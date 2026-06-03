@@ -1,13 +1,13 @@
 import { getAppEnv } from "./config/env";
-import { HealthPanel } from "./modules/health";
-import { AppShell } from "./shared/app-shell";
+import { AppUiProvider } from "./app/app-ui-context";
+import { HoldReinShell } from "./modules/shell/hold-rein-shell";
 
 export default function App() {
   const { apiBaseUrl } = getAppEnv();
 
   return (
-    <AppShell>
-      <HealthPanel apiBaseUrl={apiBaseUrl} />
-    </AppShell>
+    <AppUiProvider>
+      <HoldReinShell apiBaseUrl={apiBaseUrl} />
+    </AppUiProvider>
   );
 }

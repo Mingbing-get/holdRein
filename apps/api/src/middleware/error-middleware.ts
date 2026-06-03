@@ -6,6 +6,8 @@ export function errorMiddleware(
   response: Response,
   _next: NextFunction
 ): void {
+  void _next;
+
   response.status(500).json({
     message: error.message || "Internal Server Error"
   });

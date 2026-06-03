@@ -1,8 +1,8 @@
 import { Card, Typography } from "antd";
 
-type HealthPanelProps = {
+interface HealthPanelProps {
   apiBaseUrl: string;
-};
+}
 
 export function HealthPanel({ apiBaseUrl }: HealthPanelProps) {
   return (

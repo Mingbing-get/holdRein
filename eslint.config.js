@@ -25,6 +25,7 @@ export default [
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/no-empty-object-type": "off",
       "no-redeclare": "off",
+      "no-undef": "off",
       "max-lines": ["error", { "max": 200, "skipBlankLines": true, "skipComments": true }]
     }
   },

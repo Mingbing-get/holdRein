@@ -1,6 +1,6 @@
-export type AppEnv = {
+export interface AppEnv {
   apiBaseUrl: string;
-};
+}
 
 const DEFAULT_API_BASE_URL = "";
 
