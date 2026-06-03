@@ -13,14 +13,22 @@
     "typecheck": "pnpm -r typecheck"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@types/express": "5.0.6",
     "@changesets/cli": "2.29.5",
     "@eslint/js": "9.28.0",
     "@types/node": "22.15.29",
+    "@types/supertest": "6.0.3",
     "@typescript-eslint/eslint-plugin": "8.33.1",
     "@typescript-eslint/parser": "8.33.1",
+    "@vitejs/plugin-react": "6.0.2",
     "eslint": "9.28.0",
+    "jsdom": "29.1.1",
+    "supertest": "7.2.2",
     "typescript": "5.8.3",
     "vite": "6.3.5",
-    "vitest": "3.2.1"
+    "vitest": "3.2.1",
+    "tsx": "4.22.3"
   }
 }

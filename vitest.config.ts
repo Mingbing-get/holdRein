@@ -14,6 +14,10 @@ export default defineConfig({
       provider: "v8"
     },
     globals: true,
-    include: ["packages/**/*.test.ts"]
+    include: [
+      "packages/**/*.test.ts",
+      "apps/**/*.test.ts",
+      "apps/**/*.test.tsx"
+    ]
   }
 });
