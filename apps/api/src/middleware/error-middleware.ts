@@ -1,5 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 
+import { RESPONSE_CODE_DEFINITIONS, sendError } from "../response";
+
 export function errorMiddleware(
   error: Error,
   _request: Request,
@@ -8,7 +10,9 @@ export function errorMiddleware(
 ): void {
   void _next;
 
-  response.status(500).json({
-    message: error.message || "Internal Server Error"
-  });
+  sendError(
+    response,
+    RESPONSE_CODE_DEFINITIONS.internalError,
+    error.message || RESPONSE_CODE_DEFINITIONS.internalError.defaultMessage
+  );
 }

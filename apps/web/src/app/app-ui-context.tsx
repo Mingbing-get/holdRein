@@ -40,7 +40,7 @@ export function AppUiProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     document.documentElement.dataset.themeMode = state.themeMode;
     document.body.style.background =
-      state.themeMode === "dark" ? "#0e1624" : "#f4f6fb";
+      state.themeMode === "dark" ? "#000" : "#fff";
     document.body.style.margin = "0";
     document.body.style.fontSize = "12px";
   }, [state.themeMode]);

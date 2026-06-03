@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 
+import { RESPONSE_CODE_DEFINITIONS, sendError } from "../response";
+
 export function notFoundMiddleware(_request: Request, response: Response): void {
-  response.status(404).json({
-    message: "Not Found"
-  });
+  sendError(response, RESPONSE_CODE_DEFINITIONS.notFound);
 }
