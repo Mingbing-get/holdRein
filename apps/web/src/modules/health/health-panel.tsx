@@ -4,7 +4,7 @@ type HealthPanelProps = {
   apiBaseUrl: string;
 };
 
-export function HealthPanel({ apiBaseUrl }: HealthPanelProps): JSX.Element {
+export function HealthPanel({ apiBaseUrl }: HealthPanelProps) {
   return (
     <Card title="Hold Rein Web" style={{ maxWidth: 480 }}>
       <Typography.Paragraph>

@@ -5,7 +5,12 @@
   "type": "module",
   "packageManager": "pnpm@10.11.1",
   "scripts": {
+    "api:build": "pnpm --filter @hold-rein/api build",
+    "api:dev": "pnpm --filter @hold-rein/api dev",
+    "web:build": "pnpm --filter @hold-rein/web build",
+    "web:dev": "pnpm --filter @hold-rein/web dev",
     "build": "pnpm -r build",
+    "dev": "pnpm --parallel --filter @hold-rein/api --filter @hold-rein/web dev",
     "changeset": "changeset",
     "lint": "eslint .",
     "release": "pnpm build && changeset publish",

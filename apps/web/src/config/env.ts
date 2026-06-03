@@ -2,7 +2,7 @@ export type AppEnv = {
   apiBaseUrl: string;
 };
 
-const DEFAULT_API_BASE_URL = "http://localhost:3001";
+const DEFAULT_API_BASE_URL = "";
 
 export function getAppEnv(env: ImportMetaEnv = import.meta.env): AppEnv {
   return {
