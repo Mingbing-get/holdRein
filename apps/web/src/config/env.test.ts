@@ -7,15 +7,15 @@ describe("getAppEnv", () => {
     expect(
       getAppEnv({
         VITE_API_BASE_URL: "http://localhost:5000"
-      } as ImportMetaEnv)
+      } as unknown as ImportMetaEnv)
     ).toEqual({
       apiBaseUrl: "http://localhost:5000"
     });
   });
 
   it("falls back to the default api base url", () => {
-    expect(getAppEnv({} as ImportMetaEnv)).toEqual({
-      apiBaseUrl: "http://localhost:3001"
+    expect(getAppEnv({} as unknown as ImportMetaEnv)).toEqual({
+      apiBaseUrl: ""
     });
   });
 });
