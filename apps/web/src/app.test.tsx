@@ -35,25 +35,20 @@ describe("App", () => {
     render(<App />);
     const sidebar = screen.getByLabelText("Workspace sidebar");
     const topBar = screen.getByTestId("workspace-top-bar");
-    const chatWorkspace = screen.getByTestId("chat-workspace");
 
-    expect(screen.getByText("Hold Rein")).toBeInTheDocument();
-    expect(screen.getByText("Folder Selector")).toBeInTheDocument();
     expect(within(sidebar).getByText("Engineering Hub")).toBeInTheDocument();
+    expect(within(topBar).getByText("Engineering Hub")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Model configuration" })
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Open settings" })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Toggle theme" })
+      screen.getByRole("switch", { name: "Toggle theme" })
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Manage models" })
-    ).toBeInTheDocument();
-    expect(screen.getByText("Conversation Workspace")).toBeInTheDocument();
-    expect(screen.getByText(/http:\/\/localhost:4000/)).toBeInTheDocument();
     expect(topBar).toHaveStyle({ padding: "8px 16px" });
-    expect(chatWorkspace).toHaveStyle({ fontSize: "12px" });
-    expect(document.body).toHaveStyle({ background: "#f4f6fb" });
+    expect(document.body).toHaveStyle({ background: "#fff" });
   });
 
   it("toggles the app theme from light to dark", () => {
@@ -61,10 +56,25 @@ describe("App", () => {
 
     expect(document.documentElement.dataset.themeMode).toBe("light");
 
-    fireEvent.click(screen.getByRole("button", { name: "Toggle theme" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Toggle theme" }));
 
     expect(document.documentElement.dataset.themeMode).toBe("dark");
-    expect(screen.getByText("Dark mode")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Toggle theme" })).toHaveAttribute(
+      "aria-checked",
+      "true"
+    );
+  });
+
+  it("shows tooltips for model configuration and settings actions", async () => {
+    render(<App />);
+
+    fireEvent.mouseEnter(
+      screen.getByRole("button", { name: "Model configuration" })
+    );
+    expect(await screen.findByText("Model configuration")).toBeInTheDocument();
+
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "Open settings" }));
+    expect(await screen.findByText("Open settings")).toBeInTheDocument();
   });
 
   it("collapses the workspace sidebar", () => {

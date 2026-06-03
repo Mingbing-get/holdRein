@@ -1,4 +1,10 @@
-import { Button, Space, Tag, Typography } from "antd";
+import {
+  ExperimentOutlined,
+  MoonOutlined,
+  SettingOutlined,
+  SunOutlined
+} from "@ant-design/icons";
+import { Button, Space, Switch, Tooltip } from "antd";
 
 import { useAppUi } from "../../app/app-ui-context";
 
@@ -6,15 +12,12 @@ interface WorkspaceTopBarProps {
   workspaceName: string;
 }
 
-function getThemeLabel(themeMode: "light" | "dark") {
-  return themeMode === "light" ? "Light mode" : "Dark mode";
-}
-
 export function WorkspaceTopBar({ workspaceName }: WorkspaceTopBarProps) {
   const {
     state: { themeMode },
     toggleThemeMode
   } = useAppUi();
+  const isDarkMode = themeMode === "dark";
 
   return (
     <header
@@ -37,23 +40,43 @@ export function WorkspaceTopBar({ workspaceName }: WorkspaceTopBarProps) {
         }}
       >
         <Space size={8} wrap>
-          <span></span>
-        </Space>
-        <Space size={8}>
-          <Button aria-label="Open settings" shape="circle" size="small">
-            ST
-          </Button>
-          <Button
-            aria-label="Toggle theme"
-            onClick={toggleThemeMode}
-            shape="circle"
-            size="small"
+          <span
+            style={{
+              color: "rgba(127, 145, 170, 0.88)",
+              fontSize: 12,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase"
+            }}
           >
-            TM
-          </Button>
-          <Button aria-label="Manage models" shape="circle" size="small">
-            MM
-          </Button>
+            {workspaceName}
+          </span>
+        </Space>
+        <Space align="center" size={10}>
+          <Tooltip title="Model configuration">
+            <Button
+              aria-label="Model configuration"
+              icon={<ExperimentOutlined />}
+              shape="circle"
+              size="small"
+              type="text"
+            />
+          </Tooltip>
+          <Tooltip title="Open settings">
+            <Button
+              aria-label="Open settings"
+              icon={<SettingOutlined />}
+              shape="circle"
+              size="small"
+              type="text"
+            />
+          </Tooltip>
+          <Switch
+            aria-label="Toggle theme"
+            checked={isDarkMode}
+            checkedChildren={<MoonOutlined />}
+            onChange={toggleThemeMode}
+            unCheckedChildren={<SunOutlined />}
+          />
         </Space>
       </div>
     </header>

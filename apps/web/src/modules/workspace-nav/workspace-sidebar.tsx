@@ -1,4 +1,8 @@
-import { Button, Space, Tag, Typography } from "antd";
+import {
+  MenuFoldOutlined,
+  MenuUnfoldOutlined
+} from "@ant-design/icons";
+import { Button, Typography } from "antd";
 
 import { useAppUi } from "../../app/app-ui-context";
 import {
@@ -36,21 +40,21 @@ function WorkspaceSection({
 
         return (
           <Typography.Text
-              key={conversation.id}
-              onClick={() => {
-                setActiveWorkspaceId(workspace.id);
-                setActiveConversationId(conversation.id);
-              }}
-              ellipsis
-              strong={isActiveConversation}
-              style={{
-                display: "block",
-                fontSize: 12,
-                cursor: 'pointer'
-              }}
-            >
-              {collapsed ? conversation.shortLabel : conversation.name}
-            </Typography.Text>
+            key={conversation.id}
+            onClick={() => {
+              setActiveWorkspaceId(workspace.id);
+              setActiveConversationId(conversation.id);
+            }}
+            ellipsis
+            strong={isActiveConversation}
+            style={{
+              cursor: "pointer",
+              display: "block",
+              fontSize: 12
+            }}
+          >
+            {collapsed ? conversation.shortLabel : conversation.name}
+          </Typography.Text>
         );
       })}
     </div>
@@ -85,15 +89,17 @@ export function WorkspaceSidebar() {
         style={{
           alignItems: "center",
           display: "flex",
-          justifyContent: sidebarCollapsed ? "center" : "space-between"
+          justifyContent: "center",
+          width: "100%"
         }}
       >
         <Button
           aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           onClick={toggleSidebar}
           shape="circle"
+          type="text"
         >
-          {sidebarCollapsed ? ">" : "<"}
+          {sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
         </Button>
       </div>
 
