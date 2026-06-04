@@ -99,6 +99,9 @@ describe("App", () => {
     render(<App />);
 
     const sidebar = screen.getByLabelText("Workspace sidebar");
+    const newConversationButton = within(sidebar).getByRole("button", {
+      name: "开启新对话"
+    });
     const engineeringGroup = within(sidebar).getByTestId(
       "workspace-group-workspace-engineering"
     );
@@ -112,6 +115,11 @@ describe("App", () => {
     expect(
       within(engineeringGroup).getByTestId("workspace-folder-open-icon")
     ).toBeInTheDocument();
+    expect(newConversationButton).toHaveStyle({
+      borderRadius: "6px",
+      justifyContent: "flex-start",
+      width: "100%"
+    });
     expect(engineeringGroup.parentElement).toHaveStyle({ gap: "2px" });
     expect(activeConversation).toHaveStyle({
       borderRadius: "6px",
