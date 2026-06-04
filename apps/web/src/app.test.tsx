@@ -37,7 +37,10 @@ describe("App", () => {
     const topBar = screen.getByTestId("workspace-top-bar");
 
     expect(within(sidebar).getByText("Engineering Hub")).toBeInTheDocument();
-    expect(within(topBar).getByText("Engineering Hub")).toBeInTheDocument();
+    expect(within(topBar).queryByText("Engineering Hub")).not.toBeInTheDocument();
+    expect(
+      within(topBar).getByRole("button", { name: "Collapse sidebar" })
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Model configuration" })
     ).toBeInTheDocument();
@@ -85,7 +88,43 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Collapse sidebar" }));
 
-    expect(screen.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Expand sidebar" })
+    ).toBeVisible();
+    expect(sidebar).not.toBeVisible();
     expect(within(sidebar).queryByText("Engineering Hub")).not.toBeInTheDocument();
+  });
+
+  it("resizes the workspace sidebar from its right border within bounds", () => {
+    render(<App />);
+
+    const sidebar = screen.getByLabelText("Workspace sidebar");
+    const workspaceLayout = screen.getByTestId("workspace-main-layout");
+    const resizeHandle = screen.getByRole("separator", {
+      name: "Resize workspace sidebar"
+    });
+
+    expect(sidebar).toHaveStyle({ width: "240px" });
+    expect(resizeHandle).toHaveStyle({ cursor: "col-resize" });
+
+    fireEvent.mouseEnter(resizeHandle);
+
+    expect(sidebar).toHaveStyle({ borderRightColor: "#1f6feb" });
+
+    fireEvent.mouseDown(resizeHandle, { clientX: 240 });
+
+    expect(sidebar).toHaveStyle({ transition: "transform 0.2s ease" });
+    expect(workspaceLayout).toHaveStyle({ transition: "none" });
+
+    fireEvent.mouseMove(document, { clientX: 800 });
+    fireEvent.mouseUp(document);
+
+    expect(sidebar).toHaveStyle({ width: "680px" });
+
+    fireEvent.mouseDown(resizeHandle, { clientX: 680 });
+    fireEvent.mouseMove(document, { clientX: 0 });
+    fireEvent.mouseUp(document);
+
+    expect(sidebar).toHaveStyle({ width: "120px" });
   });
 });

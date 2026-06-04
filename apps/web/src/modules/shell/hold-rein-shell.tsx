@@ -12,7 +12,13 @@ interface HoldReinShellProps {
 
 export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
   const {
-    state: { activeConversationId, activeWorkspaceId, sidebarCollapsed }
+    state: {
+      activeConversationId,
+      activeWorkspaceId,
+      sidebarCollapsed,
+      sidebarResizing,
+      sidebarWidth
+    }
   } = useAppUi();
   const defaultWorkspace = workspaceSummaries[0];
 
@@ -43,13 +49,14 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
     >
       <WorkspaceSidebar />
       <Layout
+        data-testid="workspace-main-layout"
         style={{
           background: "transparent",
-          marginLeft: sidebarCollapsed ? 88 : 320,
-          transition: "margin-left 0.2s ease"
+          marginLeft: sidebarCollapsed ? 0 : sidebarWidth,
+          transition: sidebarResizing ? "none" : "margin-left 0.2s ease"
         }}
       >
-        <WorkspaceTopBar workspaceName={activeWorkspace.name} />
+        <WorkspaceTopBar />
         <Layout.Content style={{ padding: "10px 14px 14px" }}>
           <ChatWorkspace
             activeConversationName={activeConversation.name}

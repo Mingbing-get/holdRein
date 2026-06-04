@@ -14,6 +14,8 @@ export interface AppUiState {
   activeConversationId: string;
   activeWorkspaceId: string;
   sidebarCollapsed: boolean;
+  sidebarResizing: boolean;
+  sidebarWidth: number;
   themeMode: ThemeMode;
 }
 
@@ -21,6 +23,8 @@ export interface AppUiContextValue {
   state: AppUiState;
   setActiveConversationId: (conversationId: string) => void;
   setActiveWorkspaceId: (workspaceId: string) => void;
+  setSidebarResizing: (sidebarResizing: boolean) => void;
+  setSidebarWidth: (sidebarWidth: number) => void;
   toggleSidebar: () => void;
   toggleThemeMode: () => void;
 }
@@ -29,6 +33,8 @@ const DEFAULT_APP_UI_STATE: AppUiState = {
   activeConversationId: "conv-ops-sync",
   activeWorkspaceId: "workspace-engineering",
   sidebarCollapsed: false,
+  sidebarResizing: false,
+  sidebarWidth: 240,
   themeMode: "light"
 };
 
@@ -58,6 +64,18 @@ export function AppUiProvider({ children }: PropsWithChildren) {
         setState((currentState) => ({
           ...currentState,
           activeWorkspaceId
+        }));
+      },
+      setSidebarResizing: (sidebarResizing) => {
+        setState((currentState) => ({
+          ...currentState,
+          sidebarResizing
+        }));
+      },
+      setSidebarWidth: (sidebarWidth) => {
+        setState((currentState) => ({
+          ...currentState,
+          sidebarWidth
         }));
       },
       toggleSidebar: () => {

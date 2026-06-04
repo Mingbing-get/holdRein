@@ -1,5 +1,7 @@
 import {
   ExperimentOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   MoonOutlined,
   SettingOutlined,
   SunOutlined
@@ -8,13 +10,10 @@ import { Button, Space, Switch, Tooltip } from "antd";
 
 import { useAppUi } from "../../app/app-ui-context";
 
-interface WorkspaceTopBarProps {
-  workspaceName: string;
-}
-
-export function WorkspaceTopBar({ workspaceName }: WorkspaceTopBarProps) {
+export function WorkspaceTopBar() {
   const {
-    state: { themeMode },
+    state: { sidebarCollapsed, themeMode },
+    toggleSidebar,
     toggleThemeMode
   } = useAppUi();
   const isDarkMode = themeMode === "dark";
@@ -40,16 +39,15 @@ export function WorkspaceTopBar({ workspaceName }: WorkspaceTopBarProps) {
         }}
       >
         <Space size={8} wrap>
-          <span
-            style={{
-              color: "rgba(127, 145, 170, 0.88)",
-              fontSize: 12,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase"
-            }}
-          >
-            {workspaceName}
-          </span>
+          <Button
+            aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+            icon={sidebarCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={toggleSidebar}
+            shape="circle"
+            size="small"
+            type="text"
+          />
+          <span />
         </Space>
         <Space align="center" size={10}>
           <Tooltip title="Model configuration">
