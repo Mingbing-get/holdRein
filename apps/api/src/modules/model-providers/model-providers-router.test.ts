@@ -151,6 +151,44 @@ describe("model provider routes", () => {
     ]);
   });
 
+  it("deletes a custom provider model", async () => {
+    const { app } = createTestApp();
+
+    await request(app).post("/api/v1/model-providers/custom").send({
+      baseUrl: "https://example.com/v1",
+      provider: "acme-ai"
+    });
+    await request(app).post("/api/v1/model-providers/acme-ai/models").send({
+      api: "responses",
+      contextWindow: 32000,
+      input: ["text"],
+      maxTokens: 4096,
+      modelId: "acme-chat",
+      reasoning: false
+    });
+
+    const deleteResponse = await request(app).delete(
+      "/api/v1/model-providers/acme-ai/models/acme-chat"
+    );
+
+    expect(deleteResponse.status).toBe(200);
+    expect(deleteResponse.body).toEqual({
+      code: 0,
+      msg: "ok",
+      data: {
+        modelId: "acme-chat",
+        provider: "acme-ai"
+      }
+    });
+
+    const modelsResponse = await request(app).get(
+      "/api/v1/model-providers/acme-ai/models"
+    );
+
+    expect(modelsResponse.status).toBe(200);
+    expect(modelsResponse.body.data).toEqual([]);
+  });
+
   it("updates a custom provider", async () => {
     const { app } = createTestApp();
 

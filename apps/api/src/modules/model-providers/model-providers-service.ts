@@ -49,6 +49,7 @@ export interface ModelProvidersService {
     input: Omit<ModelSummary, "id" | "name" | "provider"> & { modelId: string }
   ) => ModelSummary;
   deleteCustomModelProvider: (provider: string) => boolean;
+  deleteCustomProviderModel: (provider: string, modelId: string) => boolean;
   getConfiguredModelForProvider: (
     provider: string,
     modelId: string
@@ -144,6 +145,15 @@ export function createModelProvidersService(
       }
 
       return repository.deleteCustomModelProvider(provider);
+    },
+    deleteCustomProviderModel: (provider, modelId) => {
+      const customProvider = repository.findCustomModelProviderByProvider(provider);
+
+      if (!customProvider) {
+        return false;
+      }
+
+      return repository.deleteCustomProviderModel(customProvider.id, modelId);
     },
     getConfiguredModelForProvider: (provider, modelId) => {
       const model = findModel(provider, modelId, repository);

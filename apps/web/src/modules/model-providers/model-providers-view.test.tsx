@@ -439,4 +439,322 @@ describe("ModelProvidersView", () => {
     );
     expect(await screen.findByText("已配置 API Key")).toBeInTheDocument();
   });
+
+  it("opens a model dialog for built-in providers", async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: [
+            { hasApiKey: false, id: "openai", modelCount: 2, source: "builtin" }
+          ],
+          msg: "success"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: [
+            {
+              api: "responses",
+              contextWindow: 200000,
+              id: "gpt-5",
+              input: ["text", "image"],
+              maxTokens: 8192,
+              name: "GPT-5",
+              provider: "openai",
+              reasoning: true
+            },
+            {
+              api: "responses",
+              contextWindow: 128000,
+              id: "gpt-4.1",
+              input: ["text"],
+              maxTokens: 4096,
+              name: "GPT-4.1",
+              provider: "openai",
+              reasoning: false
+            }
+          ],
+          msg: "success"
+        }),
+        ok: true
+      } as Response);
+
+    render(<ModelProvidersView apiBaseUrl="http://localhost:4000" />);
+
+    expect(await screen.findByText("openai")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "查看 openai 的模型" }));
+
+    expect(await screen.findByText("openai 支持的模型")).toBeInTheDocument();
+    expect(await screen.findByText("GPT-5")).toBeInTheDocument();
+    expect(screen.getByText("GPT-4.1")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost:4000/api/v1/model-providers/openai/models"
+    );
+  });
+
+  it("supports creating, updating, and deleting custom provider models in the model dialog", async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: [
+            {
+              baseUrl: "https://api.acme.ai/v1",
+              hasApiKey: true,
+              id: "acme-ai",
+              modelCount: 1,
+              source: "custom"
+            }
+          ],
+          msg: "success"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: [
+            {
+              api: "responses",
+              contextWindow: 32000,
+              id: "acme-chat",
+              input: ["text"],
+              maxTokens: 4096,
+              name: "Acme Chat",
+              provider: "acme-ai",
+              reasoning: false
+            }
+          ],
+          msg: "success"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: {
+            api: "chat-completions",
+            contextWindow: 64000,
+            id: "acme-vision",
+            input: ["text", "image"],
+            maxTokens: 8192,
+            name: "acme-vision",
+            provider: "acme-ai",
+            reasoning: true
+          },
+          msg: "success"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: [
+            {
+              api: "responses",
+              contextWindow: 32000,
+              id: "acme-chat",
+              input: ["text"],
+              maxTokens: 4096,
+              name: "Acme Chat",
+              provider: "acme-ai",
+              reasoning: false
+            },
+            {
+              api: "chat-completions",
+              contextWindow: 64000,
+              id: "acme-vision",
+              input: ["text", "image"],
+              maxTokens: 8192,
+              name: "acme-vision",
+              provider: "acme-ai",
+              reasoning: true
+            }
+          ],
+          msg: "success"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: {
+            api: "responses",
+            contextWindow: 128000,
+            id: "acme-chat",
+            input: ["text", "file"],
+            maxTokens: 16384,
+            name: "Acme Chat",
+            provider: "acme-ai",
+            reasoning: true
+          },
+          msg: "success"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: [
+            {
+              api: "responses",
+              contextWindow: 128000,
+              id: "acme-chat",
+              input: ["text", "file"],
+              maxTokens: 16384,
+              name: "Acme Chat",
+              provider: "acme-ai",
+              reasoning: true
+            },
+            {
+              api: "chat-completions",
+              contextWindow: 64000,
+              id: "acme-vision",
+              input: ["text", "image"],
+              maxTokens: 8192,
+              name: "acme-vision",
+              provider: "acme-ai",
+              reasoning: true
+            }
+          ],
+          msg: "success"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: {
+            modelId: "acme-vision",
+            provider: "acme-ai"
+          },
+          msg: "success"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: [
+            {
+              api: "responses",
+              contextWindow: 128000,
+              id: "acme-chat",
+              input: ["text", "file"],
+              maxTokens: 16384,
+              name: "Acme Chat",
+              provider: "acme-ai",
+              reasoning: true
+            }
+          ],
+          msg: "success"
+        }),
+        ok: true
+      } as Response);
+
+    render(<ModelProvidersView apiBaseUrl="http://localhost:4000" />);
+
+    expect(await screen.findByText("acme-ai")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "查看 acme-ai 的模型" }));
+
+    expect(await screen.findByText("Acme Chat")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "添加模型" }));
+
+    fireEvent.change(await screen.findByLabelText("模型 ID"), {
+      target: { value: "acme-vision" }
+    });
+    fireEvent.change(screen.getByLabelText("模型名称"), {
+      target: { value: "Acme Vision" }
+    });
+    fireEvent.change(screen.getByLabelText("API 类型"), {
+      target: { value: "chat-completions" }
+    });
+    fireEvent.change(screen.getByLabelText("支持输入"), {
+      target: { value: "text, image" }
+    });
+    fireEvent.change(screen.getByLabelText("上下文窗口"), {
+      target: { value: "64000" }
+    });
+    fireEvent.change(screen.getByLabelText("最大输出 Tokens"), {
+      target: { value: "8192" }
+    });
+    fireEvent.click(screen.getByLabelText("支持推理"));
+    fireEvent.click(screen.getByRole("button", { name: /创\s*建模型/ }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        3,
+        "http://localhost:4000/api/v1/model-providers/acme-ai/models",
+        {
+          body: JSON.stringify({
+            api: "chat-completions",
+            contextWindow: 64000,
+            input: ["text", "image"],
+            maxTokens: 8192,
+            modelId: "acme-vision",
+            reasoning: true
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: "POST"
+        }
+      );
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "编辑模型 acme-chat" }));
+
+    fireEvent.change(await screen.findByLabelText("支持输入"), {
+      target: { value: "text, file" }
+    });
+    fireEvent.change(screen.getByLabelText("上下文窗口"), {
+      target: { value: "128000" }
+    });
+    fireEvent.change(screen.getByLabelText("最大输出 Tokens"), {
+      target: { value: "16384" }
+    });
+    fireEvent.click(screen.getByLabelText("支持推理"));
+    fireEvent.click(screen.getByRole("button", { name: /保存模型/ }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        5,
+        "http://localhost:4000/api/v1/model-providers/acme-ai/models/acme-chat",
+        {
+          body: JSON.stringify({
+            api: "responses",
+            contextWindow: 128000,
+            input: ["text", "file"],
+            maxTokens: 16384,
+            reasoning: true
+          }),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: "PUT"
+        }
+      );
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "删除模型 acme-vision" }));
+    fireEvent.click((await screen.findAllByRole("button", { name: /删\s*除模型/ })).at(-1)!);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        7,
+        "http://localhost:4000/api/v1/model-providers/acme-ai/models/acme-vision",
+        {
+          method: "DELETE"
+        }
+      );
+    });
+    expect(screen.queryByText("Acme Vision")).not.toBeInTheDocument();
+  });
 });

@@ -243,6 +243,32 @@ export function createModelProvidersRouter(
     }
   );
 
+  router.delete(
+    "/model-providers/:provider/models/:modelId",
+    (
+      request: Request<{ modelId: string; provider: string }>,
+      response: Response
+    ): void => {
+      const provider = String(request.params.provider ?? "");
+      const modelId = String(request.params.modelId ?? "");
+      const deleted = getService().deleteCustomProviderModel(provider, modelId);
+
+      if (!deleted) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.notFound,
+          "Unknown custom model"
+        );
+        return;
+      }
+
+      sendSuccess(response, {
+        modelId,
+        provider
+      });
+    }
+  );
+
   router.put(
     "/model-providers/:provider/api-key",
     (

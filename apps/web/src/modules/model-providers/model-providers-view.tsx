@@ -1,29 +1,27 @@
 import { useEffect, useMemo, useState } from "react";
-import { PlusOutlined } from "@ant-design/icons";
-import { Alert, Button, Empty, Flex, Input, Modal, Spin, Typography } from "antd";
+import { Alert, Empty, Flex, Spin, Typography } from "antd";
 
+import {
+  createCustomModelProviderUrl,
+  createProviderApiKeyUrl,
+  createProviderModelUrl,
+  createProviderModelsUrl,
+  createUpdateCustomModelProviderUrl,
+  fetchModelProviders,
+  fetchProviderModels
+} from "./model-provider-api";
 import {
   CustomModelProviderModal,
   type CustomModelProviderFormValues
 } from "./custom-model-provider-modal";
-import { ModelProviderCard } from "./model-provider-card";
+import { ModelProviderGroups } from "./model-provider-groups";
+import { ModelProvidersEmptyImage } from "./model-providers-empty-image";
+import { ProviderApiKeyModal } from "./provider-api-key-modal";
+import { ProviderModelsModal, type ProviderModelFormValues } from "./provider-models-modal";
+import type { ModelProviderSummary, ModelSummary } from "./model-provider-types";
 
 interface ModelProvidersViewProps {
   apiBaseUrl: string;
-}
-
-interface ApiResponse<T> {
-  code: number;
-  data: T;
-  msg: string;
-}
-
-export interface ModelProviderSummary {
-  baseUrl?: string;
-  hasApiKey: boolean;
-  id: string;
-  modelCount: number;
-  source: "builtin" | "custom";
 }
 
 interface CustomProviderModalState {
@@ -31,6 +29,14 @@ interface CustomProviderModalState {
   mode: "create" | "edit";
   open: boolean;
   providerId?: string;
+}
+
+interface ProviderModelsModalState {
+  isLoading: boolean;
+  isSubmitting: boolean;
+  models: ModelSummary[];
+  open: boolean;
+  provider: ModelProviderSummary | null;
 }
 
 type LoadState =
@@ -46,6 +52,14 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
       mode: "create",
       open: false
     });
+  const [providerModelsModalState, setProviderModelsModalState] =
+    useState<ProviderModelsModalState>({
+      isLoading: false,
+      isSubmitting: false,
+      models: [],
+      open: false,
+      provider: null
+    });
   const [hoveredProviderKey, setHoveredProviderKey] = useState<string | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState("");
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
@@ -53,17 +67,13 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
 
   useEffect(() => {
     let isActive = true;
-
     const loadProviders = async () => {
       setLoadState({ status: "loading" });
-
       try {
         const providers = await fetchModelProviders(apiBaseUrl);
-
         if (!isActive) {
           return;
         }
-
         setLoadState({
           providers,
           status: "success"
@@ -72,7 +82,6 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
         if (!isActive) {
           return;
         }
-
         setLoadState({
           message:
             error instanceof Error
@@ -82,9 +91,7 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
         });
       }
     };
-
     void loadProviders();
-
     return () => {
       isActive = false;
     };
@@ -111,10 +118,8 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
 
   const refreshProviders = async () => {
     setLoadState({ status: "loading" });
-
     try {
       const providers = await fetchModelProviders(apiBaseUrl);
-
       setLoadState({
         providers,
         status: "success"
@@ -130,13 +135,57 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
     }
   };
 
+  const updateProviderModelCount = (providerId: string, modelCount: number) => {
+    setLoadState((currentState) => {
+      if (currentState.status !== "success") {
+        return currentState;
+      }
+      return {
+        providers: currentState.providers.map((provider) =>
+          provider.id === providerId ? { ...provider, modelCount } : provider
+        ),
+        status: "success"
+      };
+    });
+  };
+
+  const refreshProviderModels = async (
+    provider: ModelProviderSummary
+  ): Promise<ModelSummary[]> => {
+    setProviderModelsModalState((currentState) => ({
+      ...currentState,
+      isLoading: true,
+      open: true,
+      provider
+    }));
+    try {
+      const models = await fetchProviderModels(apiBaseUrl, provider.id);
+      setProviderModelsModalState({
+        isLoading: false,
+        isSubmitting: false,
+        models,
+        open: true,
+        provider
+      });
+      updateProviderModelCount(provider.id, models.length);
+      return models;
+    } catch {
+      setProviderModelsModalState({
+        isLoading: false,
+        isSubmitting: false,
+        models: [],
+        open: true,
+        provider
+      });
+      return [];
+    }
+  };
+
   const submitApiKey = async () => {
     if (!editingProviderId || apiKeyInput.trim() === "") {
       return;
     }
-
     setIsSavingApiKey(true);
-
     try {
       const response = await fetch(
         createProviderApiKeyUrl(apiBaseUrl, editingProviderId),
@@ -152,12 +201,10 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
       if (!response.ok) {
         throw new Error("Failed to store API key");
       }
-
       setLoadState((currentState) => {
         if (currentState.status !== "success") {
           return currentState;
         }
-
         return {
           providers: currentState.providers.map((provider) =>
             provider.id === editingProviderId
@@ -174,11 +221,8 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
     }
   };
 
-  const submitCustomProvider = async (
-    values: CustomModelProviderFormValues
-  ) => {
+  const submitCustomProvider = async (values: CustomModelProviderFormValues) => {
     setIsSavingCustomProvider(true);
-
     try {
       const { mode, providerId } = customProviderModalState;
       const url =
@@ -219,12 +263,97 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
         method: "DELETE"
       }
     );
-
     if (!response.ok) {
       throw new Error("Failed to delete custom provider");
     }
-
     await refreshProviders();
+  };
+
+  const submitProviderModel = async (
+    mode: "create" | "edit",
+    values: ProviderModelFormValues,
+    modelId?: string
+  ) => {
+    const provider = providerModelsModalState.provider;
+    if (!provider) {
+      return;
+    }
+    setProviderModelsModalState((currentState) => ({
+      ...currentState,
+      isSubmitting: true
+    }));
+    try {
+      const response = await fetch(
+        mode === "create"
+          ? createProviderModelsUrl(apiBaseUrl, provider.id)
+          : createProviderModelUrl(apiBaseUrl, provider.id, modelId ?? ""),
+        {
+          body: JSON.stringify(
+            mode === "create"
+              ? {
+                  api: values.api,
+                  contextWindow: values.contextWindow,
+                  input: values.input,
+                  maxTokens: values.maxTokens,
+                  modelId: values.modelId,
+                  reasoning: values.reasoning
+                }
+              : {
+                  api: values.api,
+                  contextWindow: values.contextWindow,
+                  input: values.input,
+                  maxTokens: values.maxTokens,
+                  reasoning: values.reasoning
+                }
+          ),
+          headers: {
+            "Content-Type": "application/json"
+          },
+          method: mode === "create" ? "POST" : "PUT"
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          mode === "create" ? "Failed to create model" : "Failed to update model"
+        );
+      }
+      await refreshProviderModels(provider);
+    } finally {
+      setProviderModelsModalState((currentState) => ({
+        ...currentState,
+        isSubmitting: false
+      }));
+    }
+  };
+
+  const deleteProviderModel = async (model: ModelSummary) => {
+    const provider = providerModelsModalState.provider;
+    if (!provider) {
+      return;
+    }
+    setProviderModelsModalState((currentState) => ({
+      ...currentState,
+      isSubmitting: true
+    }));
+    try {
+      const response = await fetch(
+        createProviderModelUrl(apiBaseUrl, provider.id, model.id),
+        {
+          method: "DELETE"
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete model");
+      }
+      await refreshProviderModels(provider);
+    } finally {
+      setProviderModelsModalState((currentState) => ({
+        ...currentState,
+        isSubmitting: false
+      }));
+    }
   };
 
   return (
@@ -267,111 +396,52 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
       ) : null}
 
       {loadState.status === "success" ? (
-        <Flex gap={18} vertical>
-          {groupedProviders.map((group) => (
-            <Flex gap={10} key={group.source} vertical>
-              <Flex align="center" justify="space-between">
-                <Typography.Title level={4} style={{ margin: 0 }}>
-                  {group.title}
-                </Typography.Title>
-                {group.source === "custom" ? (
-                  <Button
-                    aria-label="添加提供商"
-                    icon={<PlusOutlined />}
-                    onClick={() => {
-                      setCustomProviderModalState({
-                        mode: "create",
-                        open: true
-                      });
-                    }}
-                    type="default"
-                  >
-                    添加提供商
-                  </Button>
-                ) : null}
-              </Flex>
-              {group.source === "custom" && group.providers.length === 0 ? (
-                <Empty
-                  description="还没有自定义提供商，先添加一个吧。"
-                  image={<ModelProvidersEmptyImage />}
-                  style={{ color: "var(--app-color-text)" }}
-                />
-              ) : (
-                <Flex gap={12} wrap>
-                  {group.providers.map((provider) => {
-                    const providerKey = `${provider.source}-${provider.id}`;
-
-                    return (
-                      <ModelProviderCard
-                        isHovered={hoveredProviderKey === providerKey}
-                        key={providerKey}
-                        onDeleteProvider={(nextProviderId) => {
-                          void deleteCustomProvider(nextProviderId);
-                        }}
-                        onEditApiKey={(nextProviderId) => {
-                          setEditingProviderId(nextProviderId);
-                          setApiKeyInput("");
-                        }}
-                        onEditProvider={(nextProvider) => {
-                          setCustomProviderModalState({
-                            initialValues: {
-                              baseUrl: nextProvider.baseUrl ?? "",
-                              provider: nextProvider.id
-                            },
-                            mode: "edit",
-                            open: true,
-                            providerId: nextProvider.id
-                          });
-                        }}
-                        onMouseEnter={() => {
-                          setHoveredProviderKey(providerKey);
-                        }}
-                        onMouseLeave={() => {
-                          setHoveredProviderKey((currentKey) =>
-                            currentKey === providerKey ? null : currentKey
-                          );
-                        }}
-                        provider={provider}
-                      />
-                    );
-                  })}
-                </Flex>
-              )}
-            </Flex>
-          ))}
-        </Flex>
+        <ModelProviderGroups
+          groupedProviders={groupedProviders}
+          hoveredProviderKey={hoveredProviderKey}
+          onAddProvider={() => {
+            setCustomProviderModalState({
+              mode: "create",
+              open: true
+            });
+          }}
+          onDeleteProvider={(nextProviderId) => {
+            void deleteCustomProvider(nextProviderId);
+          }}
+          onEditApiKey={(nextProviderId) => {
+            setEditingProviderId(nextProviderId);
+            setApiKeyInput("");
+          }}
+          onEditProvider={(nextProvider) => {
+            setCustomProviderModalState({
+              initialValues: {
+                baseUrl: nextProvider.baseUrl ?? "",
+                provider: nextProvider.id
+              },
+              mode: "edit",
+              open: true,
+              providerId: nextProvider.id
+            });
+          }}
+          onHoverChange={setHoveredProviderKey}
+          onViewModels={(nextProvider) => {
+            void refreshProviderModels(nextProvider);
+          }}
+        />
       ) : null}
 
-      <Modal
-        cancelText="取消"
-        okButtonProps={{
-          loading: isSavingApiKey
-        }}
-        okText="提交"
+      <ProviderApiKeyModal
+        isSubmitting={isSavingApiKey}
         onCancel={() => {
           setEditingProviderId(null);
           setApiKeyInput("");
         }}
-        onOk={() => {
-          void submitApiKey();
-        }}
+        onChange={setApiKeyInput}
+        onSubmit={submitApiKey}
         open={editingProviderId !== null}
-        title="配置 API Key"
-      >
-        <Flex gap={10} vertical>
-          <Typography.Text type="secondary">
-            {editingProviderId ? `为 ${editingProviderId} 配置 API Key。` : ""}
-          </Typography.Text>
-          <Input
-            aria-label="API Key"
-            onChange={(event) => {
-              setApiKeyInput(event.target.value);
-            }}
-            placeholder="输入 API Key"
-            value={apiKeyInput}
-          />
-        </Flex>
-      </Modal>
+        providerId={editingProviderId}
+        value={apiKeyInput}
+      />
       <CustomModelProviderModal
         initialValues={customProviderModalState.initialValues}
         isSubmitting={isSavingCustomProvider}
@@ -385,88 +455,33 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
         onSubmit={submitCustomProvider}
         open={customProviderModalState.open}
       />
+      {providerModelsModalState.open || providerModelsModalState.provider ? (
+        <ProviderModelsModal
+          isLoading={providerModelsModalState.isLoading}
+          isSubmitting={providerModelsModalState.isSubmitting}
+          models={providerModelsModalState.models}
+          onClose={() => {
+            setProviderModelsModalState({
+              isLoading: false,
+              isSubmitting: false,
+              models: [],
+              open: false,
+              provider: null
+            });
+          }}
+          onCreate={async (values) => {
+            await submitProviderModel("create", values);
+          }}
+          onDelete={async (model) => {
+            await deleteProviderModel(model);
+          }}
+          onUpdate={async (modelId, values) => {
+            await submitProviderModel("edit", values, modelId);
+          }}
+          open={providerModelsModalState.open}
+          provider={providerModelsModalState.provider}
+        />
+      ) : null}
     </Flex>
-  );
-}
-
-async function fetchModelProviders(
-  apiBaseUrl: string
-): Promise<ModelProviderSummary[]> {
-  const response = await fetch(createModelProvidersUrl(apiBaseUrl));
-
-  if (!response.ok) {
-    throw new Error("Failed to load model providers");
-  }
-
-  const payload = (await response.json()) as ApiResponse<ModelProviderSummary[]>;
-
-  return sortProviders(payload.data);
-}
-
-function createModelProvidersUrl(apiBaseUrl: string): string {
-  return `${apiBaseUrl.replace(/\/$/, "")}/api/v1/model-providers`;
-}
-
-function createCustomModelProviderUrl(apiBaseUrl: string): string {
-  return `${createModelProvidersUrl(apiBaseUrl)}/custom`;
-}
-
-function createProviderApiKeyUrl(apiBaseUrl: string, providerId: string): string {
-  return `${createModelProvidersUrl(apiBaseUrl)}/${providerId}/api-key`;
-}
-
-function createUpdateCustomModelProviderUrl(
-  apiBaseUrl: string,
-  providerId: string
-): string {
-  return `${createCustomModelProviderUrl(apiBaseUrl)}/${providerId}`;
-}
-
-function sortProviders(
-  providers: ModelProviderSummary[]
-): ModelProviderSummary[] {
-  return [...providers].sort((left, right) => {
-    if (left.source !== right.source) {
-      return left.source === "custom" ? -1 : 1;
-    }
-
-    return left.id.localeCompare(right.id);
-  });
-}
-
-function ModelProvidersEmptyImage() {
-  return (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      height="72"
-      viewBox="0 0 72 72"
-      width="72"
-    >
-      <rect
-        height="40"
-        rx="10"
-        stroke="currentColor"
-        strokeOpacity="0.32"
-        strokeWidth="2"
-        width="40"
-        x="16"
-        y="16"
-      />
-      <path
-        d="M26 32h20M26 40h12"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeOpacity="0.88"
-        strokeWidth="2.5"
-      />
-      <circle cx="48" cy="50" fill="currentColor" fillOpacity="0.14" r="12" />
-      <path
-        d="M48 45v6M45 48h6"
-        stroke="currentColor"
-        strokeLinecap="round"
-        strokeWidth="2.5"
-      />
-    </svg>
   );
 }
