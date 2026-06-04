@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { FolderOpenOutlined } from "@ant-design/icons";
-import { theme, Typography } from "antd";
+import { Typography } from "antd";
 
 import { useAppUi } from "../../app/app-ui-context";
 import type { WorkspaceSummary } from "../../shared/mock/workspaces";
@@ -19,7 +19,6 @@ export function WorkspaceSection({
     setActiveConversationId,
     setActiveWorkspaceId
   } = useAppUi();
-  const { token } = theme.useToken();
   const [hoveredConversationId, setHoveredConversationId] = useState<
     string | null
   >(null);
@@ -34,7 +33,7 @@ export function WorkspaceSection({
         >
           <FolderOpenOutlined
             data-testid="workspace-folder-open-icon"
-            style={{ color: token.colorTextSecondary, fontSize: 14 }}
+            style={{ color: "var(--app-color-text-secondary)", fontSize: 14 }}
           />
           <Typography.Text strong style={{ fontSize: 12, lineHeight: "20px" }}>
             {workspace.name}
@@ -68,7 +67,7 @@ export function WorkspaceSection({
             style={{
               background:
                 isActiveConversation || hoveredConversationId === conversation.id
-                  ? token.colorFillSecondary
+                  ? "var(--app-color-fill-secondary)"
                   : undefined,
               borderRadius: 6,
               cursor: "pointer",

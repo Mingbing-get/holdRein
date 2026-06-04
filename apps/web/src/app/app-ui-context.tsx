@@ -8,6 +8,8 @@ import {
 import { App as AntdApp, ConfigProvider, theme } from "antd";
 import type { PropsWithChildren } from "react";
 
+import "./theme.css";
+
 export type ThemeMode = "light" | "dark";
 
 export interface AppUiState {
@@ -40,15 +42,35 @@ const DEFAULT_APP_UI_STATE: AppUiState = {
 
 const AppUiContext = createContext<AppUiContextValue | null>(null);
 
+const THEME_ALGORITHMS = {
+  dark: theme.darkAlgorithm,
+  light: theme.defaultAlgorithm
+} as const;
+
+const ANTD_THEME_TOKEN = {
+  borderRadius: 18,
+  colorBgBase: "var(--app-color-bg-base)",
+  colorBgContainer: "var(--app-color-bg-container)",
+  colorBgElevated: "var(--app-color-bg-elevated)",
+  colorBorder: "var(--app-color-border)",
+  colorBorderSecondary: "var(--app-color-border-secondary)",
+  colorFillSecondary: "var(--app-color-fill-secondary)",
+  colorFillTertiary: "var(--app-color-fill-tertiary)",
+  colorPrimary: "var(--app-color-primary)",
+  colorText: "var(--app-color-text)",
+  colorTextBase: "var(--app-color-text)",
+  colorTextSecondary: "var(--app-color-text-secondary)",
+  colorTextTertiary: "var(--app-color-text-tertiary)",
+  fontSize: 12,
+  fontFamily: "var(--app-font-family)"
+} as const;
+
 export function AppUiProvider({ children }: PropsWithChildren) {
   const [state, setState] = useState<AppUiState>(DEFAULT_APP_UI_STATE);
 
   useEffect(() => {
     document.documentElement.dataset.themeMode = state.themeMode;
-    document.body.style.background =
-      state.themeMode === "dark" ? "#000" : "#fff";
-    document.body.style.margin = "0";
-    document.body.style.fontSize = "12px";
+    document.body.style.background = "var(--app-color-bg-base)";
   }, [state.themeMode]);
 
   const contextValue = useMemo<AppUiContextValue>(
@@ -94,22 +116,15 @@ export function AppUiProvider({ children }: PropsWithChildren) {
     [state]
   );
 
-  const isDarkMode = state.themeMode === "dark";
-
   return (
     <ConfigProvider
       theme={{
-        algorithm: isDarkMode ? theme.darkAlgorithm : theme.defaultAlgorithm,
-        token: {
-          borderRadius: 18,
-          colorBgBase: isDarkMode ? "#0e1624" : "#f4f6fb",
-          colorBgContainer: isDarkMode ? "#111c2b" : "#ffffff",
-          colorPrimary: isDarkMode ? "#7cc7ff" : "#1f6feb",
-          colorTextBase: isDarkMode ? "#eff5ff" : "#152033",
-          fontSize: 12,
-          fontFamily:
-            '"IBM Plex Sans", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif'
-        }
+        algorithm: THEME_ALGORITHMS[state.themeMode],
+        cssVar: {
+          key: "hold-rein",
+          prefix: "hr"
+        },
+        token: ANTD_THEME_TOKEN
       }}
     >
       <AntdApp>

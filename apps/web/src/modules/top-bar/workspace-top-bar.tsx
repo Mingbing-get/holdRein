@@ -16,14 +16,13 @@ export function WorkspaceTopBar() {
     toggleSidebar,
     toggleThemeMode
   } = useAppUi();
-  const isDarkMode = themeMode === "dark";
 
   return (
     <header
       data-testid="workspace-top-bar"
       style={{
         backdropFilter: "blur(10px)",
-        borderBottom: "1px solid rgba(127, 145, 170, 0.18)",
+        borderBottom: "1px solid var(--app-color-border-secondary)",
         padding: "8px 16px",
         position: "sticky",
         top: 0,
@@ -70,7 +69,7 @@ export function WorkspaceTopBar() {
           </Tooltip>
           <Switch
             aria-label="Toggle theme"
-            checked={isDarkMode}
+            checked={themeMode === "dark"}
             checkedChildren={<MoonOutlined />}
             onChange={toggleThemeMode}
             unCheckedChildren={<SunOutlined />}

@@ -51,7 +51,9 @@ describe("App", () => {
       screen.getByRole("switch", { name: "Toggle theme" })
     ).toBeInTheDocument();
     expect(topBar).toHaveStyle({ padding: "8px 16px" });
-    expect(document.body).toHaveStyle({ background: "#fff" });
+    expect(document.body).toHaveStyle({
+      background: "var(--app-color-bg-base)"
+    });
   });
 
   it("toggles the app theme from light to dark", () => {
@@ -151,7 +153,9 @@ describe("App", () => {
 
     fireEvent.mouseEnter(resizeHandle);
 
-    expect(sidebar).toHaveStyle({ borderRightColor: "#1f6feb" });
+    expect(sidebar.style.borderRight).toBe(
+      "1px solid var(--app-color-primary)"
+    );
 
     fireEvent.mouseDown(resizeHandle, { clientX: 240 });
 

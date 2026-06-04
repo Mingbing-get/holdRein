@@ -1,0 +1,44 @@
+:root {
+  --app-font-family: "IBM Plex Sans", "Segoe UI", -apple-system,
+    BlinkMacSystemFont, sans-serif;
+}
+
+:root[data-theme-mode="light"] {
+  --app-color-bg-base: #f4f6fb;
+  --app-color-bg-container: #ffffff;
+  --app-color-bg-elevated: #ffffff;
+  --app-color-text: #152033;
+  --app-color-text-secondary: rgba(21, 32, 51, 0.65);
+  --app-color-text-tertiary: rgba(21, 32, 51, 0.45);
+  --app-color-primary: #1f6feb;
+  --app-color-primary-hover: #388bfd;
+  --app-color-fill-secondary: rgba(21, 32, 51, 0.06);
+  --app-color-fill-tertiary: rgba(21, 32, 51, 0.04);
+  --app-color-border: rgba(127, 145, 170, 0.28);
+  --app-color-border-secondary: rgba(127, 145, 170, 0.18);
+  --app-color-shadow: rgba(21, 32, 51, 0.12);
+}
+
+:root[data-theme-mode="dark"] {
+  --app-color-bg-base: #0e1624;
+  --app-color-bg-container: #111c2b;
+  --app-color-bg-elevated: #172436;
+  --app-color-text: #eff5ff;
+  --app-color-text-secondary: rgba(239, 245, 255, 0.68);
+  --app-color-text-tertiary: rgba(239, 245, 255, 0.48);
+  --app-color-primary: #7cc7ff;
+  --app-color-primary-hover: #a5d8ff;
+  --app-color-fill-secondary: rgba(239, 245, 255, 0.09);
+  --app-color-fill-tertiary: rgba(239, 245, 255, 0.06);
+  --app-color-border: rgba(142, 165, 196, 0.32);
+  --app-color-border-secondary: rgba(142, 165, 196, 0.22);
+  --app-color-shadow: rgba(0, 0, 0, 0.3);
+}
+
+body {
+  background: var(--app-color-bg-base);
+  color: var(--app-color-text);
+  font-family: var(--app-font-family);
+  font-size: 12px;
+  margin: 0;
+}

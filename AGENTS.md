@@ -9,6 +9,21 @@
 - Use ESLint for code quality, Vite for package builds, and Vitest for tests.
 - Add or update tests for behavior changes before changing implementation code.
 
+## Frontend Theme And Colors
+
+- Configure Ant Design colors through `ConfigProvider` and enable `theme.cssVar`
+  so antd components inherit the active light or dark algorithm.
+- Custom application UI must not branch on theme mode to choose color values.
+  Define light and dark values in `:root[data-theme-mode="light"]` and
+  `:root[data-theme-mode="dark"]`, then consume them through CSS variables.
+- Use the `--app-*` variable namespace for application colors and surfaces.
+  Components should reference variables such as `var(--app-color-text)`,
+  `var(--app-color-bg-container)`, `var(--app-color-primary)`, and
+  `var(--app-color-border-secondary)` instead of hard-coded hex, rgb, or rgba
+  colors.
+- Add new theme colors to the central theme variable file before using them in
+  components, and provide values for both light and dark modes.
+
 ## Dependency And Runtime Boundaries
 
 - Do not pass Node built-in capabilities such as `fs`, `path`, `crypto`, or

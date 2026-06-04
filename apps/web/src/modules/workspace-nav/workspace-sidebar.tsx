@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { PlusOutlined } from "@ant-design/icons";
-import { Button, theme } from "antd";
+import { Button } from "antd";
 
 import { useAppUi } from "../../app/app-ui-context";
 import { workspaceSummaries } from "../../shared/mock/workspaces";
@@ -19,7 +19,6 @@ export function WorkspaceSidebar() {
     setSidebarResizing,
     setSidebarWidth
   } = useAppUi();
-  const { token } = theme.useToken();
   const [isResizeHandleHovered, setIsResizeHandleHovered] = useState(false);
   const isResizeActive = sidebarResizing || isResizeHandleHovered;
 
@@ -52,10 +51,12 @@ export function WorkspaceSidebar() {
       aria-label="Workspace sidebar"
       style={{
         borderRight: `1px solid ${
-          isResizeActive ? token.colorPrimary : "rgba(127, 145, 170, 0.18)"
+          isResizeActive
+            ? "var(--app-color-primary)"
+            : "var(--app-color-border-secondary)"
         }`,
         bottom: 0,
-        color: "#eff5ff",
+        color: "var(--app-color-text)",
         display: "flex",
         flexDirection: "column",
         gap: 12,
@@ -77,8 +78,10 @@ export function WorkspaceSidebar() {
           icon={<PlusOutlined />}
           block
           style={{
-            borderColor: token.colorBorderSecondary,
-            fontSize: 12,
+            borderColor: "var(--app-color-border-secondary)",
+            borderRadius: 6,
+            color: "var(--app-color-text)",
+            fontSize: 12
           }}
           type="text"
         >
