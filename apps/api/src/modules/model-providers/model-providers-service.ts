@@ -8,6 +8,7 @@ import {
 import type { ModelProviderRepository } from "./model-provider-repository";
 
 export interface ModelProviderSummary {
+  baseUrl?: string;
   hasApiKey: boolean;
   id: string;
   modelCount: number;
@@ -47,6 +48,7 @@ export interface ModelProvidersService {
     provider: string,
     input: Omit<ModelSummary, "id" | "name" | "provider"> & { modelId: string }
   ) => ModelSummary;
+  deleteCustomModelProvider: (provider: string) => boolean;
   getConfiguredModelForProvider: (
     provider: string,
     modelId: string
@@ -136,6 +138,13 @@ export function createModelProvidersService(
 
       return mapCustomProviderModel(customProvider.provider, row);
     },
+    deleteCustomModelProvider: (provider) => {
+      if (hasBuiltInProvider(provider)) {
+        return false;
+      }
+
+      return repository.deleteCustomModelProvider(provider);
+    },
     getConfiguredModelForProvider: (provider, modelId) => {
       const model = findModel(provider, modelId, repository);
 
@@ -171,6 +180,7 @@ export function createModelProvidersService(
         source: "builtin" as const
       }));
       const customProviders = repository.listCustomModelProviders().map((provider) => ({
+        baseUrl: provider.baseUrl,
         hasApiKey:
           repository.findProviderApiKeyByProvider(provider.provider) !== undefined,
         id: provider.provider,

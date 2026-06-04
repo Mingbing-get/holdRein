@@ -54,6 +54,7 @@ export interface ModelProviderRepository {
   createCustomProviderModel: (
     input: CreateCustomProviderModelInput
   ) => CustomProviderModelRow;
+  deleteCustomModelProvider: (provider: string) => boolean;
   findCustomModelProviderByProvider: (
     provider: string
   ) => CustomModelProviderRow | undefined;
@@ -116,6 +117,18 @@ export function createInMemoryModelProviderRepository(): ModelProviderRepository
       rows.push(row);
       customModels.set(row.providerId, rows);
       return row;
+    },
+    deleteCustomModelProvider: (provider) => {
+      const existing = customProviders.get(provider);
+
+      if (!existing) {
+        return false;
+      }
+
+      customProviders.delete(provider);
+      customModels.delete(existing.id);
+      apiKeys.delete(provider);
+      return true;
     },
     findCustomModelProviderByProvider: (provider) => customProviders.get(provider),
     findCustomProviderModel: (providerId, modelId) =>
@@ -230,6 +243,31 @@ export function createSqliteModelProviderRepository(
 
       database.db.insert(customProviderModels).values(row).run();
       return row;
+    },
+    deleteCustomModelProvider: (provider) => {
+      const existing = database.db
+        .select()
+        .from(customModelProviders)
+        .where(eq(customModelProviders.provider, provider))
+        .get();
+
+      if (!existing) {
+        return false;
+      }
+
+      database.db
+        .delete(customProviderModels)
+        .where(eq(customProviderModels.providerId, existing.id))
+        .run();
+      database.db
+        .delete(providerApiKeys)
+        .where(eq(providerApiKeys.provider, provider))
+        .run();
+      database.db
+        .delete(customModelProviders)
+        .where(eq(customModelProviders.id, existing.id))
+        .run();
+      return true;
     },
     findCustomModelProviderByProvider: (provider) =>
       database.db

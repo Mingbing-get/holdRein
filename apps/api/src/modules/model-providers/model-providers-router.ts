@@ -122,6 +122,28 @@ export function createModelProvidersRouter(
     }
   );
 
+  router.delete(
+    "/model-providers/custom/:provider",
+    (
+      request: Request<{ provider: string }>,
+      response: Response
+    ): void => {
+      const provider = String(request.params.provider ?? "");
+      const deleted = getService().deleteCustomModelProvider(provider);
+
+      if (!deleted) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.notFound,
+          "Unknown custom provider"
+        );
+        return;
+      }
+
+      sendSuccess(response, { provider });
+    }
+  );
+
   router.get(
     "/model-providers/:provider/models",
     (request: Request, response: Response): void => {

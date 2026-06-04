@@ -68,6 +68,7 @@ describe("model provider routes", () => {
     expect(listResponse.body.data).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
+          baseUrl: "https://example.com/v1",
           id: "acme-ai",
           modelCount: 0,
           source: "custom"
@@ -180,11 +181,56 @@ describe("model provider routes", () => {
     expect(listResponse.body.data).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
+          baseUrl: "https://api.acme.ai/v2",
           id: "acme-enterprise",
           source: "custom"
         })
       ])
     );
+  });
+
+  it("deletes a custom provider and its related data", async () => {
+    const { app, repository } = createTestApp();
+
+    await request(app).post("/api/v1/model-providers/custom").send({
+      baseUrl: "https://example.com/v1",
+      provider: "acme-ai"
+    });
+    await request(app).post("/api/v1/model-providers/acme-ai/models").send({
+      api: "responses",
+      contextWindow: 32000,
+      input: ["text"],
+      maxTokens: 4096,
+      modelId: "acme-chat",
+      reasoning: false
+    });
+    await request(app)
+      .put("/api/v1/model-providers/acme-ai/api-key")
+      .send({ apiKey: "test-acme-key" });
+
+    const deleteResponse = await request(app).delete(
+      "/api/v1/model-providers/custom/acme-ai"
+    );
+
+    expect(deleteResponse.status).toBe(200);
+    expect(deleteResponse.body).toEqual({
+      code: 0,
+      msg: "ok",
+      data: {
+        provider: "acme-ai"
+      }
+    });
+
+    const listResponse = await request(app).get("/api/v1/model-providers");
+
+    expect(listResponse.body.data).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "acme-ai"
+        })
+      ])
+    );
+    expect(repository.findProviderApiKeyByProvider("acme-ai")).toBeUndefined();
   });
 
   it("lists models for a selected provider", async () => {

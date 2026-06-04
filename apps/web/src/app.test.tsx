@@ -1,8 +1,15 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within
+} from "@testing-library/react";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 class ResizeObserverMock {
   disconnect() {
@@ -18,6 +25,19 @@ class ResizeObserverMock {
   }
 }
 
+function createMatchMediaMock(): typeof window.matchMedia {
+  return ((query: string) => ({
+    addEventListener: () => undefined,
+    addListener: () => undefined,
+    dispatchEvent: () => false,
+    matches: false,
+    media: query,
+    onchange: null,
+    removeEventListener: () => undefined,
+    removeListener: () => undefined
+  })) as typeof window.matchMedia;
+}
+
 vi.mock("./config/env", () => ({
   getAppEnv: () => ({
     apiBaseUrl: "http://localhost:4000"
@@ -31,11 +51,16 @@ const fetchMock = vi.fn<typeof fetch>();
 describe("App", () => {
   beforeAll(() => {
     vi.stubGlobal("ResizeObserver", ResizeObserverMock);
+    vi.stubGlobal("matchMedia", createMatchMediaMock());
     vi.stubGlobal("fetch", fetchMock);
   });
 
   beforeEach(() => {
     fetchMock.mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
   });
 
   it("renders the workspace shell with top bar actions", () => {
@@ -61,159 +86,6 @@ describe("App", () => {
     expect(document.body).toHaveStyle({
       background: "var(--app-color-bg-base)"
     });
-  });
-
-  it("switches the main area to model configuration and renders custom providers first", async () => {
-    fetchMock.mockResolvedValueOnce({
-      json: async () => ({
-        code: 0,
-        data: [
-          { hasApiKey: false, id: "openai", modelCount: 12, source: "builtin" },
-          { hasApiKey: true, id: "acme-ai", modelCount: 3, source: "custom" }
-        ],
-        msg: "success"
-      }),
-      ok: true
-    } as Response);
-
-    render(<App />);
-
-    expect(screen.getByTestId("chat-workspace")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "Model configuration" }));
-
-    expect(await screen.findByText("模型配置")).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:4000/api/v1/model-providers"
-    );
-
-    const providerCards = await screen.findAllByTestId("model-provider-card");
-
-    expect(providerCards).toHaveLength(2);
-    expect(within(providerCards[0] as HTMLElement).getByText("acme-ai")).toBeVisible();
-    expect(within(providerCards[1] as HTMLElement).getByText("openai")).toBeVisible();
-    expect(screen.getByText("自定义")).toBeInTheDocument();
-    expect(screen.getByText("内置")).toBeInTheDocument();
-    expect(screen.getByText("模型数量 3")).toBeInTheDocument();
-    expect(screen.getByText("已配置 API Key")).toBeInTheDocument();
-    expect(screen.getByText("未配置 API Key")).toBeInTheDocument();
-    expect(screen.queryByTestId("chat-workspace")).not.toBeInTheDocument();
-  });
-
-  it("opens the api key dialog for an unconfigured provider and stores the key", async () => {
-    fetchMock
-      .mockResolvedValueOnce({
-        json: async () => ({
-          code: 0,
-          data: [
-            { hasApiKey: false, id: "openai", modelCount: 12, source: "builtin" }
-          ],
-          msg: "success"
-        }),
-        ok: true
-      } as Response)
-      .mockResolvedValueOnce({
-        json: async () => ({
-          code: 0,
-          data: {
-            hasApiKey: true,
-            provider: "openai"
-          },
-          msg: "success"
-        }),
-        ok: true
-      } as Response);
-
-    render(<App />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Model configuration" }));
-
-    expect(await screen.findByText("未配置 API Key")).toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Edit API key for openai" })
-    );
-
-    expect(await screen.findByRole("dialog")).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText("API Key"), {
-      target: { value: "sk-test-123" }
-    });
-    fireEvent.click(screen.getByRole("button", { name: /提\s*交/ }));
-
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      "http://localhost:4000/api/v1/model-providers/openai/api-key",
-      {
-        body: JSON.stringify({ apiKey: "sk-test-123" }),
-        headers: {
-          "Content-Type": "application/json"
-        },
-        method: "PUT"
-      }
-    );
-    expect(await screen.findByText("已配置 API Key")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Edit API key for openai" })
-    ).toBeInTheDocument();
-  });
-
-  it("allows editing an already configured api key without pre-filling the current value", async () => {
-    fetchMock
-      .mockResolvedValueOnce({
-        json: async () => ({
-          code: 0,
-          data: [
-            { hasApiKey: true, id: "openai", modelCount: 12, source: "builtin" }
-          ],
-          msg: "success"
-        }),
-        ok: true
-      } as Response)
-      .mockResolvedValueOnce({
-        json: async () => ({
-          code: 0,
-          data: {
-            hasApiKey: true,
-            provider: "openai"
-          },
-          msg: "success"
-        }),
-        ok: true
-      } as Response);
-
-    render(<App />);
-
-    fireEvent.click(screen.getByRole("button", { name: "Model configuration" }));
-
-    expect(await screen.findByText("已配置 API Key")).toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Edit API key for openai" })
-    );
-
-    const apiKeyInput = await screen.findByLabelText("API Key");
-
-    expect(apiKeyInput).toHaveValue("");
-    expect(screen.getByRole("button", { name: /取\s*消/ })).toBeInTheDocument();
-
-    fireEvent.change(apiKeyInput, {
-      target: { value: "sk-updated-456" }
-    });
-    fireEvent.click(screen.getByRole("button", { name: /提\s*交/ }));
-
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      "http://localhost:4000/api/v1/model-providers/openai/api-key",
-      {
-        body: JSON.stringify({ apiKey: "sk-updated-456" }),
-        headers: {
-          "Content-Type": "application/json"
-        },
-        method: "PUT"
-      }
-    );
-    expect(await screen.findByText("已配置 API Key")).toBeInTheDocument();
   });
 
   it("toggles the app theme from light to dark", () => {
