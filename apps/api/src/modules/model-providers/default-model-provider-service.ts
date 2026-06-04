@@ -1,3 +1,4 @@
+import { loadApiEnv } from "../../config/env";
 import { createDatabase, migrateDatabase } from "../../db";
 import {
   createSqliteModelProviderRepository,
@@ -15,6 +16,8 @@ export function getDefaultModelProvidersService(): ModelProvidersService {
   if (service) {
     return service;
   }
+
+  loadApiEnv();
 
   const database = createDatabase(
     process.env.SQLITE_DB_PATH ?? "./data/hold-rein.sqlite"

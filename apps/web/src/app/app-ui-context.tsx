@@ -11,9 +11,11 @@ import type { PropsWithChildren } from "react";
 import "./theme.css";
 
 export type ThemeMode = "light" | "dark";
+export type MainContentView = "chat" | "modelProviders";
 
 export interface AppUiState {
   activeConversationId: string;
+  activeMainView: MainContentView;
   activeWorkspaceId: string;
   sidebarCollapsed: boolean;
   sidebarResizing: boolean;
@@ -22,8 +24,11 @@ export interface AppUiState {
 }
 
 export interface AppUiContextValue {
+  openChatWorkspace: () => void;
+  openModelProviders: () => void;
   state: AppUiState;
   setActiveConversationId: (conversationId: string) => void;
+  setActiveMainView: (view: MainContentView) => void;
   setActiveWorkspaceId: (workspaceId: string) => void;
   setSidebarResizing: (sidebarResizing: boolean) => void;
   setSidebarWidth: (sidebarWidth: number) => void;
@@ -33,6 +38,7 @@ export interface AppUiContextValue {
 
 const DEFAULT_APP_UI_STATE: AppUiState = {
   activeConversationId: "conv-ops-sync",
+  activeMainView: "chat",
   activeWorkspaceId: "workspace-engineering",
   sidebarCollapsed: false,
   sidebarResizing: false,
@@ -65,6 +71,13 @@ const ANTD_THEME_TOKEN = {
   fontFamily: "var(--app-font-family)"
 } as const;
 
+const ANTD_COMPONENT_TOKENS = {
+  Tag: {
+    defaultBg: "var(--app-color-fill-secondary)",
+    defaultColor: "var(--app-color-text-secondary)"
+  }
+} as const;
+
 export function AppUiProvider({ children }: PropsWithChildren) {
   const [state, setState] = useState<AppUiState>(DEFAULT_APP_UI_STATE);
 
@@ -75,11 +88,29 @@ export function AppUiProvider({ children }: PropsWithChildren) {
 
   const contextValue = useMemo<AppUiContextValue>(
     () => ({
+      openChatWorkspace: () => {
+        setState((currentState) => ({
+          ...currentState,
+          activeMainView: "chat"
+        }));
+      },
+      openModelProviders: () => {
+        setState((currentState) => ({
+          ...currentState,
+          activeMainView: "modelProviders"
+        }));
+      },
       state,
       setActiveConversationId: (activeConversationId) => {
         setState((currentState) => ({
           ...currentState,
           activeConversationId
+        }));
+      },
+      setActiveMainView: (activeMainView) => {
+        setState((currentState) => ({
+          ...currentState,
+          activeMainView
         }));
       },
       setActiveWorkspaceId: (activeWorkspaceId) => {
@@ -124,6 +155,7 @@ export function AppUiProvider({ children }: PropsWithChildren) {
           key: "hold-rein",
           prefix: "hr"
         },
+        components: ANTD_COMPONENT_TOKENS,
         token: ANTD_THEME_TOKEN
       }}
     >

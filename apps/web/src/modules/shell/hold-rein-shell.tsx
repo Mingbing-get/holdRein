@@ -3,6 +3,7 @@ import { Layout } from "antd";
 import { useAppUi } from "../../app/app-ui-context";
 import { workspaceSummaries } from "../../shared/mock/workspaces";
 import { ChatWorkspace } from "../chat/chat-workspace";
+import { ModelProvidersView } from "../model-providers";
 import { WorkspaceSidebar } from "../workspace-nav/workspace-sidebar";
 import { WorkspaceTopBar } from "../top-bar/workspace-top-bar";
 
@@ -14,6 +15,7 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
   const {
     state: {
       activeConversationId,
+      activeMainView,
       activeWorkspaceId,
       sidebarCollapsed,
       sidebarResizing,
@@ -58,10 +60,14 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
       >
         <WorkspaceTopBar />
         <Layout.Content style={{ padding: "10px 14px 14px" }}>
-          <ChatWorkspace
-            activeConversationName={activeConversation.name}
-            apiBaseUrl={apiBaseUrl}
-          />
+          {activeMainView === "modelProviders" ? (
+            <ModelProvidersView apiBaseUrl={apiBaseUrl} />
+          ) : (
+            <ChatWorkspace
+              activeConversationName={activeConversation.name}
+              apiBaseUrl={apiBaseUrl}
+            />
+          )}
         </Layout.Content>
       </Layout>
     </Layout>

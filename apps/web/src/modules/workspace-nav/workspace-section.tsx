@@ -16,6 +16,7 @@ export function WorkspaceSection({
 }: WorkspaceSectionProps) {
   const {
     state: { activeConversationId, activeWorkspaceId },
+    openChatWorkspace,
     setActiveConversationId,
     setActiveWorkspaceId
   } = useAppUi();
@@ -52,6 +53,7 @@ export function WorkspaceSection({
             onClick={() => {
               setActiveWorkspaceId(workspace.id);
               setActiveConversationId(conversation.id);
+              openChatWorkspace();
             }}
             onMouseEnter={() => {
               setHoveredConversationId(conversation.id);

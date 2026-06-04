@@ -81,7 +81,9 @@ export function WorkspaceSidebar() {
             borderColor: "var(--app-color-border-secondary)",
             borderRadius: 6,
             color: "var(--app-color-text)",
-            fontSize: 12
+            fontSize: 12,
+            justifyContent: "flex-start",
+            width: "100%"
           }}
           type="text"
         >

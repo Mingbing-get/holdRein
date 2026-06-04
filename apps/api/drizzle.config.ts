@@ -1,4 +1,7 @@
 import { defineConfig } from "drizzle-kit";
+import { loadApiEnv } from "./src/config/env";
+
+loadApiEnv();
 
 export default defineConfig({
   dbCredentials: {
