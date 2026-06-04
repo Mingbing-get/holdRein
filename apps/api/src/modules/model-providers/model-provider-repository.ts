@@ -27,6 +27,19 @@ export interface CreateCustomProviderModelInput {
   reasoning: boolean;
 }
 
+export interface UpdateCustomModelProviderInput {
+  baseUrl: string;
+  provider: string;
+}
+
+export interface UpdateCustomProviderModelInput {
+  api: string;
+  contextWindow: number;
+  input: string[];
+  maxTokens: number;
+  reasoning: boolean;
+}
+
 export interface SaveProviderApiKeyInput {
   apiKeyCiphertext: string;
   apiKeyIv: string;
@@ -44,12 +57,25 @@ export interface ModelProviderRepository {
   findCustomModelProviderByProvider: (
     provider: string
   ) => CustomModelProviderRow | undefined;
+  findCustomProviderModel: (
+    providerId: string,
+    modelId: string
+  ) => CustomProviderModelRow | undefined;
   findProviderApiKeyByProvider: (provider: string) => ProviderApiKeyRow | undefined;
   listCustomModelProviders: () => CustomModelProviderRow[];
   listCustomProviderModelsByProviderId: (
     providerId: string
   ) => CustomProviderModelRow[];
   saveProviderApiKey: (input: SaveProviderApiKeyInput) => ProviderApiKeyRow;
+  updateCustomModelProvider: (
+    provider: string,
+    input: UpdateCustomModelProviderInput
+  ) => CustomModelProviderRow | undefined;
+  updateCustomProviderModel: (
+    providerId: string,
+    modelId: string,
+    input: UpdateCustomProviderModelInput
+  ) => CustomProviderModelRow | undefined;
 }
 
 export function createInMemoryModelProviderRepository(): ModelProviderRepository {
@@ -92,6 +118,8 @@ export function createInMemoryModelProviderRepository(): ModelProviderRepository
       return row;
     },
     findCustomModelProviderByProvider: (provider) => customProviders.get(provider),
+    findCustomProviderModel: (providerId, modelId) =>
+      (customModels.get(providerId) ?? []).find((model) => model.modelId === modelId),
     findProviderApiKeyByProvider: (provider) => apiKeys.get(provider),
     listCustomModelProviders: () => Array.from(customProviders.values()),
     listCustomProviderModelsByProviderId: (providerId) =>
@@ -110,6 +138,59 @@ export function createInMemoryModelProviderRepository(): ModelProviderRepository
       };
 
       apiKeys.set(row.provider, row);
+      return row;
+    },
+    updateCustomModelProvider: (provider, input) => {
+      const existing = customProviders.get(provider);
+
+      if (!existing) {
+        return undefined;
+      }
+
+      const row: CustomModelProviderRow = {
+        ...existing,
+        baseUrl: input.baseUrl,
+        provider: input.provider,
+        updatedAt: new Date().toISOString()
+      };
+
+      customProviders.delete(provider);
+      customProviders.set(row.provider, row);
+
+      const existingApiKey = apiKeys.get(provider);
+
+      if (existingApiKey) {
+        apiKeys.delete(provider);
+        apiKeys.set(row.provider, {
+          ...existingApiKey,
+          provider: row.provider,
+          updatedAt: row.updatedAt
+        });
+      }
+
+      return row;
+    },
+    updateCustomProviderModel: (providerId, modelId, input) => {
+      const rows = customModels.get(providerId) ?? [];
+      const index = rows.findIndex((model) => model.modelId === modelId);
+      const existingRow = rows[index];
+
+      if (index === -1 || !existingRow) {
+        return undefined;
+      }
+
+      const row: CustomProviderModelRow = {
+        ...existingRow,
+        api: input.api,
+        contextWindow: input.contextWindow,
+        input: JSON.stringify(input.input),
+        maxTokens: input.maxTokens,
+        reasoning: input.reasoning,
+        updatedAt: new Date().toISOString()
+      };
+
+      rows[index] = row;
+      customModels.set(providerId, rows);
       return row;
     }
   };
@@ -156,6 +237,13 @@ export function createSqliteModelProviderRepository(
         .from(customModelProviders)
         .where(eq(customModelProviders.provider, provider))
         .get(),
+    findCustomProviderModel: (providerId, modelId) =>
+      database.db
+        .select()
+        .from(customProviderModels)
+        .where(eq(customProviderModels.providerId, providerId))
+        .all()
+        .find((model) => model.modelId === modelId),
     findProviderApiKeyByProvider: (provider) =>
       database.db
         .select()
@@ -196,6 +284,80 @@ export function createSqliteModelProviderRepository(
       } else {
         database.db.insert(providerApiKeys).values(row).run();
       }
+
+      return row;
+    },
+    updateCustomModelProvider: (provider, input) => {
+      const existing = database.db
+        .select()
+        .from(customModelProviders)
+        .where(eq(customModelProviders.provider, provider))
+        .get();
+
+      if (!existing) {
+        return undefined;
+      }
+
+      const row: CustomModelProviderRow = {
+        ...existing,
+        baseUrl: input.baseUrl,
+        provider: input.provider,
+        updatedAt: new Date().toISOString()
+      };
+
+      database.db
+        .update(customModelProviders)
+        .set(row)
+        .where(eq(customModelProviders.id, existing.id))
+        .run();
+
+      const existingApiKey = database.db
+        .select()
+        .from(providerApiKeys)
+        .where(eq(providerApiKeys.provider, provider))
+        .get();
+
+      if (existingApiKey) {
+        database.db
+          .update(providerApiKeys)
+          .set({
+            ...existingApiKey,
+            provider: row.provider,
+            updatedAt: row.updatedAt
+          })
+          .where(eq(providerApiKeys.id, existingApiKey.id))
+          .run();
+      }
+
+      return row;
+    },
+    updateCustomProviderModel: (providerId, modelId, input) => {
+      const existing = database.db
+        .select()
+        .from(customProviderModels)
+        .where(eq(customProviderModels.providerId, providerId))
+        .all()
+        .find((model) => model.modelId === modelId);
+
+      if (!existing) {
+        return undefined;
+      }
+
+      const row: CustomProviderModelRow = {
+        ...existing,
+        api: input.api,
+        contextWindow: input.contextWindow,
+        input: JSON.stringify(input.input),
+        maxTokens: input.maxTokens,
+        reasoning: input.reasoning,
+        updatedAt: new Date().toISOString()
+      };
+
+      database.db
+        .update(customProviderModels)
+        .set(row)
+        .where(eq(customProviderModels.id, existing.id))
+        .run();
 
       return row;
     }

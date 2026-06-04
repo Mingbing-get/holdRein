@@ -1,4 +1,5 @@
-import { getModel, getModels, getProviders, type KnownProvider } from "@earendil-works/pi-ai";
+import { getModels, getProviders, type KnownProvider } from "@earendil-works/pi-ai";
+import type { getModel } from "@earendil-works/pi-ai";
 
 import {
   decryptProviderApiKey,
@@ -11,6 +12,14 @@ export interface ModelProviderSummary {
   id: string;
   modelCount: number;
   source: "builtin" | "custom";
+}
+
+export interface CustomModelProviderSummary {
+  baseUrl: string;
+  createdAt: string;
+  id: string;
+  provider: string;
+  updatedAt: string;
 }
 
 export interface ModelSummary {
@@ -30,6 +39,14 @@ export interface ModelProvidersServiceOptions {
 }
 
 export interface ModelProvidersService {
+  createCustomModelProvider: (
+    provider: string,
+    baseUrl: string
+  ) => CustomModelProviderSummary;
+  createCustomProviderModel: (
+    provider: string,
+    input: Omit<ModelSummary, "id" | "name" | "provider"> & { modelId: string }
+  ) => ModelSummary;
   getConfiguredModelForProvider: (
     provider: string,
     modelId: string
@@ -41,6 +58,16 @@ export interface ModelProvidersService {
   listModelsForProvider: (provider: string) => ModelSummary[];
   listModelProviders: () => ModelProviderSummary[];
   storeProviderApiKey: (provider: string, apiKey: string) => ModelProviderSummary;
+  updateCustomModelProvider: (
+    provider: string,
+    nextProvider: string,
+    baseUrl: string
+  ) => CustomModelProviderSummary | null;
+  updateCustomProviderModel: (
+    provider: string,
+    modelId: string,
+    input: Omit<ModelSummary, "id" | "name" | "provider">
+  ) => ModelSummary | null;
 }
 
 export function createModelProvidersService(
@@ -73,6 +100,42 @@ export function createModelProvidersService(
   };
 
   return {
+    createCustomModelProvider: (provider, baseUrl) => {
+      const normalizedProvider = provider.trim();
+      const normalizedBaseUrl = baseUrl.trim();
+
+      if (hasBuiltInProvider(normalizedProvider)) {
+        throw new Error("Provider conflicts with built-in provider");
+      }
+
+      if (hasCustomProvider(normalizedProvider, repository)) {
+        throw new Error("Provider already exists");
+      }
+
+      return repository.createCustomModelProvider({
+        baseUrl: normalizedBaseUrl,
+        provider: normalizedProvider
+      });
+    },
+    createCustomProviderModel: (provider, input) => {
+      const customProvider = repository.findCustomModelProviderByProvider(provider);
+
+      if (!customProvider) {
+        throw new Error("Unknown custom provider");
+      }
+
+      const row = repository.createCustomProviderModel({
+        api: input.api,
+        contextWindow: input.contextWindow,
+        input: input.input,
+        maxTokens: input.maxTokens,
+        modelId: input.modelId.trim(),
+        providerId: customProvider.id,
+        reasoning: input.reasoning
+      });
+
+      return mapCustomProviderModel(customProvider.provider, row);
+    },
     getConfiguredModelForProvider: (provider, modelId) => {
       const model = findModel(provider, modelId, repository);
 
@@ -140,6 +203,50 @@ export function createModelProvidersService(
         modelCount: listModelsForProvider(provider).length,
         source: hasBuiltInProvider(provider) ? "builtin" : "custom"
       };
+    },
+    updateCustomModelProvider: (provider, nextProvider, baseUrl) => {
+      const normalizedProvider = nextProvider.trim();
+      const normalizedBaseUrl = baseUrl.trim();
+
+      if (
+        normalizedProvider !== provider &&
+        hasBuiltInProvider(normalizedProvider)
+      ) {
+        throw new Error("Provider conflicts with built-in provider");
+      }
+
+      const existingWithNextProvider =
+        normalizedProvider === provider
+          ? undefined
+          : repository.findCustomModelProviderByProvider(normalizedProvider);
+
+      if (existingWithNextProvider) {
+        throw new Error("Provider already exists");
+      }
+
+      return (
+        repository.updateCustomModelProvider(provider, {
+          baseUrl: normalizedBaseUrl,
+          provider: normalizedProvider
+        }) ?? null
+      );
+    },
+    updateCustomProviderModel: (provider, modelId, input) => {
+      const customProvider = repository.findCustomModelProviderByProvider(provider);
+
+      if (!customProvider) {
+        return null;
+      }
+
+      const row = repository.updateCustomProviderModel(customProvider.id, modelId, {
+        api: input.api,
+        contextWindow: input.contextWindow,
+        input: input.input,
+        maxTokens: input.maxTokens,
+        reasoning: input.reasoning
+      });
+
+      return row ? mapCustomProviderModel(customProvider.provider, row) : null;
     }
   };
 }
@@ -170,14 +277,7 @@ function findModel(
   }
 
   return {
-    api: model.api,
-    contextWindow: model.contextWindow,
-    id: model.modelId,
-    input: JSON.parse(model.input) as string[],
-    maxTokens: model.maxTokens,
-    name: model.modelId,
-    provider: customProvider.provider,
-    reasoning: model.reasoning
+    ...mapCustomProviderModel(customProvider.provider, model)
   };
 }
 
@@ -203,6 +303,29 @@ function mapBuiltInModel(
     maxTokens: model.maxTokens,
     name: model.name,
     provider: model.provider,
+    reasoning: model.reasoning
+  };
+}
+
+function mapCustomProviderModel(
+  provider: string,
+  model: {
+    api: string;
+    contextWindow: number;
+    input: string;
+    maxTokens: number;
+    modelId: string;
+    reasoning: boolean;
+  }
+): ModelSummary {
+  return {
+    api: model.api,
+    contextWindow: model.contextWindow,
+    id: model.modelId,
+    input: JSON.parse(model.input) as string[],
+    maxTokens: model.maxTokens,
+    name: model.modelId,
+    provider,
     reasoning: model.reasoning
   };
 }
