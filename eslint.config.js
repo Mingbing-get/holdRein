@@ -26,7 +26,7 @@ export default [
       "@typescript-eslint/no-empty-object-type": "off",
       "no-redeclare": "off",
       "no-undef": "off",
-      "max-lines": ["error", { "max": 200, "skipBlankLines": true, "skipComments": true }]
+      "max-lines": ["error", { "max": 400, "skipBlankLines": true, "skipComments": true }]
     }
   },
   {

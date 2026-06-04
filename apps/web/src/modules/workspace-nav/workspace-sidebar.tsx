@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { FolderOpenOutlined } from "@ant-design/icons";
 import { theme, Typography } from "antd";
 
 import { useAppUi } from "../../app/app-ui-context";
@@ -26,13 +27,24 @@ function WorkspaceSection({
     setActiveConversationId,
     setActiveWorkspaceId
   } = useAppUi();
+  const { token } = theme.useToken();
+  const [hoveredConversationId, setHoveredConversationId] = useState<
+    string | null
+  >(null);
   const isActiveWorkspace = workspace.id === activeWorkspaceId;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {!collapsed ? (
-        <div>
-          <Typography.Text strong style={{ fontSize: 12 }}>
+        <div
+          data-testid={`workspace-group-${workspace.id}`}
+          style={{ alignItems: "center", display: "flex", gap: 6 }}
+        >
+          <FolderOpenOutlined
+            data-testid="workspace-folder-open-icon"
+            style={{ color: token.colorTextSecondary, fontSize: 14 }}
+          />
+          <Typography.Text strong style={{ fontSize: 12, lineHeight: "20px" }}>
             {workspace.name}
           </Typography.Text>
         </div>
@@ -45,16 +57,35 @@ function WorkspaceSection({
         return (
           <Typography.Text
             key={conversation.id}
+            data-testid={`workspace-conversation-${conversation.id}`}
             onClick={() => {
               setActiveWorkspaceId(workspace.id);
               setActiveConversationId(conversation.id);
             }}
+            onMouseEnter={() => {
+              setHoveredConversationId(conversation.id);
+            }}
+            onMouseLeave={() => {
+              setHoveredConversationId((currentConversationId) =>
+                currentConversationId === conversation.id
+                  ? null
+                  : currentConversationId
+              );
+            }}
             ellipsis
-            strong={isActiveConversation}
             style={{
+              background:
+                isActiveConversation || hoveredConversationId === conversation.id
+                  ? token.colorFillSecondary
+                  : undefined,
+              borderRadius: 6,
               cursor: "pointer",
               display: "block",
-              fontSize: 12
+              fontSize: 12,
+              fontWeight: 400,
+              lineHeight: "20px",
+              padding: collapsed ? "4px 6px" : "4px 8px 4px 20px",
+              transition: "background-color 0.16s ease"
             }}
           >
             {collapsed ? conversation.shortLabel : conversation.name}

@@ -95,6 +95,40 @@ describe("App", () => {
     expect(within(sidebar).queryByText("Engineering Hub")).not.toBeInTheDocument();
   });
 
+  it("renders workspace groups and conversations with aligned navigation styling", () => {
+    render(<App />);
+
+    const sidebar = screen.getByLabelText("Workspace sidebar");
+    const engineeringGroup = within(sidebar).getByTestId(
+      "workspace-group-workspace-engineering"
+    );
+    const activeConversation = within(sidebar).getByTestId(
+      "workspace-conversation-conv-ops-sync"
+    );
+    const inactiveConversation = within(sidebar).getByTestId(
+      "workspace-conversation-conv-release-audit"
+    );
+
+    expect(
+      within(engineeringGroup).getByTestId("workspace-folder-open-icon")
+    ).toBeInTheDocument();
+    expect(engineeringGroup.parentElement).toHaveStyle({ gap: "2px" });
+    expect(activeConversation).toHaveStyle({
+      borderRadius: "6px",
+      fontWeight: "400",
+      paddingLeft: "20px"
+    });
+    expect(activeConversation.style.background).not.toBe("");
+
+    fireEvent.mouseEnter(inactiveConversation);
+
+    expect(inactiveConversation).toHaveStyle({
+      borderRadius: "6px",
+      paddingLeft: "20px"
+    });
+    expect(inactiveConversation.style.background).not.toBe("");
+  });
+
   it("resizes the workspace sidebar from its right border within bounds", () => {
     render(<App />);
 
