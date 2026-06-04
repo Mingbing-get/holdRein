@@ -1,3 +1,9 @@
 packages:
-  - "packages/*"
-  - "apps/*"
+  - packages/*
+  - apps/*
+ignoredBuiltDependencies:
+  - '@google/genai'
+  - esbuild
+  - protobufjs
+onlyBuiltDependencies:
+  - better-sqlite3
