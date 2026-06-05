@@ -19,6 +19,9 @@ export interface SuggestionGroup {
   suggestions: SuggestionItem[]
 }
 
+export const CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS =
+  "chat-workspace-suggestion-popup";
+
 interface SuggestionTrigger {
   trigger: SuggestionGroup['trigger']
   query: string
@@ -175,100 +178,105 @@ export default function Sender({ suggestionGroups, onMessageChange, ...senderPro
     }
   }, [suggestionGroups, getItemsByQuery])
 
-  return <Flex vertical>
-    <Suggestion<SuggestionTrigger>
-      getPopupContainer={(triggerNode) =>
-        triggerNode.parentElement ?? document.body
-      }
-      items={(info) => getItemsByQuery(info)}
-      onOpenChange={setSuggestionOpen}
-      onSelect={(value) => {
-        const cursorIndex = getCurrentCursorIndex();
-        const activeTrigger = currentTrigger.current;
-        const triggerText = activeTrigger
-          ? `${activeTrigger.trigger}${activeTrigger.query}`
-          : "";
-        const nextMessage = triggerText
-          ? replaceTriggerAtCursor(draftMessage, cursorIndex, triggerText, value)
-          : insertTextAtCursor(draftMessage, cursorIndex, value);
-        const nextCursorIndex =
-          triggerText && cursorIndex != null
-            ? cursorIndex - triggerText.length + value.length
-            : clampCursorIndex(draftMessage, cursorIndex) + value.length;
-
-        handleChangeMessage(nextMessage);
-        focusCursorAt(nextCursorIndex);
-        setSuggestionOpen(false);
-        currentTrigger.current = null;
-      }}
-      open={suggestionOpen}
-      styles={{
-        popup: {
-          border: "1px solid var(--app-color-border-secondary)",
-          borderRadius: 16,
-          boxShadow:
-            "0 18px 36px color-mix(in srgb, var(--app-color-shadow) 32%, transparent)"
-        },
-        root: {
-          width: "100%"
+  return (
+    <Flex vertical>
+      <Suggestion<SuggestionTrigger>
+        classNames={{
+          popup: CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS
+        }}
+        getPopupContainer={(triggerNode) =>
+          triggerNode.parentElement ?? document.body
         }
-      }}
-    >
-      {({ onTrigger, onKeyDown }) => (
-        (() => {
-          return (
-            <ASender
-              {...senderProps}
-              classNames={{
-                input: "chat-workspace-sender-input"
-              }}
-              onChange={(nextValue, e) => {
-                const cursorIndex =
-                  getCurrentCursorCharacterIndex(e?.currentTarget ?? null) ??
-                  getCurrentCursorIndex();
-                handleChangeMessage(nextValue);
+        items={(info) => getItemsByQuery(info)}
+        onOpenChange={setSuggestionOpen}
+        onSelect={(value) => {
+          const cursorIndex = getCurrentCursorIndex();
+          const activeTrigger = currentTrigger.current;
+          const triggerText = activeTrigger
+            ? `${activeTrigger.trigger}${activeTrigger.query}`
+            : "";
+          const nextMessage = triggerText
+            ? replaceTriggerAtCursor(draftMessage, cursorIndex, triggerText, value)
+            : insertTextAtCursor(draftMessage, cursorIndex, value);
+          const nextCursorIndex =
+            triggerText && cursorIndex != null
+              ? cursorIndex - triggerText.length + value.length
+              : clampCursorIndex(draftMessage, cursorIndex) + value.length;
 
-                const trigger = getTriggerQuery(nextValue, cursorIndex)
+          handleChangeMessage(nextMessage);
+          focusCursorAt(nextCursorIndex);
+          setSuggestionOpen(false);
+          currentTrigger.current = null;
+        }}
+        open={suggestionOpen}
+        styles={{
+          popup: {
+            border: "1px solid var(--app-color-border-secondary)",
+            borderRadius: 16,
+            boxShadow:
+              "0 18px 36px color-mix(in srgb, var(--app-color-shadow) 32%, transparent)"
+          },
+          root: {
+            width: "100%"
+          }
+        }}
+      >
+        {({ onTrigger, onKeyDown }) => (
+          (() => {
+            return (
+              <ASender
+                {...senderProps}
+                classNames={{
+                  input: "chat-workspace-sender-input"
+                }}
+                onChange={(nextValue, e) => {
+                  const cursorIndex =
+                    getCurrentCursorCharacterIndex(e?.currentTarget ?? null) ??
+                    getCurrentCursorIndex();
+                  handleChangeMessage(nextValue);
 
-                if (trigger) {
-                  currentTrigger.current = trigger
-                  setSuggestionOpen(true);
-                  onTrigger(trigger);
+                  const trigger = getTriggerQuery(nextValue, cursorIndex)
 
-                  return;
-                }
+                  if (trigger) {
+                    currentTrigger.current = trigger
+                    setSuggestionOpen(true);
+                    onTrigger(trigger);
 
-                setSuggestionOpen(false);
-              }}
-              styles={{
-                content: {
-                  background: "var(--app-color-bg-elevated)",
-                  borderRadius: 20
-                },
-                input: {
-                  color: "var(--app-color-text)"
-                },
-                root: {
-                  background: "var(--app-color-bg-elevated)",
-                  border: "1px solid var(--app-color-border-secondary)",
-                  borderRadius: 20,
-                  boxShadow:
-                    "0 14px 32px color-mix(in srgb, var(--app-color-shadow) 20%, transparent)"
-                }
-              }}
-              ref={senderRef}
-              value={draftMessage}
-              onKeyDown={e => {
-                if (e.code === 'Space') {
-                  handleAppendSpace(e)
-                  return;
-                }
-                onKeyDown(e)
-              }}
-            />
-          );
-        })()
-      )}
-    </Suggestion>
-  </Flex>
+                    return;
+                  }
+
+                  setSuggestionOpen(false);
+                }}
+                styles={{
+                  content: {
+                    background: "var(--app-color-bg-elevated)",
+                    borderRadius: 20
+                  },
+                  input: {
+                    color: "var(--app-color-text)"
+                  },
+                  root: {
+                    background: "var(--app-color-bg-elevated)",
+                    border: "1px solid var(--app-color-border-secondary)",
+                    borderRadius: 20,
+                    boxShadow:
+                      "0 14px 32px color-mix(in srgb, var(--app-color-shadow) 20%, transparent)"
+                  }
+                }}
+                ref={senderRef}
+                value={draftMessage}
+                onKeyDown={e => {
+                  if (e.code === 'Space') {
+                    handleAppendSpace(e)
+                    return;
+                  }
+                  onKeyDown(e)
+                }}
+              />
+            );
+          })()
+        )}
+      </Suggestion>
+    </Flex>
+  )
 }

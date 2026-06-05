@@ -9,6 +9,7 @@
   --app-color-bg-elevated: #ffffff;
   --app-color-input-placeholder: rgba(21, 32, 51, 0.45);
   --app-color-text: #152033;
+  --app-color-text-on-emphasis: #ffffff;
   --app-color-text-secondary: rgba(21, 32, 51, 0.65);
   --app-color-text-tertiary: rgba(21, 32, 51, 0.45);
   --app-color-primary: #1f6feb;
@@ -28,6 +29,7 @@
   --app-color-bg-elevated: #172436;
   --app-color-input-placeholder: rgba(239, 245, 255, 0.56);
   --app-color-text: #eff5ff;
+  --app-color-text-on-emphasis: #ffffff;
   --app-color-text-secondary: rgba(239, 245, 255, 0.68);
   --app-color-text-tertiary: rgba(239, 245, 255, 0.48);
   --app-color-primary: #7cc7ff;
@@ -52,4 +54,12 @@ body {
 .ant-input::placeholder,
 .ant-input-affix-wrapper input::placeholder {
   color: var(--app-color-input-placeholder);
+}
+
+.chat-workspace-suggestion-popup .ant-cascader-menu-item-active {
+  color: var(--app-color-text-on-emphasis) !important;
+}
+
+.chat-workspace-suggestion-popup .ant-cascader-menu-item-active * {
+  color: inherit;
 }

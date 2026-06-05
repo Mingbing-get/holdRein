@@ -1,8 +1,11 @@
 // @vitest-environment jsdom
 
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import {
+  CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS,
   getCurrentCursorCharacterIndex,
   insertTextAtCursor,
   replaceTriggerAtCursor
@@ -39,5 +42,22 @@ describe("replaceTriggerAtCursor", () => {
     expect(
       replaceTriggerAtCursor("hello world", 5, "/re", "/release checklist")
     ).toBe("hello/release checklist world");
+  });
+});
+
+describe("sender suggestion theme styles", () => {
+  it("scopes the selected suggestion text override to the sender popup", () => {
+    const themeCss = readFileSync(
+      `${process.cwd()}/apps/web/src/app/theme.css`,
+      "utf8"
+    );
+
+    expect(themeCss.match(/--app-color-text-on-emphasis:/g)).toHaveLength(2);
+    expect(themeCss).toContain(
+      `.${CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS} .ant-cascader-menu-item-active`
+    );
+    expect(themeCss).toContain(
+      "color: var(--app-color-text-on-emphasis) !important;"
+    );
   });
 });
