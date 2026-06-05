@@ -94,6 +94,7 @@ export function ChatWorkspace({
         suggestionGroups={groups}
         onMessageChange={setDraftMessage}
         autoSize={{ minRows: 1, maxRows: 4 }}
+        onSubmit={async () => new Promise(resolve => setTimeout(resolve, 2000))}
       />
     </Flex>
   );

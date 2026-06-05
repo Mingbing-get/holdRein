@@ -101,14 +101,16 @@ export function replaceTriggerAtCursor(
   return insertTextAtCursor(value, safeCursorIndex, replacementText);
 }
 
-interface Props extends Pick<SenderProps, 'autoSize' | 'className' | 'classNames' | 'disabled' | 'loading' | 'onSubmit' | 'placeholder'> {
+interface Props extends Pick<SenderProps, 'autoSize' | 'className' | 'classNames' | 'disabled' | 'placeholder' | 'footer'> {
   suggestionGroups?: SuggestionGroup[]
+  onSubmit?: (...args: Parameters<Required<SenderProps>['onSubmit']>) => Promise<void> | void
   onMessageChange?: (message: string) => void
 }
 
-export default function Sender({ suggestionGroups, onMessageChange, ...senderProps }: Props) {
+export default function Sender({ suggestionGroups, onMessageChange, onSubmit, ...senderProps }: Props) {
   const [draftMessage, setDraftMessage] = useState("");
   const [suggestionOpen, setSuggestionOpen] = useState(false);
+  const [loading, setLoading] = useState(false)
   const currentTrigger = useRef<SuggestionTrigger>(null)
   const senderRef = useRef<SenderInstance>(null);
 
@@ -195,6 +197,18 @@ export default function Sender({ suggestionGroups, onMessageChange, ...senderPro
     }
   }, [suggestionGroups, getItemsByQuery])
 
+  const handleSubmit = useCallback(async (...args: Parameters<Required<SenderProps>['onSubmit']>) => {
+    setLoading(true)
+
+    try {
+      await onSubmit?.(...args)
+
+      setDraftMessage('')
+    } finally {
+      setLoading(false)
+    }
+  }, [onSubmit])
+
   return (
     <Flex vertical>
       <Suggestion<SuggestionTrigger>
@@ -243,6 +257,7 @@ export default function Sender({ suggestionGroups, onMessageChange, ...senderPro
             return (
               <ASender
                 {...senderProps}
+                loading={loading}
                 classNames={{
                   input: "chat-workspace-sender-input"
                 }}
@@ -290,6 +305,7 @@ export default function Sender({ suggestionGroups, onMessageChange, ...senderPro
                   }
                   onKeyDown(e)
                 }}
+                onSubmit={handleSubmit}
               />
             );
           })()
