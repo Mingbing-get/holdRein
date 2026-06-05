@@ -1,5 +1,5 @@
-import { FolderOpenOutlined } from "@ant-design/icons";
-import { Button, Divider, Select } from "antd";
+import { DownOutlined, FolderOpenOutlined } from "@ant-design/icons";
+import { Button, ConfigProvider, Divider, Select } from "antd";
 import { useCallback, useState } from "react";
 
 import { FileSelector } from "../../components/fileSelector";
@@ -24,6 +24,19 @@ const initialWorkspaceOptions: WorkspaceOption[] = [
   }
 ];
 const defaultWorkspaceValue = initialWorkspaceOptions[0]?.value ?? "";
+
+const workspaceSelectTheme = {
+  components: {
+    Select: {
+      colorText: "var(--app-color-text)",
+      colorTextPlaceholder: "var(--app-color-text)",
+      optionActiveBg: "var(--app-color-fill-secondary)",
+      optionSelectedBg:
+        "color-mix(in srgb, var(--app-color-primary) 16%, var(--app-color-bg-elevated))",
+      optionSelectedColor: "var(--app-color-text)"
+    }
+  }
+} as const;
 
 export function getWorkspaceLabelFromPath(path: string): string {
   const normalizedPath = path.replace(/\/+$/, "");
@@ -60,39 +73,42 @@ export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
 
   return (
     <>
-      <Select
-        aria-label="工作空间"
-        options={options}
-        popupMatchSelectWidth={220}
-        popupRender={(originNode) => (
-          <>
-            {originNode}
-            <Divider style={{ margin: "6px 0" }} />
-            <Button
-              aria-label="选择工作空间"
-              icon={<FolderOpenOutlined />}
-              onClick={() => {
-                setSelectOpen(false);
-                setSelectorOpen(true);
-              }}
-              style={{
-                justifyContent: "flex-start",
-                width: "100%"
-              }}
-              type="text"
-            >
-              选择工作空间
-            </Button>
-          </>
-        )}
-        open={selectOpen}
-        size="small"
-        style={{ width: "fit-content" }}
-        value={selectedWorkspacePath}
-        variant="borderless"
-        onChange={setSelectedWorkspacePath}
-        onOpenChange={setSelectOpen}
-      />
+      <ConfigProvider theme={workspaceSelectTheme}>
+        <Select
+          aria-label="工作空间"
+          options={options}
+          popupMatchSelectWidth={220}
+          popupRender={(originNode) => (
+            <>
+              {originNode}
+              <Divider style={{ margin: "6px 0" }} />
+              <Button
+                aria-label="选择工作空间"
+                icon={<FolderOpenOutlined />}
+                onClick={() => {
+                  setSelectOpen(false);
+                  setSelectorOpen(true);
+                }}
+                style={{
+                  justifyContent: "flex-start",
+                  width: "100%"
+                }}
+                type="text"
+              >
+                选择工作空间
+              </Button>
+            </>
+          )}
+          open={selectOpen}
+          size="small"
+          style={{ width: "fit-content" }}
+          suffixIcon={<DownOutlined style={{ color: "var(--app-color-text)" }} />}
+          value={selectedWorkspacePath}
+          variant="borderless"
+          onChange={setSelectedWorkspacePath}
+          onOpenChange={setSelectOpen}
+        />
+      </ConfigProvider>
       <FileSelector
         apiBaseUrl={apiBaseUrl}
         open={selectorOpen}

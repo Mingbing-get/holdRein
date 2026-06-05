@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
+import { existsSync, readFileSync } from "node:fs";
 import {
   cleanup,
   fireEvent,
@@ -139,5 +140,44 @@ describe("WorkspaceSelector", () => {
     expect(
       await screen.findByRole("option", { hidden: true, name: "ai-project" })
     ).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("uses theme variables for selected option and suffix icon colors", () => {
+    const workspaceSelectorPathFromPackage =
+      `${process.cwd()}/src/modules/chat/workspace-selector.tsx`;
+    const workspaceSelectorPath = existsSync(workspaceSelectorPathFromPackage)
+      ? workspaceSelectorPathFromPackage
+      : `${process.cwd()}/apps/web/src/modules/chat/workspace-selector.tsx`;
+    const workspaceSelectorSource = readFileSync(
+      workspaceSelectorPath,
+      "utf8"
+    );
+
+    expect(workspaceSelectorSource).toContain("optionSelectedBg");
+    expect(workspaceSelectorSource).toContain(
+      "color-mix(in srgb, var(--app-color-primary) 16%, var(--app-color-bg-elevated))"
+    );
+    expect(workspaceSelectorSource).toContain(
+      'style={{ color: "var(--app-color-text)" }}'
+    );
+  });
+
+  it("keeps the selected value readable while the selector is focused", () => {
+    const workspaceSelectorPathFromPackage =
+      `${process.cwd()}/src/modules/chat/workspace-selector.tsx`;
+    const workspaceSelectorPath = existsSync(workspaceSelectorPathFromPackage)
+      ? workspaceSelectorPathFromPackage
+      : `${process.cwd()}/apps/web/src/modules/chat/workspace-selector.tsx`;
+    const workspaceSelectorSource = readFileSync(
+      workspaceSelectorPath,
+      "utf8"
+    );
+
+    expect(workspaceSelectorSource).toContain(
+      'colorText: "var(--app-color-text)"'
+    );
+    expect(workspaceSelectorSource).toContain(
+      'colorTextPlaceholder: "var(--app-color-text)"'
+    );
   });
 });
