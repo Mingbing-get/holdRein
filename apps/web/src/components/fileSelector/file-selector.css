@@ -40,6 +40,10 @@
   color: var(--app-color-text-tertiary);
 }
 
+.file-selector__select-folder-button--selected {
+  color: var(--app-color-primary);
+}
+
 .file-selector__entry-main {
   justify-content: flex-start;
   min-width: 0;

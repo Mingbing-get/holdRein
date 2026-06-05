@@ -96,6 +96,12 @@ export function FileSelector(props: FileSelectorProps) {
       open={open}
       title="选择文件"
       width={680}
+      styles={{
+        body: {
+          maxHeight: '60vh',
+          overflowY: 'auto'
+        }
+      }}
       {...(props.onCancel ? { onCancel: props.onCancel } : {})}
     >
       <FileSelectorBrowser
@@ -257,6 +263,12 @@ function FileSelectorEntry({
         <Tooltip title="选择文件夹">
           <Button
             aria-label={`${entry.name} folder selectable`}
+            className={[
+              "file-selector__select-folder-button",
+              isSelected
+                ? "file-selector__select-folder-button--selected"
+                : undefined
+            ].filter(Boolean).join(" ")}
             icon={<CheckOutlined />}
             onClick={() => {
               onToggleSelection(entry);

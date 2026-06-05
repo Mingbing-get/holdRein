@@ -3,6 +3,7 @@ import { Flex } from "antd";
 import { Bubble, Think } from "@ant-design/x";
 
 import Sender, { type SuggestionGroup } from "./sender";
+import { WorkspaceSelector } from "./workspace-selector";
 
 interface ChatWorkspaceProps {
   activeConversationName: string;
@@ -94,6 +95,7 @@ export function ChatWorkspace({
         suggestionGroups={groups}
         onMessageChange={setDraftMessage}
         autoSize={{ minRows: 1, maxRows: 4 }}
+        footer={<WorkspaceSelector apiBaseUrl={apiBaseUrl} />}
         onSubmit={async () => new Promise(resolve => setTimeout(resolve, 2000))}
       />
     </Flex>

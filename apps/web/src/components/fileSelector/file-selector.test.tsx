@@ -211,6 +211,47 @@ describe("FileSelector", () => {
     expect(within(row).getByRole("button", { name: "src folder open" })).toBeEnabled();
   });
 
+  it("marks a selected folder action with the theme primary color class", async () => {
+    fetchMock.mockResolvedValueOnce({
+      json: async () => ({
+        code: 0,
+        data: {
+          parentPath: "/workspace",
+          entries: [
+            {
+              extension: "",
+              kind: "folder",
+              name: "src",
+              path: "/workspace/src"
+            }
+          ]
+        },
+        msg: "ok"
+      }),
+      ok: true
+    } as Response);
+
+    render(
+      <FileSelector
+        apiBaseUrl=""
+        open
+        selectableTypes={["folder"]}
+        onConfirm={vi.fn()}
+      />
+    );
+
+    const row = await screen.findByTestId("file-selector-entry-src");
+    const selectFolderButton = within(row).getByRole("button", {
+      name: "src folder selectable"
+    });
+
+    fireEvent.click(selectFolderButton);
+
+    expect(selectFolderButton).toHaveClass(
+      "file-selector__select-folder-button--selected"
+    );
+  });
+
   it("confirms multiple selected paths when multiple is true", async () => {
     const onConfirm = vi.fn();
     fetchMock.mockResolvedValueOnce({
