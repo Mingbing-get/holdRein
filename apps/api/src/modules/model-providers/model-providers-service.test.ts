@@ -24,6 +24,7 @@ describe("model providers service", () => {
       input: ["text"],
       maxTokens: 4096,
       modelId: "acme-chat",
+      name: "Acme Chat",
       reasoning: false
     });
     service.storeProviderApiKey("acme-ai", "test-acme-key");

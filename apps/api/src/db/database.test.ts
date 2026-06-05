@@ -20,7 +20,7 @@ describe("database", () => {
 
     migrateDatabase({ exec } as { exec: (sql: string) => void });
 
-    expect(exec).toHaveBeenCalledTimes(6);
+    expect(exec).toHaveBeenCalledTimes(7);
     expect(exec).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_model_providers")
@@ -32,6 +32,10 @@ describe("database", () => {
     expect(exec).toHaveBeenNthCalledWith(
       5,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_provider_models")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      6,
+      expect.stringContaining("ALTER TABLE custom_provider_models ADD COLUMN name")
     );
   });
 

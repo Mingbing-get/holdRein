@@ -102,7 +102,7 @@ export function ModelProviderCard({
             type="text"
           />
         </Flex>
-        <Flex align="center" gap={8} justify="space-between">
+        <Flex align="center" gap={6}>
           <Typography.Text>
             {provider.hasApiKey ? "已配置 API Key" : "未配置 API Key"}
           </Typography.Text>

@@ -46,7 +46,7 @@ export interface ModelProvidersService {
   ) => CustomModelProviderSummary;
   createCustomProviderModel: (
     provider: string,
-    input: Omit<ModelSummary, "id" | "name" | "provider"> & { modelId: string }
+    input: Omit<ModelSummary, "id" | "provider"> & { modelId: string }
   ) => ModelSummary;
   deleteCustomModelProvider: (provider: string) => boolean;
   deleteCustomProviderModel: (provider: string, modelId: string) => boolean;
@@ -69,7 +69,7 @@ export interface ModelProvidersService {
   updateCustomProviderModel: (
     provider: string,
     modelId: string,
-    input: Omit<ModelSummary, "id" | "name" | "provider">
+    input: Omit<ModelSummary, "id" | "provider">
   ) => ModelSummary | null;
 }
 
@@ -96,7 +96,7 @@ export function createModelProvidersService(
         id: model.modelId,
         input: JSON.parse(model.input) as string[],
         maxTokens: model.maxTokens,
-        name: model.modelId,
+        name: model.name && model.name.trim().length > 0 ? model.name : model.modelId,
         provider: customProvider.provider,
         reasoning: model.reasoning
       }));
@@ -133,6 +133,7 @@ export function createModelProvidersService(
         input: input.input,
         maxTokens: input.maxTokens,
         modelId: input.modelId.trim(),
+        name: normalizeCustomModelName(input.name, input.modelId),
         providerId: customProvider.id,
         reasoning: input.reasoning
       });
@@ -263,6 +264,7 @@ export function createModelProvidersService(
         contextWindow: input.contextWindow,
         input: input.input,
         maxTokens: input.maxTokens,
+        name: normalizeCustomModelName(input.name, modelId),
         reasoning: input.reasoning
       });
 
@@ -335,6 +337,7 @@ function mapCustomProviderModel(
     input: string;
     maxTokens: number;
     modelId: string;
+    name?: string;
     reasoning: boolean;
   }
 ): ModelSummary {
@@ -344,8 +347,14 @@ function mapCustomProviderModel(
     id: model.modelId,
     input: JSON.parse(model.input) as string[],
     maxTokens: model.maxTokens,
-    name: model.modelId,
+    name: model.name && model.name.trim().length > 0 ? model.name : model.modelId,
     provider,
     reasoning: model.reasoning
   };
+}
+
+function normalizeCustomModelName(name: string, modelId: string): string {
+  const normalizedName = name.trim();
+
+  return normalizedName.length > 0 ? normalizedName : modelId.trim();
 }

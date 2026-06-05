@@ -44,6 +44,7 @@ export const customProviderModels = sqliteTable(
     input: text("input").notNull(),
     maxTokens: integer("max_tokens").notNull(),
     modelId: text("model_id").notNull(),
+    name: text("name").notNull(),
     providerId: text("provider_id")
       .notNull()
       .references(() => customModelProviders.id),

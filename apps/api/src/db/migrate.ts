@@ -35,6 +35,7 @@ const CREATE_CUSTOM_PROVIDER_MODELS_TABLE_SQL = `
     id TEXT PRIMARY KEY NOT NULL,
     provider_id TEXT NOT NULL,
     model_id TEXT NOT NULL,
+    name TEXT NOT NULL,
     api TEXT NOT NULL,
     reasoning INTEGER NOT NULL CHECK(reasoning IN (0, 1)),
     input TEXT NOT NULL,
@@ -51,11 +52,22 @@ const CREATE_CUSTOM_PROVIDER_MODELS_PROVIDER_MODEL_INDEX_SQL = `
   ON custom_provider_models (provider_id, model_id)
 `;
 
+const ADD_CUSTOM_PROVIDER_MODELS_NAME_COLUMN_SQL = `
+  ALTER TABLE custom_provider_models ADD COLUMN name TEXT NOT NULL DEFAULT ''
+`;
+
 export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
   sqlite.exec(CREATE_CUSTOM_MODEL_PROVIDERS_TABLE_SQL);
   sqlite.exec(CREATE_CUSTOM_MODEL_PROVIDERS_PROVIDER_INDEX_SQL);
   sqlite.exec(CREATE_PROVIDER_API_KEYS_TABLE_SQL);
   sqlite.exec(CREATE_PROVIDER_API_KEYS_PROVIDER_INDEX_SQL);
   sqlite.exec(CREATE_CUSTOM_PROVIDER_MODELS_TABLE_SQL);
+  try {
+    sqlite.exec(ADD_CUSTOM_PROVIDER_MODELS_NAME_COLUMN_SQL);
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("duplicate column name")) {
+      throw error;
+    }
+  }
   sqlite.exec(CREATE_CUSTOM_PROVIDER_MODELS_PROVIDER_MODEL_INDEX_SQL);
 }

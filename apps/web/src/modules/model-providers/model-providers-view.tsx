@@ -296,6 +296,7 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
                   input: values.input,
                   maxTokens: values.maxTokens,
                   modelId: values.modelId,
+                  name: values.name,
                   reasoning: values.reasoning
                 }
               : {
@@ -303,6 +304,7 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
                   contextWindow: values.contextWindow,
                   input: values.input,
                   maxTokens: values.maxTokens,
+                  name: values.name,
                   reasoning: values.reasoning
                 }
           ),

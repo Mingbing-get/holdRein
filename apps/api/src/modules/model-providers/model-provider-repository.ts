@@ -23,6 +23,7 @@ export interface CreateCustomProviderModelInput {
   input: string[];
   maxTokens: number;
   modelId: string;
+  name: string;
   providerId: string;
   reasoning: boolean;
 }
@@ -37,6 +38,7 @@ export interface UpdateCustomProviderModelInput {
   contextWindow: number;
   input: string[];
   maxTokens: number;
+  name: string;
   reasoning: boolean;
 }
 
@@ -109,6 +111,7 @@ export function createInMemoryModelProviderRepository(): ModelProviderRepository
         input: JSON.stringify(input.input),
         maxTokens: input.maxTokens,
         modelId: input.modelId,
+        name: input.name,
         providerId: input.providerId,
         reasoning: input.reasoning,
         updatedAt: now
@@ -210,6 +213,7 @@ export function createInMemoryModelProviderRepository(): ModelProviderRepository
         contextWindow: input.contextWindow,
         input: JSON.stringify(input.input),
         maxTokens: input.maxTokens,
+        name: input.name,
         reasoning: input.reasoning,
         updatedAt: new Date().toISOString()
       };
@@ -248,6 +252,7 @@ export function createSqliteModelProviderRepository(
         input: JSON.stringify(input.input),
         maxTokens: input.maxTokens,
         modelId: input.modelId,
+        name: input.name,
         providerId: input.providerId,
         reasoning: input.reasoning,
         updatedAt: now
@@ -418,6 +423,7 @@ export function createSqliteModelProviderRepository(
         contextWindow: input.contextWindow,
         input: JSON.stringify(input.input),
         maxTokens: input.maxTokens,
+        name: input.name,
         reasoning: input.reasoning,
         updatedAt: new Date().toISOString()
       };

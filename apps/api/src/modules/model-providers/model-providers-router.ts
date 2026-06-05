@@ -24,6 +24,7 @@ interface CustomProviderModelBody {
   input?: string[];
   maxTokens?: number;
   modelId?: string;
+  name?: string;
   reasoning?: boolean;
 }
 
@@ -169,7 +170,7 @@ export function createModelProvidersRouter(
         sendError(
           response,
           RESPONSE_CODE_DEFINITIONS.badRequest,
-          "api, modelId, input, contextWindow, maxTokens and reasoning are required"
+          "api, modelId, name, input, contextWindow, maxTokens and reasoning are required"
         );
         return;
       }
@@ -183,6 +184,7 @@ export function createModelProvidersRouter(
             input: request.body.input,
             maxTokens: request.body.maxTokens,
             modelId: request.body.modelId,
+            name: request.body.name,
             reasoning: request.body.reasoning
           })
         );
@@ -213,7 +215,7 @@ export function createModelProvidersRouter(
         sendError(
           response,
           RESPONSE_CODE_DEFINITIONS.badRequest,
-          "api, input, contextWindow, maxTokens and reasoning are required"
+          "api, name, input, contextWindow, maxTokens and reasoning are required"
         );
         return;
       }
@@ -226,6 +228,7 @@ export function createModelProvidersRouter(
           contextWindow: request.body.contextWindow,
           input: request.body.input,
           maxTokens: request.body.maxTokens,
+          name: request.body.name,
           reasoning: request.body.reasoning
         }
       );
@@ -321,6 +324,7 @@ function isValidCreateModelBody(
   return (
     typeof body.api === "string" &&
     typeof body.modelId === "string" &&
+    typeof body.name === "string" &&
     Array.isArray(body.input) &&
     body.input.every((item) => typeof item === "string") &&
     typeof body.contextWindow === "number" &&
@@ -334,6 +338,7 @@ function isValidUpdateModelBody(
 ): body is Omit<Required<CustomProviderModelBody>, "modelId"> {
   return (
     typeof body.api === "string" &&
+    typeof body.name === "string" &&
     Array.isArray(body.input) &&
     body.input.every((item) => typeof item === "string") &&
     typeof body.contextWindow === "number" &&

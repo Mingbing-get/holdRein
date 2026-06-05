@@ -93,6 +93,7 @@ describe("model provider routes", () => {
         input: ["text"],
         maxTokens: 4096,
         modelId: "acme-chat",
+        name: "Acme Chat",
         reasoning: false
       });
 
@@ -113,6 +114,7 @@ describe("model provider routes", () => {
         contextWindow: 64000,
         input: ["text", "image"],
         maxTokens: 8192,
+        name: "Acme Chat Pro",
         reasoning: true
       });
 
@@ -126,7 +128,7 @@ describe("model provider routes", () => {
         id: "acme-chat",
         input: ["text", "image"],
         maxTokens: 8192,
-        name: "acme-chat",
+        name: "Acme Chat Pro",
         provider: "acme-ai",
         reasoning: true
       }
@@ -144,7 +146,7 @@ describe("model provider routes", () => {
         id: "acme-chat",
         input: ["text", "image"],
         maxTokens: 8192,
-        name: "acme-chat",
+        name: "Acme Chat Pro",
         provider: "acme-ai",
         reasoning: true
       }
@@ -164,6 +166,7 @@ describe("model provider routes", () => {
       input: ["text"],
       maxTokens: 4096,
       modelId: "acme-chat",
+      name: "Acme Chat",
       reasoning: false
     });
 
@@ -240,6 +243,7 @@ describe("model provider routes", () => {
       input: ["text"],
       maxTokens: 4096,
       modelId: "acme-chat",
+      name: "Acme Chat",
       reasoning: false
     });
     await request(app)

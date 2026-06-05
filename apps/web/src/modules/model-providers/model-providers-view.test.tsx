@@ -457,7 +457,7 @@ describe("ModelProvidersView", () => {
           code: 0,
           data: [
             {
-              api: "responses",
+              api: "openai-responses",
               contextWindow: 200000,
               id: "gpt-5",
               input: ["text", "image"],
@@ -467,7 +467,7 @@ describe("ModelProvidersView", () => {
               reasoning: true
             },
             {
-              api: "responses",
+              api: "openai-responses",
               contextWindow: 128000,
               id: "gpt-4.1",
               input: ["text"],
@@ -520,7 +520,7 @@ describe("ModelProvidersView", () => {
           code: 0,
           data: [
             {
-              api: "responses",
+              api: "openai-responses",
               contextWindow: 32000,
               id: "acme-chat",
               input: ["text"],
@@ -538,12 +538,12 @@ describe("ModelProvidersView", () => {
         json: async () => ({
           code: 0,
           data: {
-            api: "chat-completions",
+            api: "openai-completions",
             contextWindow: 64000,
             id: "acme-vision",
             input: ["text", "image"],
             maxTokens: 8192,
-            name: "acme-vision",
+            name: "Acme Vision",
             provider: "acme-ai",
             reasoning: true
           },
@@ -556,7 +556,7 @@ describe("ModelProvidersView", () => {
           code: 0,
           data: [
             {
-              api: "responses",
+              api: "openai-responses",
               contextWindow: 32000,
               id: "acme-chat",
               input: ["text"],
@@ -566,12 +566,12 @@ describe("ModelProvidersView", () => {
               reasoning: false
             },
             {
-              api: "chat-completions",
+              api: "openai-completions",
               contextWindow: 64000,
               id: "acme-vision",
               input: ["text", "image"],
               maxTokens: 8192,
-              name: "acme-vision",
+              name: "Acme Vision",
               provider: "acme-ai",
               reasoning: true
             }
@@ -584,12 +584,12 @@ describe("ModelProvidersView", () => {
         json: async () => ({
           code: 0,
           data: {
-            api: "responses",
+            api: "openai-responses",
             contextWindow: 128000,
             id: "acme-chat",
             input: ["text", "file"],
             maxTokens: 16384,
-            name: "Acme Chat",
+            name: "Acme Chat Pro",
             provider: "acme-ai",
             reasoning: true
           },
@@ -602,22 +602,22 @@ describe("ModelProvidersView", () => {
           code: 0,
           data: [
             {
-              api: "responses",
+              api: "openai-responses",
               contextWindow: 128000,
               id: "acme-chat",
-              input: ["text", "file"],
+              input: ["text", "image"],
               maxTokens: 16384,
-              name: "Acme Chat",
+              name: "Acme Chat Pro",
               provider: "acme-ai",
               reasoning: true
             },
             {
-              api: "chat-completions",
+              api: "openai-completions",
               contextWindow: 64000,
               id: "acme-vision",
               input: ["text", "image"],
               maxTokens: 8192,
-              name: "acme-vision",
+              name: "Acme Vision",
               provider: "acme-ai",
               reasoning: true
             }
@@ -642,12 +642,12 @@ describe("ModelProvidersView", () => {
           code: 0,
           data: [
             {
-              api: "responses",
+              api: "openai-responses",
               contextWindow: 128000,
               id: "acme-chat",
-              input: ["text", "file"],
+              input: ["text", "image"],
               maxTokens: 16384,
-              name: "Acme Chat",
+              name: "Acme Chat Pro",
               provider: "acme-ai",
               reasoning: true
             }
@@ -673,12 +673,7 @@ describe("ModelProvidersView", () => {
     fireEvent.change(screen.getByLabelText("模型名称"), {
       target: { value: "Acme Vision" }
     });
-    fireEvent.change(screen.getByLabelText("API 类型"), {
-      target: { value: "chat-completions" }
-    });
-    fireEvent.change(screen.getByLabelText("支持输入"), {
-      target: { value: "text, image" }
-    });
+    fireEvent.click(screen.getByRole("checkbox", { name: "image" }));
     fireEvent.change(screen.getByLabelText("上下文窗口"), {
       target: { value: "64000" }
     });
@@ -694,11 +689,12 @@ describe("ModelProvidersView", () => {
         "http://localhost:4000/api/v1/model-providers/acme-ai/models",
         {
           body: JSON.stringify({
-            api: "chat-completions",
+            api: "openai-responses",
             contextWindow: 64000,
             input: ["text", "image"],
             maxTokens: 8192,
             modelId: "acme-vision",
+            name: "Acme Vision",
             reasoning: true
           }),
           headers: {
@@ -711,9 +707,14 @@ describe("ModelProvidersView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "编辑模型 acme-chat" }));
 
-    fireEvent.change(await screen.findByLabelText("支持输入"), {
-      target: { value: "text, file" }
+    fireEvent.mouseDown(await screen.findByRole("combobox", { name: "API 类型" }));
+    expect(
+      await screen.findByRole("option", { name: "openai-responses" })
+    ).toHaveAttribute("aria-selected", "true");
+    fireEvent.change(await screen.findByLabelText("模型名称"), {
+      target: { value: "Acme Chat Pro" }
     });
+    fireEvent.click(screen.getByRole("checkbox", { name: "image" }));
     fireEvent.change(screen.getByLabelText("上下文窗口"), {
       target: { value: "128000" }
     });
@@ -729,10 +730,11 @@ describe("ModelProvidersView", () => {
         "http://localhost:4000/api/v1/model-providers/acme-ai/models/acme-chat",
         {
           body: JSON.stringify({
-            api: "responses",
+            api: "openai-responses",
             contextWindow: 128000,
-            input: ["text", "file"],
+            input: ["text", "image"],
             maxTokens: 16384,
+            name: "Acme Chat Pro",
             reasoning: true
           }),
           headers: {
@@ -742,6 +744,7 @@ describe("ModelProvidersView", () => {
         }
       );
     });
+    expect(await screen.findByText("Acme Chat Pro")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "删除模型 acme-vision" }));
     fireEvent.click((await screen.findAllByRole("button", { name: /删\s*除模型/ })).at(-1)!);
