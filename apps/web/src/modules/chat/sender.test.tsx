@@ -8,7 +8,8 @@ import {
   CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS,
   getCurrentCursorCharacterIndex,
   insertTextAtCursor,
-  replaceTriggerAtCursor
+  replaceTriggerAtCursor,
+  shouldHandleSpaceKeydown
 } from "./sender";
 
 describe("getCurrentCursorCharacterIndex", () => {
@@ -45,7 +46,42 @@ describe("replaceTriggerAtCursor", () => {
   });
 });
 
+describe("shouldHandleSpaceKeydown", () => {
+  it("returns true for a normal space keydown", () => {
+    expect(
+      shouldHandleSpaceKeydown({
+        code: "Space",
+        isComposing: false,
+        nativeEvent: {
+          isComposing: false
+        }
+      })
+    ).toBe(true);
+  });
+
+  it("returns false while an input method composition is active", () => {
+    expect(
+      shouldHandleSpaceKeydown({
+        code: "Space",
+        isComposing: true,
+        nativeEvent: {
+          isComposing: true
+        }
+      })
+    ).toBe(false);
+  });
+});
+
 describe("sender suggestion theme styles", () => {
+  it("uses the theme text color for the sender caret", () => {
+    const senderSource = readFileSync(
+      `${process.cwd()}/apps/web/src/modules/chat/sender.tsx`,
+      "utf8"
+    );
+
+    expect(senderSource).toContain('caretColor: "var(--app-color-text)"');
+  });
+
   it("scopes the selected suggestion text override to the sender popup", () => {
     const themeCss = readFileSync(
       `${process.cwd()}/apps/web/src/app/theme.css`,

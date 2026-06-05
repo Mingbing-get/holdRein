@@ -32,11 +32,28 @@ type CursorSource = {
   selectionStart?: number | null;
 } | null | undefined;
 type InputElement = HTMLTextAreaElement | null;
+type SpaceKeydownSource = {
+  code?: string;
+  isComposing?: boolean;
+  nativeEvent?: {
+    isComposing?: boolean;
+  };
+};
 
 export function getCurrentCursorCharacterIndex(
   source: CursorSource
 ): number | null {
   return source?.selectionStart ?? null;
+}
+
+export function shouldHandleSpaceKeydown(
+  event: SpaceKeydownSource
+): boolean {
+  if (event.code !== "Space") {
+    return false;
+  }
+
+  return !(event.isComposing || event.nativeEvent?.isComposing);
 }
 
 function clampCursorIndex(value: string, cursorIndex: number | null): number {
@@ -253,6 +270,7 @@ export default function Sender({ suggestionGroups, onMessageChange, ...senderPro
                     borderRadius: 20
                   },
                   input: {
+                    caretColor: "var(--app-color-text)",
                     color: "var(--app-color-text)"
                   },
                   root: {
@@ -266,7 +284,7 @@ export default function Sender({ suggestionGroups, onMessageChange, ...senderPro
                 ref={senderRef}
                 value={draftMessage}
                 onKeyDown={e => {
-                  if (e.code === 'Space') {
+                  if (shouldHandleSpaceKeydown(e)) {
                     handleAppendSpace(e)
                     return;
                   }
