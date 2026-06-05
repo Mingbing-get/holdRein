@@ -59,7 +59,7 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
         }}
       >
         <WorkspaceTopBar />
-        <Layout.Content style={{ padding: "10px 14px 14px" }}>
+        <Layout.Content style={{ padding: "10px 14px 14px", display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 41px)' }}>
           {activeMainView === "modelProviders" ? (
             <ModelProvidersView apiBaseUrl={apiBaseUrl} />
           ) : (
