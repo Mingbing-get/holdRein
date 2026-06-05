@@ -15,7 +15,6 @@ import {
   type CustomModelProviderFormValues
 } from "./custom-model-provider-modal";
 import { ModelProviderGroups } from "./model-provider-groups";
-import { ModelProvidersEmptyImage } from "./model-providers-empty-image";
 import { ProviderApiKeyModal } from "./provider-api-key-modal";
 import { ProviderModelsModal, type ProviderModelFormValues } from "./provider-models-modal";
 import type { ModelProviderSummary, ModelSummary } from "./model-provider-types";
@@ -365,14 +364,9 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
       vertical
       style={{ minHeight: "100%" }}
     >
-      <div>
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          模型配置
-        </Typography.Title>
-        <Typography.Text type="secondary">
-          查看所有模型提供商，并区分自定义与内置来源。
-        </Typography.Text>
-      </div>
+      <Typography.Title level={3} style={{ margin: 0 }}>
+        模型管理
+      </Typography.Title>
 
       {loadState.status === "loading" ? (
         <Flex align="center" justify="center" style={{ minHeight: 240 }}>
@@ -392,8 +386,6 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
       {loadState.status === "success" && loadState.providers.length === 0 ? (
         <Empty
           description="暂无模型提供商"
-          image={<ModelProvidersEmptyImage />}
-          style={{ color: "var(--app-color-text)" }}
         />
       ) : null}
 

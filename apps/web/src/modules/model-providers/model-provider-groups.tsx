@@ -3,7 +3,6 @@ import { PlusOutlined } from "@ant-design/icons";
 import { Button, Empty, Flex, Typography } from "antd";
 
 import { ModelProviderCard } from "./model-provider-card";
-import { ModelProvidersEmptyImage } from "./model-providers-empty-image";
 import type { ModelProviderSummary } from "./model-provider-types";
 
 interface ProviderGroup {
@@ -55,8 +54,6 @@ export function ModelProviderGroups({
           {group.source === "custom" && group.providers.length === 0 ? (
             <Empty
               description="还没有自定义提供商，先添加一个吧。"
-              image={<ModelProvidersEmptyImage />}
-              style={{ color: "var(--app-color-text)" }}
             />
           ) : (
             <Flex gap={12} wrap>

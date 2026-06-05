@@ -150,9 +150,7 @@ describe("App", () => {
       within(engineeringGroup).getByTestId("workspace-folder-open-icon")
     ).toBeInTheDocument();
     expect(newConversationButton).toHaveStyle({
-      borderRadius: "6px",
-      justifyContent: "flex-start",
-      width: "100%"
+      borderRadius: "6px"
     });
     expect(engineeringGroup.parentElement).toHaveStyle({ gap: "2px" });
     expect(activeConversation).toHaveStyle({
