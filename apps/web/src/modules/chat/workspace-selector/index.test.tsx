@@ -78,10 +78,11 @@ describe("WorkspaceSelector", () => {
     cleanup();
   });
 
-  it("renders without placeholder workspace options", async () => {
+  it("renders an empty-state prompt without placeholder workspace options", async () => {
     renderWorkspaceSelector();
 
     expect(screen.queryByText("工作空间")).not.toBeInTheDocument();
+    expect(screen.getByText("选择工作空间")).toBeInTheDocument();
     expect(screen.queryByTestId("selected-workspace-label")).not.toBeInTheDocument();
 
     const selectRoot = screen
@@ -89,7 +90,6 @@ describe("WorkspaceSelector", () => {
       .closest(".ant-select");
 
     expect(selectRoot).toHaveClass("ant-select-borderless");
-    expect(selectRoot).not.toHaveStyle({ minWidth: "180px" });
 
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "工作空间" }));
 

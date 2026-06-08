@@ -110,6 +110,7 @@ export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
           aria-label="工作空间"
           options={options}
           optionLabelProp="label"
+          placeholder="选择工作空间"
           popupMatchSelectWidth={220}
           popupRender={(originNode) => (
             <>
