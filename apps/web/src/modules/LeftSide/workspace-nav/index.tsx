@@ -2,16 +2,11 @@ import { PlusOutlined } from "@ant-design/icons";
 import { Button, Typography } from "antd";
 
 import { useAppUi } from "../../../app/app-ui-context";
-import type { WorkspaceSummary } from "../workspace-nav-types";
 import { WorkspaceSection } from "../workspace-section";
 
-export interface WorkspaceNavProps {
-  workspaces: WorkspaceSummary[];
-}
-
-export function WorkspaceNav({ workspaces }: WorkspaceNavProps) {
+export function WorkspaceNav() {
   const {
-    state: { sidebarCollapsed }
+    state: { sidebarCollapsed, workspaces }
   } = useAppUi();
 
   return (

@@ -1,8 +1,10 @@
 import { DownOutlined, FolderOpenOutlined } from "@ant-design/icons";
 import { Button, ConfigProvider, Divider, Select } from "antd";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
+import { useAppUi } from "../../../app/app-ui-context";
 import { FileSelector } from "../../../components/fileSelector";
+import type { WorkspaceSummary } from "../../LeftSide/workspace-nav-types";
 
 interface WorkspaceOption {
   label: string;
@@ -12,18 +14,6 @@ interface WorkspaceOption {
 interface WorkspaceSelectorProps {
   apiBaseUrl: string;
 }
-
-const initialWorkspaceOptions: WorkspaceOption[] = [
-  {
-    label: "holdRein",
-    value: "/Users/mingbing/apps/ai-project/holdRein"
-  },
-  {
-    label: "demo-workspace",
-    value: "/Users/mingbing/apps/demo-workspace"
-  }
-];
-const defaultWorkspaceValue = initialWorkspaceOptions[0]?.value ?? "";
 
 const workspaceSelectTheme = {
   components: {
@@ -46,30 +36,72 @@ export function getWorkspaceLabelFromPath(path: string): string {
 }
 
 export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
-  const [options, setOptions] = useState<WorkspaceOption[]>(
-    initialWorkspaceOptions
-  );
-  const [selectedWorkspacePath, setSelectedWorkspacePath] =
-    useState(defaultWorkspaceValue);
+  const {
+    state: { activeWorkspaceId, workspaces },
+    setActiveConversationId,
+    setActiveWorkspaceId,
+    setWorkspaces
+  } = useAppUi();
   const [selectOpen, setSelectOpen] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
+  const options = useMemo<WorkspaceOption[]>(
+    () =>
+      workspaces.map((workspace) => ({
+        label: workspace.name,
+        value: workspace.path
+      })),
+    [workspaces]
+  );
+  const selectedWorkspacePath = workspaces.find(
+    (workspace) => workspace.id === activeWorkspaceId
+  )?.path;
 
-  const handleConfirmWorkspace = useCallback((path: string) => {
-    const nextOption: WorkspaceOption = {
-      label: getWorkspaceLabelFromPath(path),
-      value: path
-    };
+  const selectWorkspace = useCallback(
+    (workspace: WorkspaceSummary) => {
+      setActiveWorkspaceId(workspace.id);
+      setActiveConversationId(workspace.tasks[0]?.id ?? "");
+    },
+    [setActiveConversationId, setActiveWorkspaceId]
+  );
 
-    setOptions((currentOptions) => {
-      const optionExists = currentOptions.some(
-        (option) => option.value === nextOption.value
+  const handleChangeWorkspace = useCallback(
+    (path: string) => {
+      const workspace = workspaces.find(
+        (currentWorkspace) => currentWorkspace.path === path
       );
 
-      return optionExists ? currentOptions : [...currentOptions, nextOption];
-    });
-    setSelectedWorkspacePath(path);
-    setSelectorOpen(false);
-  }, []);
+      if (workspace) {
+        selectWorkspace(workspace);
+      }
+    },
+    [selectWorkspace, workspaces]
+  );
+
+  const handleConfirmWorkspace = useCallback(
+    (path: string) => {
+      const existingWorkspace = workspaces.find(
+        (workspace) => workspace.path === path
+      );
+      const nextWorkspace =
+        existingWorkspace ?? createLocalWorkspaceSummary(path);
+
+      if (!existingWorkspace) {
+        setWorkspaces((currentWorkspaces) => {
+          const workspaceExists = currentWorkspaces.some(
+            (workspace) => workspace.path === nextWorkspace.path
+          );
+
+          return workspaceExists
+            ? currentWorkspaces
+            : [...currentWorkspaces, nextWorkspace];
+        });
+      }
+
+      selectWorkspace(nextWorkspace);
+      setSelectorOpen(false);
+    },
+    [selectWorkspace, setWorkspaces, workspaces]
+  );
 
   return (
     <>
@@ -77,6 +109,7 @@ export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
         <Select
           aria-label="工作空间"
           options={options}
+          optionLabelProp="label"
           popupMatchSelectWidth={220}
           popupRender={(originNode) => (
             <>
@@ -103,9 +136,9 @@ export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
           size="small"
           style={{ width: "fit-content" }}
           suffixIcon={<DownOutlined style={{ color: "var(--app-color-text)" }} />}
-          value={selectedWorkspacePath}
+          value={selectedWorkspacePath ?? null}
           variant="borderless"
-          onChange={setSelectedWorkspacePath}
+          onChange={handleChangeWorkspace}
           onOpenChange={setSelectOpen}
         />
       </ConfigProvider>
@@ -121,4 +154,14 @@ export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
       />
     </>
   );
+}
+
+function createLocalWorkspaceSummary(path: string): WorkspaceSummary {
+  return {
+    hasMore: false,
+    id: `local-workspace:${path}`,
+    name: getWorkspaceLabelFromPath(path),
+    path,
+    tasks: []
+  };
 }

@@ -12,6 +12,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AppUiProvider } from "../../../app/app-ui-context";
 import { WorkspaceSelector, getWorkspaceLabelFromPath } from ".";
 
 class ResizeObserverMock {
@@ -77,8 +78,8 @@ describe("WorkspaceSelector", () => {
     cleanup();
   });
 
-  it("renders placeholder workspace options", async () => {
-    render(<WorkspaceSelector apiBaseUrl="" />);
+  it("renders without placeholder workspace options", async () => {
+    renderWorkspaceSelector();
 
     expect(screen.queryByText("工作空间")).not.toBeInTheDocument();
     expect(screen.queryByTestId("selected-workspace-label")).not.toBeInTheDocument();
@@ -93,11 +94,14 @@ describe("WorkspaceSelector", () => {
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "工作空间" }));
 
     expect(
-      await screen.findByRole("option", { hidden: true, name: "holdRein" })
-    ).toHaveAttribute("aria-selected", "true");
+      await screen.findByRole("button", { name: "选择工作空间" })
+    ).toBeInTheDocument();
     expect(
-      screen.getByRole("option", { hidden: true, name: "demo-workspace" })
-    ).toHaveAttribute("aria-selected", "false");
+      screen.queryByRole("option", { hidden: true, name: "holdRein" })
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("option", { hidden: true, name: "demo-workspace" })
+    ).not.toBeInTheDocument();
   });
 
   it("adds the selected directory as the active option", async () => {
@@ -120,7 +124,7 @@ describe("WorkspaceSelector", () => {
       ok: true
     } as Response);
 
-    render(<WorkspaceSelector apiBaseUrl="" />);
+    renderWorkspaceSelector();
 
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "工作空间" }));
     fireEvent.click(await screen.findByRole("button", { name: "选择工作空间" }));
@@ -181,3 +185,11 @@ describe("WorkspaceSelector", () => {
     );
   });
 });
+
+function renderWorkspaceSelector() {
+  render(
+    <AppUiProvider>
+      <WorkspaceSelector apiBaseUrl="" />
+    </AppUiProvider>
+  );
+}

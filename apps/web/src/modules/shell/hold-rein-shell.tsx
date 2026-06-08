@@ -1,12 +1,11 @@
 import { Layout } from "antd";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import { useAppUi } from "../../app/app-ui-context";
 import { ChatWorkspace } from "../chat/chat-workspace";
 import { LeftSideAside } from "../LeftSide/aside";
 import { fetchWorkspaceNavigation } from "../LeftSide/workspace-nav-api";
 import { WorkspaceNav } from "../LeftSide/workspace-nav";
-import type { WorkspaceSummary } from "../LeftSide/workspace-nav-types";
 import { ModelProvidersView } from "../model-providers";
 import { WorkspaceTopBar } from "../top-bar/workspace-top-bar";
 
@@ -22,12 +21,13 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
       activeWorkspaceId,
       sidebarCollapsed,
       sidebarResizing,
-      sidebarWidth
+      sidebarWidth,
+      workspaces
     },
     setActiveConversationId,
-    setActiveWorkspaceId
+    setActiveWorkspaceId,
+    setWorkspaces
   } = useAppUi();
-  const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
 
   useEffect(() => {
     let ignore = false;
@@ -47,7 +47,7 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
     return () => {
       ignore = true;
     };
-  }, [apiBaseUrl]);
+  }, [apiBaseUrl, setWorkspaces]);
 
   const activeWorkspace =
     workspaces.find((workspace) => workspace.id === activeWorkspaceId) ??
@@ -68,6 +68,10 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
     if (activeTask && activeTask.id !== activeConversationId) {
       setActiveConversationId(activeTask.id);
     }
+
+    if (!activeTask && activeConversationId) {
+      setActiveConversationId("");
+    }
   }, [
     activeConversationId,
     activeTask,
@@ -85,7 +89,7 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
       }}
     >
       <LeftSideAside>
-        <WorkspaceNav workspaces={workspaces} />
+        <WorkspaceNav />
       </LeftSideAside>
       <Layout
         data-testid="workspace-main-layout"

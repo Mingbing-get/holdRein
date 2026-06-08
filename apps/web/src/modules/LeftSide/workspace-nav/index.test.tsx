@@ -2,9 +2,10 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
+import { useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { AppUiProvider } from "../../../app/app-ui-context";
+import { AppUiProvider, useAppUi } from "../../../app/app-ui-context";
 import type { WorkspaceSummary } from "../workspace-nav-types";
 import { WorkspaceNav } from ".";
 
@@ -96,7 +97,22 @@ describe("WorkspaceNav", () => {
 function renderWorkspaceNav(workspaces: WorkspaceSummary[]) {
   render(
     <AppUiProvider>
-      <WorkspaceNav workspaces={workspaces} />
+      <WorkspaceNavTestState workspaces={workspaces} />
+      <WorkspaceNav />
     </AppUiProvider>
   );
+}
+
+function WorkspaceNavTestState({
+  workspaces
+}: {
+  workspaces: WorkspaceSummary[];
+}) {
+  const { setWorkspaces } = useAppUi();
+
+  useEffect(() => {
+    setWorkspaces(workspaces);
+  }, [setWorkspaces, workspaces]);
+
+  return null;
 }

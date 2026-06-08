@@ -1,12 +1,15 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState
 } from "react";
 import { App as AntdApp, ConfigProvider, theme } from "antd";
-import type { PropsWithChildren } from "react";
+import type { Dispatch, PropsWithChildren, SetStateAction } from "react";
+
+import type { WorkspaceSummary } from "../modules/LeftSide/workspace-nav-types";
 
 import "./theme.css";
 
@@ -21,6 +24,7 @@ export interface AppUiState {
   sidebarResizing: boolean;
   sidebarWidth: number;
   themeMode: ThemeMode;
+  workspaces: WorkspaceSummary[];
 }
 
 export interface AppUiContextValue {
@@ -32,6 +36,7 @@ export interface AppUiContextValue {
   setActiveWorkspaceId: (workspaceId: string) => void;
   setSidebarResizing: (sidebarResizing: boolean) => void;
   setSidebarWidth: (sidebarWidth: number) => void;
+  setWorkspaces: Dispatch<SetStateAction<WorkspaceSummary[]>>;
   toggleSidebar: () => void;
   toggleThemeMode: () => void;
 }
@@ -43,7 +48,8 @@ const DEFAULT_APP_UI_STATE: AppUiState = {
   sidebarCollapsed: false,
   sidebarResizing: false,
   sidebarWidth: 240,
-  themeMode: "light"
+  themeMode: "light",
+  workspaces: []
 };
 
 const AppUiContext = createContext<AppUiContextValue | null>(null);
@@ -86,65 +92,109 @@ export function AppUiProvider({ children }: PropsWithChildren) {
     document.body.style.background = "var(--app-color-bg-base)";
   }, [state.themeMode]);
 
+  const openChatWorkspace = useCallback(() => {
+    setState((currentState) => ({
+      ...currentState,
+      activeMainView: "chat"
+    }));
+  }, []);
+
+  const openModelProviders = useCallback(() => {
+    setState((currentState) => ({
+      ...currentState,
+      activeMainView: "modelProviders"
+    }));
+  }, []);
+
+  const setActiveConversationId = useCallback((activeConversationId: string) => {
+    setState((currentState) => ({
+      ...currentState,
+      activeConversationId
+    }));
+  }, []);
+
+  const setActiveMainView = useCallback((activeMainView: MainContentView) => {
+    setState((currentState) => ({
+      ...currentState,
+      activeMainView
+    }));
+  }, []);
+
+  const setActiveWorkspaceId = useCallback((activeWorkspaceId: string) => {
+    setState((currentState) => ({
+      ...currentState,
+      activeWorkspaceId
+    }));
+  }, []);
+
+  const setSidebarResizing = useCallback((sidebarResizing: boolean) => {
+    setState((currentState) => ({
+      ...currentState,
+      sidebarResizing
+    }));
+  }, []);
+
+  const setSidebarWidth = useCallback((sidebarWidth: number) => {
+    setState((currentState) => ({
+      ...currentState,
+      sidebarWidth
+    }));
+  }, []);
+
+  const setWorkspaces = useCallback(
+    (workspaces: SetStateAction<WorkspaceSummary[]>) => {
+      setState((currentState) => ({
+        ...currentState,
+        workspaces:
+          typeof workspaces === "function"
+            ? workspaces(currentState.workspaces)
+            : workspaces
+      }));
+    },
+    []
+  );
+
+  const toggleSidebar = useCallback(() => {
+    setState((currentState) => ({
+      ...currentState,
+      sidebarCollapsed: !currentState.sidebarCollapsed
+    }));
+  }, []);
+
+  const toggleThemeMode = useCallback(() => {
+    setState((currentState) => ({
+      ...currentState,
+      themeMode: currentState.themeMode === "light" ? "dark" : "light"
+    }));
+  }, []);
+
   const contextValue = useMemo<AppUiContextValue>(
     () => ({
-      openChatWorkspace: () => {
-        setState((currentState) => ({
-          ...currentState,
-          activeMainView: "chat"
-        }));
-      },
-      openModelProviders: () => {
-        setState((currentState) => ({
-          ...currentState,
-          activeMainView: "modelProviders"
-        }));
-      },
+      openChatWorkspace,
+      openModelProviders,
       state,
-      setActiveConversationId: (activeConversationId) => {
-        setState((currentState) => ({
-          ...currentState,
-          activeConversationId
-        }));
-      },
-      setActiveMainView: (activeMainView) => {
-        setState((currentState) => ({
-          ...currentState,
-          activeMainView
-        }));
-      },
-      setActiveWorkspaceId: (activeWorkspaceId) => {
-        setState((currentState) => ({
-          ...currentState,
-          activeWorkspaceId
-        }));
-      },
-      setSidebarResizing: (sidebarResizing) => {
-        setState((currentState) => ({
-          ...currentState,
-          sidebarResizing
-        }));
-      },
-      setSidebarWidth: (sidebarWidth) => {
-        setState((currentState) => ({
-          ...currentState,
-          sidebarWidth
-        }));
-      },
-      toggleSidebar: () => {
-        setState((currentState) => ({
-          ...currentState,
-          sidebarCollapsed: !currentState.sidebarCollapsed
-        }));
-      },
-      toggleThemeMode: () => {
-        setState((currentState) => ({
-          ...currentState,
-          themeMode: currentState.themeMode === "light" ? "dark" : "light"
-        }));
-      }
+      setActiveConversationId,
+      setActiveMainView,
+      setActiveWorkspaceId,
+      setSidebarResizing,
+      setSidebarWidth,
+      setWorkspaces,
+      toggleSidebar,
+      toggleThemeMode
     }),
-    [state]
+    [
+      openChatWorkspace,
+      openModelProviders,
+      setActiveConversationId,
+      setActiveMainView,
+      setActiveWorkspaceId,
+      setSidebarResizing,
+      setSidebarWidth,
+      setWorkspaces,
+      state,
+      toggleSidebar,
+      toggleThemeMode
+    ]
   );
 
   return (

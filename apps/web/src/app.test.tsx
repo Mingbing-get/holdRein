@@ -6,6 +6,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within
 } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -52,6 +53,49 @@ const emptyWorkspaceNavigationResponse = {
   msg: "ok",
   data: {
     workspaces: []
+  }
+};
+
+const workspaceNavigationResponse = {
+  code: 0,
+  msg: "ok",
+  data: {
+    workspaces: [
+      {
+        hasMore: false,
+        id: "workspace-one",
+        name: "Workspace One",
+        path: "/Users/mingbing/apps/workspace-one",
+        tasks: [
+          {
+            id: "task-one",
+            initialUserMessage: "First task",
+            lastContinuedAt: "2026-06-08T08:00:00.000Z",
+            lastModelName: "gpt-4.1",
+            lastModelProvider: "openai",
+            lastModelProviderSource: "built_in",
+            title: "First task"
+          }
+        ]
+      },
+      {
+        hasMore: false,
+        id: "workspace-two",
+        name: "Workspace Two",
+        path: "/Users/mingbing/apps/workspace-two",
+        tasks: [
+          {
+            id: "task-two",
+            initialUserMessage: "Second task",
+            lastContinuedAt: "2026-06-08T09:00:00.000Z",
+            lastModelName: "gpt-4.1",
+            lastModelProvider: "openai",
+            lastModelProviderSource: "built_in",
+            title: "Second task"
+          }
+        ]
+      }
+    ]
   }
 };
 
@@ -144,6 +188,113 @@ describe("App", () => {
 
     fireEvent.mouseEnter(screen.getByRole("button", { name: "Open settings" }));
     expect(await screen.findByText("设置")).toBeInTheDocument();
+  });
+
+  it("shows the sidebar workspaces in the chat workspace selector", async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input);
+
+      if (url.endsWith("/api/v1/workspaces/recent-tasks")) {
+        return {
+          json: async () => workspaceNavigationResponse,
+          ok: true
+        } as Response;
+      }
+
+      return {
+        json: async () => modelProvidersResponse,
+        ok: true
+      } as Response;
+    });
+
+    render(<App />);
+
+    expect(await screen.findByTestId("workspace-task-task-one")).toHaveTextContent(
+      "First task"
+    );
+    expect(screen.getByTestId("workspace-task-task-two")).toHaveTextContent(
+      "Second task"
+    );
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "工作空间" }));
+
+    expect(
+      await screen.findByRole("option", {
+        hidden: true,
+        name: "Workspace One"
+      })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("option", {
+        hidden: true,
+        name: "Workspace Two"
+      })
+    ).toBeInTheDocument();
+  });
+
+  it("switches the active workspace from the workspace selector", async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input);
+
+      if (url.endsWith("/api/v1/workspaces/recent-tasks")) {
+        return {
+          json: async () => workspaceNavigationResponse,
+          ok: true
+        } as Response;
+      }
+
+      if (url.endsWith("/api/v1/file-system/entries")) {
+        return {
+          json: async () => ({
+            code: 0,
+            data: {
+              parentPath: "/Users/mingbing/apps",
+              entries: [
+                {
+                  extension: "",
+                  kind: "folder",
+                  name: "workspace-two",
+                  path: "/Users/mingbing/apps/workspace-two"
+                }
+              ]
+            },
+            msg: "ok"
+          }),
+          ok: true
+        } as Response;
+      }
+
+      return {
+        json: async () => modelProvidersResponse,
+        ok: true
+      } as Response;
+    });
+
+    render(<App />);
+
+    expect(await screen.findByTestId("workspace-task-task-one")).toHaveTextContent(
+      "First task"
+    );
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "工作空间" }));
+    fireEvent.click(await screen.findByRole("button", { name: "选择工作空间" }));
+
+    const row = await screen.findByTestId("file-selector-entry-workspace-two");
+    fireEvent.click(
+      within(row).getByRole("button", {
+        name: "workspace-two folder selectable"
+      })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "确定" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-task-task-two").style.background).not.toBe(
+        ""
+      );
+    });
+    expect(
+      screen.getByRole("combobox", { name: "工作空间" }).parentElement
+    ).toHaveTextContent("Workspace Two");
   });
 
   it("collapses the workspace sidebar", async () => {
