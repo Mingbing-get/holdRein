@@ -1,4 +1,10 @@
-import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex
+} from "drizzle-orm/sqlite-core";
 
 export const customModelProviders = sqliteTable(
   "custom_model_providers",
@@ -59,9 +65,50 @@ export const customProviderModels = sqliteTable(
   })
 );
 
+export const workspaces = sqliteTable(
+  "workspaces",
+  {
+    createdAt: text("created_at").notNull(),
+    id: text("id").primaryKey(),
+    name: text("name").notNull(),
+    path: text("path").notNull(),
+    updatedAt: text("updated_at").notNull()
+  },
+  (table) => ({
+    pathUniqueIndex: uniqueIndex("workspaces_path_idx").on(table.path)
+  })
+);
+
+export const tasks = sqliteTable(
+  "tasks",
+  {
+    createdAt: text("created_at").notNull(),
+    id: text("id").primaryKey(),
+    initialUserMessage: text("initial_user_message").notNull(),
+    lastContinuedAt: text("last_continued_at"),
+    lastModelName: text("last_model_name").notNull(),
+    lastModelProvider: text("last_model_provider").notNull(),
+    lastModelProviderSource: text("last_model_provider_source", {
+      enum: ["built_in", "custom"]
+    }).notNull(),
+    title: text("title").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspaces.id)
+  },
+  (table) => ({
+    workspaceIdIndex: index("tasks_workspace_id_idx").on(table.workspaceId)
+  })
+);
+
 export type CustomModelProviderRow = typeof customModelProviders.$inferSelect;
 export type NewCustomModelProviderRow = typeof customModelProviders.$inferInsert;
 export type ProviderApiKeyRow = typeof providerApiKeys.$inferSelect;
 export type NewProviderApiKeyRow = typeof providerApiKeys.$inferInsert;
 export type CustomProviderModelRow = typeof customProviderModels.$inferSelect;
 export type NewCustomProviderModelRow = typeof customProviderModels.$inferInsert;
+export type WorkspaceRow = typeof workspaces.$inferSelect;
+export type NewWorkspaceRow = typeof workspaces.$inferInsert;
+export type TaskRow = typeof tasks.$inferSelect;
+export type NewTaskRow = typeof tasks.$inferInsert;

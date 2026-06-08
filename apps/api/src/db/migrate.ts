@@ -56,6 +56,42 @@ const ADD_CUSTOM_PROVIDER_MODELS_NAME_COLUMN_SQL = `
   ALTER TABLE custom_provider_models ADD COLUMN name TEXT NOT NULL DEFAULT ''
 `;
 
+const CREATE_WORKSPACES_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS workspaces (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    path TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  ) STRICT
+`;
+
+const CREATE_WORKSPACES_PATH_INDEX_SQL = `
+  CREATE UNIQUE INDEX IF NOT EXISTS workspaces_path_idx
+  ON workspaces (path)
+`;
+
+const CREATE_TASKS_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS tasks (
+    id TEXT PRIMARY KEY NOT NULL,
+    workspace_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    initial_user_message TEXT NOT NULL,
+    last_model_provider_source TEXT NOT NULL CHECK(last_model_provider_source IN ('built_in', 'custom')),
+    last_model_provider TEXT NOT NULL,
+    last_model_name TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    last_continued_at TEXT,
+    FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
+  ) STRICT
+`;
+
+const CREATE_TASKS_WORKSPACE_ID_INDEX_SQL = `
+  CREATE INDEX IF NOT EXISTS tasks_workspace_id_idx
+  ON tasks (workspace_id)
+`;
+
 export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
   sqlite.exec(CREATE_CUSTOM_MODEL_PROVIDERS_TABLE_SQL);
   sqlite.exec(CREATE_CUSTOM_MODEL_PROVIDERS_PROVIDER_INDEX_SQL);
@@ -70,4 +106,8 @@ export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
     }
   }
   sqlite.exec(CREATE_CUSTOM_PROVIDER_MODELS_PROVIDER_MODEL_INDEX_SQL);
+  sqlite.exec(CREATE_WORKSPACES_TABLE_SQL);
+  sqlite.exec(CREATE_WORKSPACES_PATH_INDEX_SQL);
+  sqlite.exec(CREATE_TASKS_TABLE_SQL);
+  sqlite.exec(CREATE_TASKS_WORKSPACE_ID_INDEX_SQL);
 }
