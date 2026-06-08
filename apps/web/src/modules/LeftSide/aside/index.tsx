@@ -1,23 +1,16 @@
 import { useCallback, useState } from "react";
-import { PlusOutlined } from "@ant-design/icons";
-import { Button, Typography } from "antd";
+import type { PropsWithChildren } from "react";
 
-import { useAppUi } from "../../app/app-ui-context";
-import { WorkspaceSection } from "./workspace-section";
-import type { WorkspaceSummary } from "./workspace-nav-types";
+import { useAppUi } from "../../../app/app-ui-context";
 
 const MIN_SIDEBAR_WIDTH = 120;
 const MAX_SIDEBAR_WIDTH = 680;
-
-interface WorkspaceSidebarProps {
-  workspaces: WorkspaceSummary[];
-}
 
 function clampSidebarWidth(width: number): number {
   return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, width));
 }
 
-export function WorkspaceSidebar({ workspaces }: WorkspaceSidebarProps) {
+export function LeftSideAside({ children }: PropsWithChildren) {
   const {
     state: { sidebarCollapsed, sidebarResizing, sidebarWidth },
     setSidebarResizing,
@@ -76,44 +69,7 @@ export function WorkspaceSidebar({ workspaces }: WorkspaceSidebarProps) {
         width: sidebarWidth
       }}
     >
-      <div style={{ display: "flex", flex: 1, flexDirection: "column", gap: 12 }}>
-        <Button
-          aria-label="开启新对话"
-          icon={<PlusOutlined />}
-          block
-          style={{
-            borderColor: "var(--app-color-border-secondary)",
-            borderRadius: 6,
-            color: "var(--app-color-text)",
-            fontSize: 12
-          }}
-          type="text"
-        >
-          开启新对话
-        </Button>
-        {workspaces.length === 0 && !sidebarCollapsed ? (
-          <Typography.Text
-            data-testid="workspace-sidebar-empty"
-            style={{
-              color: "var(--app-color-text-secondary)",
-              display: "block",
-              fontSize: 12,
-              lineHeight: "20px",
-              padding: "4px 8px",
-              textAlign: 'center'
-            }}
-          >
-            暂无对话
-          </Typography.Text>
-        ) : null}
-        {workspaces.map((workspace) => (
-          <WorkspaceSection
-            key={workspace.id}
-            collapsed={sidebarCollapsed}
-            workspace={workspace}
-          />
-        ))}
-      </div>
+      {children}
       <div
         aria-label="Resize workspace sidebar"
         aria-orientation="vertical"

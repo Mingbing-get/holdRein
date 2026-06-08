@@ -12,7 +12,8 @@ export async function fetchWorkspaceNavigation(
     throw new Error("Failed to load workspace navigation");
   }
 
-  const payload = (await response.json()) as ApiResponse<WorkspaceNavigationResponse>;
+  const payload =
+    (await response.json()) as ApiResponse<WorkspaceNavigationResponse>;
 
   return payload.data;
 }

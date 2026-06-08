@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   cleanup,
   fireEvent,
@@ -45,6 +46,16 @@ function createMatchMediaMock(): typeof window.matchMedia {
 }
 
 const fetchMock = vi.fn<typeof fetch>();
+
+function getWebSourcePath(pathFromWebSrc: string): string {
+  const pathFromWebPackage = join(process.cwd(), "src", pathFromWebSrc);
+
+  if (existsSync(pathFromWebPackage)) {
+    return pathFromWebPackage;
+  }
+
+  return join(process.cwd(), "apps", "web", "src", pathFromWebSrc);
+}
 
 describe("buildConfiguredProviderOptions", () => {
   it("keeps only providers with configured API keys", () => {
@@ -141,7 +152,7 @@ describe("ModelSelector", () => {
 
   it("uses content-sized popup width and disables clearing", () => {
     const modelSelectorSource = readFileSync(
-      `${process.cwd()}/src/modules/chat/model-selector/index.tsx`,
+      getWebSourcePath("modules/chat/model-selector/index.tsx"),
       "utf8"
     );
 
@@ -151,7 +162,7 @@ describe("ModelSelector", () => {
 
   it("uses app theme variables for cascader colors", () => {
     const modelSelectorSource = readFileSync(
-      `${process.cwd()}/src/modules/chat/model-selector/index.tsx`,
+      getWebSourcePath("modules/chat/model-selector/index.tsx"),
       "utf8"
     );
 

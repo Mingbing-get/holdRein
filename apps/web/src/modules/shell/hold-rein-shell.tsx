@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 
 import { useAppUi } from "../../app/app-ui-context";
 import { ChatWorkspace } from "../chat/chat-workspace";
+import { LeftSideAside } from "../LeftSide/aside";
+import { fetchWorkspaceNavigation } from "../LeftSide/workspace-nav-api";
+import { WorkspaceNav } from "../LeftSide/workspace-nav";
+import type { WorkspaceSummary } from "../LeftSide/workspace-nav-types";
 import { ModelProvidersView } from "../model-providers";
-import { WorkspaceSidebar } from "../workspace-nav/workspace-sidebar";
-import { fetchWorkspaceNavigation } from "../workspace-nav/workspace-nav-api";
-import type { WorkspaceSummary } from "../workspace-nav/workspace-nav-types";
 import { WorkspaceTopBar } from "../top-bar/workspace-top-bar";
 
 interface HoldReinShellProps {
@@ -83,7 +84,9 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
         background: "transparent",
       }}
     >
-      <WorkspaceSidebar workspaces={workspaces} />
+      <LeftSideAside>
+        <WorkspaceNav workspaces={workspaces} />
+      </LeftSideAside>
       <Layout
         data-testid="workspace-main-layout"
         style={{

@@ -2,11 +2,11 @@ import { useState } from "react";
 import { FolderOpenOutlined } from "@ant-design/icons";
 import { Typography } from "antd";
 
-import { useAppUi } from "../../app/app-ui-context";
+import { useAppUi } from "../../../app/app-ui-context";
 import type {
   WorkspaceSummary,
   WorkspaceTaskSummary
-} from "./workspace-nav-types";
+} from "../workspace-nav-types";
 
 export interface WorkspaceSectionProps {
   collapsed: boolean;
@@ -14,8 +14,8 @@ export interface WorkspaceSectionProps {
 }
 
 export function WorkspaceSection({
-  workspace,
-  collapsed
+  collapsed,
+  workspace
 }: WorkspaceSectionProps) {
   const {
     state: { activeConversationId, activeWorkspaceId },
@@ -23,9 +23,7 @@ export function WorkspaceSection({
     setActiveConversationId,
     setActiveWorkspaceId
   } = useAppUi();
-  const [hoveredTaskId, setHoveredTaskId] = useState<
-    string | null
-  >(null);
+  const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
   const isActiveWorkspace = workspace.id === activeWorkspaceId;
 
   return (
@@ -46,12 +44,14 @@ export function WorkspaceSection({
       ) : null}
 
       {workspace.tasks.map((task) => {
-        const isActiveTask = isActiveWorkspace && task.id === activeConversationId;
+        const isActiveTask =
+          isActiveWorkspace && task.id === activeConversationId;
 
         return (
           <Typography.Text
-            key={task.id}
             data-testid={`workspace-task-${task.id}`}
+            ellipsis
+            key={task.id}
             onClick={() => {
               setActiveWorkspaceId(workspace.id);
               setActiveConversationId(task.id);
@@ -62,12 +62,9 @@ export function WorkspaceSection({
             }}
             onMouseLeave={() => {
               setHoveredTaskId((currentTaskId) =>
-                currentTaskId === task.id
-                  ? null
-                  : currentTaskId
+                currentTaskId === task.id ? null : currentTaskId
               );
             }}
-            ellipsis
             style={{
               background:
                 isActiveTask || hoveredTaskId === task.id

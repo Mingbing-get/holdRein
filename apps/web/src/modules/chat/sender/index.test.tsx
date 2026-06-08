@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
@@ -11,6 +12,16 @@ import {
   replaceTriggerAtCursor,
   shouldHandleSpaceKeydown
 } from ".";
+
+function getWebSourcePath(pathFromWebSrc: string): string {
+  const pathFromWebPackage = join(process.cwd(), "src", pathFromWebSrc);
+
+  if (existsSync(pathFromWebPackage)) {
+    return pathFromWebPackage;
+  }
+
+  return join(process.cwd(), "apps", "web", "src", pathFromWebSrc);
+}
 
 describe("getCurrentCursorCharacterIndex", () => {
   it("returns null when the textarea is unavailable", () => {
@@ -75,7 +86,7 @@ describe("shouldHandleSpaceKeydown", () => {
 describe("sender suggestion theme styles", () => {
   it("uses the theme text color for the sender caret", () => {
     const senderSource = readFileSync(
-      `${process.cwd()}/src/modules/chat/sender/index.tsx`,
+      getWebSourcePath("modules/chat/sender/index.tsx"),
       "utf8"
     );
 
@@ -84,7 +95,7 @@ describe("sender suggestion theme styles", () => {
 
   it("scopes the selected suggestion text override to the sender popup", () => {
     const themeCss = readFileSync(
-      `${process.cwd()}/src/app/theme.css`,
+      getWebSourcePath("app/theme.css"),
       "utf8"
     );
 
