@@ -12,16 +12,43 @@ import {
 import { ChatWorkspace } from "./chat-workspace";
 import type { SelectedModel } from "./model-selector";
 
+const agentTasksMock = vi.hoisted(() => ({
+  startTask: vi.fn()
+}));
+
+vi.mock("../agent-messages", () => ({
+  AgentMessageList: ({ messages }: { messages: { content: string }[] }) => (
+    <div data-testid="agent-message-list">
+      {messages.map((message) => message.content).join(",")}
+    </div>
+  ),
+  useAgentTasks: () => ({
+    getTaskState: (taskId: string) =>
+      taskId === "task-one"
+        ? {
+            messages: [{ content: "Real message", id: "message-1", kind: "assistant" }]
+          }
+        : undefined,
+    startTask: agentTasksMock.startTask
+  })
+}));
+
 vi.mock("./sender", () => ({
   default: ({
     disabled,
-    footer
+    footer,
+    onSubmit
   }: {
     disabled?: boolean;
     footer?: React.ReactNode;
+    onSubmit?: (message: string) => Promise<void>;
   }) => (
     <div>
-      <button data-testid="sender" disabled={disabled}>
+      <button
+        data-testid="sender"
+        disabled={disabled}
+        onClick={() => void onSubmit?.("Inspect this project")}
+      >
         Sender
       </button>
       {footer}
@@ -60,6 +87,7 @@ vi.mock("./model-selector", () => ({
 describe("ChatWorkspace", () => {
   afterEach(() => {
     cleanup();
+    agentTasksMock.startTask.mockReset();
   });
 
   it("disables the sender until both a workspace and model are selected", () => {
@@ -97,10 +125,35 @@ describe("ChatWorkspace", () => {
       "claude-3-5-sonnet"
     );
   });
+
+  it("starts a task and renders messages for the active task", async () => {
+    agentTasksMock.startTask.mockResolvedValue(undefined);
+    renderChatWorkspace({
+      activeAgent: {
+        modelId: "claude-3-5-sonnet",
+        providerId: "anthropic"
+      },
+      activeTaskId: "task-one",
+      activeWorkspaceId: "workspace-one"
+    });
+
+    expect(screen.getByTestId("agent-message-list")).toHaveTextContent(
+      "Real message"
+    );
+    fireEvent.click(screen.getByTestId("sender"));
+
+    expect(agentTasksMock.startTask).toHaveBeenCalledWith({
+      modelId: "claude-3-5-sonnet",
+      prompt: "Inspect this project",
+      provider: "anthropic",
+      workspacePath: "/Users/mingbing/apps/workspace-one"
+    });
+  });
 });
 
 interface RenderOptions {
   activeAgent?: SelectedModel;
+  activeTaskId?: string;
   activeWorkspaceId?: string;
 }
 
@@ -115,10 +168,12 @@ function renderChatWorkspace(options: RenderOptions = {}) {
 
 function WorkspaceStateSetup({
   activeAgent,
+  activeTaskId,
   activeWorkspaceId
 }: RenderOptions) {
   const {
     setActiveAgent,
+    setActiveTaskId,
     setActiveWorkspaceId,
     setWorkspaces
   } = useAppWorkspace();
@@ -141,10 +196,15 @@ function WorkspaceStateSetup({
     if (activeAgent) {
       setActiveAgent(activeAgent);
     }
+    if (activeTaskId) {
+      setActiveTaskId(activeTaskId);
+    }
   }, [
     activeAgent,
+    activeTaskId,
     activeWorkspaceId,
     setActiveAgent,
+    setActiveTaskId,
     setActiveWorkspaceId,
     setWorkspaces
   ]);

@@ -82,7 +82,7 @@ export function WorkspaceSection({
               transition: "background-color 0.16s ease"
             }}
           >
-            {collapsed ? getTaskShortLabel(task) : task.title}
+            {collapsed ? getTaskShortLabel(task) : getTaskVisibleTitle(task)}
           </Typography.Text>
         );
       })}
@@ -91,10 +91,14 @@ export function WorkspaceSection({
 }
 
 function getTaskShortLabel(task: WorkspaceTaskSummary): string {
-  return task.title
+  return getTaskVisibleTitle(task)
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+export function getTaskVisibleTitle(task: WorkspaceTaskSummary): string {
+  return task.title.trim() || task.initialUserMessage;
 }

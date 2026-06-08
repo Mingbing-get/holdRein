@@ -2,6 +2,7 @@ import { getAppEnv } from "./config/env";
 import { AppUiProvider } from "./app/app-ui-context";
 import { AppWorkspaceProvider } from "./app/app-workspace-context";
 import { HoldReinShell } from "./modules/shell/hold-rein-shell";
+import { AgentTasksProvider } from "./modules/agent-messages";
 
 export default function App() {
   const { apiBaseUrl } = getAppEnv();
@@ -9,7 +10,9 @@ export default function App() {
   return (
     <AppUiProvider>
       <AppWorkspaceProvider>
-        <HoldReinShell apiBaseUrl={apiBaseUrl} />
+        <AgentTasksProvider apiBaseUrl={apiBaseUrl}>
+          <HoldReinShell apiBaseUrl={apiBaseUrl} />
+        </AgentTasksProvider>
       </AppWorkspaceProvider>
     </AppUiProvider>
   );

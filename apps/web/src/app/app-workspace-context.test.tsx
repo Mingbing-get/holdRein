@@ -107,6 +107,31 @@ describe("AppWorkspaceProvider", () => {
     ).toBeNull();
     expect(window.localStorage.getItem("hold-rein.active-agent")).toBeNull();
   });
+
+  it("upserts a started task with a prompt title and replaces it later", () => {
+    render(
+      <AppWorkspaceProvider>
+        <StartedTaskStateProbe />
+      </AppWorkspaceProvider>
+    );
+
+    expect(screen.getByTestId("started-workspace-count")).toHaveTextContent("1");
+    expect(screen.getByTestId("started-task-order")).toHaveTextContent(
+      "task-new,task-old"
+    );
+    expect(screen.getByTestId("started-task-title")).toHaveTextContent(
+      "Inspect the project"
+    );
+    expect(screen.getByTestId("started-active-workspace")).toHaveTextContent(
+      "workspace-one"
+    );
+    expect(screen.getByTestId("started-active-task")).toHaveTextContent(
+      "task-new"
+    );
+    expect(screen.getByTestId("generated-task-title")).toHaveTextContent(
+      "Project inspection"
+    );
+  });
 });
 
 function WorkspaceStateProbe() {
@@ -197,4 +222,77 @@ function ClearWorkspaceStateProbe() {
   }, [setActiveAgent, setActiveWorkspaceId]);
 
   return null;
+}
+
+function StartedTaskStateProbe() {
+  const {
+    state: { activeTaskId, activeWorkspaceId, workspaces },
+    setWorkspaces,
+    updateTaskTitle,
+    upsertStartedTask
+  } = useAppWorkspace();
+
+  useEffect(() => {
+    setWorkspaces([
+      {
+        hasMore: false,
+        id: "workspace-one",
+        name: "Workspace One",
+        path: "/workspace-one",
+        tasks: [
+          {
+            id: "task-old",
+            initialUserMessage: "Old prompt",
+            lastContinuedAt: "2026-06-08T00:00:00.000Z",
+            lastModelName: "gpt-4.1",
+            lastModelProvider: "openai",
+            lastModelProviderSource: "built_in",
+            title: "Old title"
+          }
+        ]
+      }
+    ]);
+    upsertStartedTask(
+      {
+        id: "workspace-one",
+        name: "Workspace One",
+        path: "/workspace-one"
+      },
+      {
+        id: "task-new",
+        initialUserMessage: "Inspect the project",
+        lastContinuedAt: "2026-06-08T01:00:00.000Z",
+        lastModelName: "gpt-4.1",
+        lastModelProvider: "openai",
+        lastModelProviderSource: "built_in",
+        title: "",
+        workspaceId: "workspace-one"
+      },
+      "Inspect the project"
+    );
+  }, [setWorkspaces, upsertStartedTask]);
+
+  useEffect(() => {
+    if (activeTaskId === "task-new") {
+      updateTaskTitle("task-new", "Project inspection");
+    }
+  }, [activeTaskId, updateTaskTitle]);
+
+  const startedWorkspace = workspaces[0];
+  const startedTask = startedWorkspace?.tasks[0];
+
+  return (
+    <>
+      <span data-testid="started-workspace-count">{workspaces.length}</span>
+      <span data-testid="started-task-order">
+        {startedWorkspace?.tasks.map((task) => task.id).join(",")}
+      </span>
+      <span data-testid="started-task-title">
+        {startedTask?.initialUserMessage}
+      </span>
+      <span data-testid="generated-task-title">{startedTask?.title}</span>
+      <span data-testid="started-active-workspace">{activeWorkspaceId}</span>
+      <span data-testid="started-active-task">{activeTaskId}</span>
+    </>
+  );
 }

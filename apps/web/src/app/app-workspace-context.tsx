@@ -8,6 +8,7 @@ import {
 import type { Dispatch, PropsWithChildren, SetStateAction } from "react";
 
 import type { WorkspaceSummary } from "../modules/LeftSide/workspace-nav-types";
+import type { WorkspaceTaskSummary } from "../modules/LeftSide/workspace-nav-types";
 
 const ACTIVE_AGENT_STORAGE_KEY = "hold-rein.active-agent";
 const ACTIVE_WORKSPACE_ID_STORAGE_KEY = "hold-rein.active-workspace-id";
@@ -30,6 +31,22 @@ export interface AppWorkspaceContextValue {
   setActiveTaskId: (taskId: string) => void;
   setActiveWorkspaceId: (workspaceId: string) => void;
   setWorkspaces: Dispatch<SetStateAction<WorkspaceSummary[]>>;
+  updateTaskTitle: (taskId: string, title: string) => void;
+  upsertStartedTask: (
+    workspace: StartedWorkspace,
+    task: StartedTask,
+    temporaryTitle: string
+  ) => void;
+}
+
+export interface StartedWorkspace {
+  id: string;
+  name: string;
+  path: string;
+}
+
+export interface StartedTask extends WorkspaceTaskSummary {
+  workspaceId: string;
 }
 
 const DEFAULT_APP_WORKSPACE_STATE: AppWorkspaceState = {
@@ -168,20 +185,85 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
     []
   );
 
+  const updateTaskTitle = useCallback((taskId: string, title: string) => {
+    setState((currentState) => ({
+      ...currentState,
+      workspaces: currentState.workspaces.map((workspace) => ({
+        ...workspace,
+        tasks: workspace.tasks.map((task) =>
+          task.id === taskId ? { ...task, title } : task
+        )
+      }))
+    }));
+  }, []);
+
+  const upsertStartedTask = useCallback(
+    (
+      workspace: StartedWorkspace,
+      task: StartedTask,
+      temporaryTitle: string
+    ) => {
+      setState((currentState) => {
+        const nextTask: WorkspaceTaskSummary = {
+          ...task,
+          title: task.title.trim() || temporaryTitle
+        };
+        const existingWorkspace = currentState.workspaces.find(
+          (item) => item.id === workspace.id
+        );
+        const nextWorkspace: WorkspaceSummary = existingWorkspace
+          ? {
+              ...existingWorkspace,
+              name: workspace.name,
+              path: workspace.path,
+              tasks: [
+                nextTask,
+                ...existingWorkspace.tasks.filter(
+                  (existingTask) => existingTask.id !== task.id
+                )
+              ]
+            }
+          : {
+              hasMore: false,
+              ...workspace,
+              tasks: [nextTask]
+            };
+
+        return {
+          ...currentState,
+          activeTaskId: task.id,
+          activeWorkspaceId: workspace.id,
+          workspaces: [
+            nextWorkspace,
+            ...currentState.workspaces.filter(
+              (item) => item.id !== workspace.id
+            )
+          ]
+        };
+      });
+      storeActiveWorkspaceId(workspace.id);
+    },
+    []
+  );
+
   const contextValue = useMemo<AppWorkspaceContextValue>(
     () => ({
       state,
       setActiveAgent,
       setActiveTaskId,
       setActiveWorkspaceId,
-      setWorkspaces
+      setWorkspaces,
+      updateTaskTitle,
+      upsertStartedTask
     }),
     [
       setActiveAgent,
       setActiveTaskId,
       setActiveWorkspaceId,
       setWorkspaces,
-      state
+      state,
+      updateTaskTitle,
+      upsertStartedTask
     ]
   );
 

@@ -1,8 +1,7 @@
-import { useState } from "react";
 import { Divider, Flex } from "antd";
-import { Bubble, Think } from "@ant-design/x";
 
 import { useAppWorkspace } from "../../app/app-workspace-context";
+import { AgentMessageList, useAgentTasks } from "../agent-messages";
 import { ModelSelector } from "./model-selector";
 import Sender, { type SuggestionGroup } from "./sender";
 import { WorkspaceSelector } from "./workspace-selector";
@@ -14,7 +13,7 @@ interface ChatWorkspaceProps {
 
 const groups: SuggestionGroup[] = [
   {
-    trigger: '/' as any,
+    trigger: "/",
     suggestions: [
       {
         label: "Run release checklist",
@@ -36,11 +35,15 @@ export function ChatWorkspace({
   activeTaskName,
   apiBaseUrl
 }: ChatWorkspaceProps) {
-  const [draftMessage, setDraftMessage] = useState("");
   const {
-    state: { activeAgent, activeWorkspaceId },
+    state: { activeAgent, activeTaskId, activeWorkspaceId, workspaces },
     setActiveAgent
   } = useAppWorkspace();
+  const { getTaskState, startTask } = useAgentTasks();
+  const activeWorkspace = workspaces.find(
+    (workspace) => workspace.id === activeWorkspaceId
+  );
+  const taskState = getTaskState(activeTaskId);
   const senderDisabled = !activeWorkspaceId || !activeAgent;
 
   return (
@@ -64,50 +67,18 @@ export function ChatWorkspace({
           overflow: "auto",
         }}
       >
-        <Bubble content="message 1" />
-        <Bubble content="message 2" placement="end" />
-        <Think
-            blink
-            loading={false}
-            styles={{
-              content: {
-                color: "var(--app-color-text-secondary)"
-              },
-              root: {
-                color: "var(--app-color-text-secondary)"
-              },
-              status: {
-                color: "var(--app-color-text)"
-              }
-            }}
-            title="Reasoning trace"
-          >
-            This is deep thinking content.
-          </Think>
-        <Bubble content="message 3" />
-        <Bubble content="message 4" placement="end" />
-        <Bubble content="message 3" />
-        <Bubble content="message 4" placement="end" />
-        <Bubble content="message 3" />
-        <Bubble content="message 4" placement="end" />
-        <Bubble content="message 3" />
-        <Bubble content="message 4" placement="end" />
-        <Bubble content="message 3" />
-        <Bubble content="message 4" placement="end" />
-        <Bubble content="message 3" />
-        <Bubble content="message 4" placement="end" />
+        <AgentMessageList messages={taskState?.messages ?? []} />
       </Flex>
 
       <Sender
         disabled={senderDisabled}
         suggestionGroups={groups}
-        onMessageChange={setDraftMessage}
         autoSize={{ minRows: 1, maxRows: 4 }}
         footer={
           <Flex align="center">
             <WorkspaceSelector apiBaseUrl={apiBaseUrl} />
             <Divider
-              type="vertical"
+              orientation="vertical"
               style={{
                 borderColor: "var(--app-color-border-secondary)"
               }}
@@ -119,7 +90,18 @@ export function ChatWorkspace({
             />
           </Flex>
         }
-        onSubmit={async () => new Promise(resolve => setTimeout(resolve, 2000))}
+        onSubmit={async (message) => {
+          if (!activeAgent || !activeWorkspace || !message.trim()) {
+            return;
+          }
+
+          await startTask({
+            modelId: activeAgent.modelId,
+            prompt: message,
+            provider: activeAgent.providerId,
+            workspacePath: activeWorkspace.path
+          });
+        }}
       />
     </Flex>
   );

@@ -101,13 +101,39 @@ describe("WorkspaceSection", () => {
       "接W"
     );
   });
+
+  it("uses the initial prompt when the generated title is empty", () => {
+    const task = workspaceSummary.tasks[0];
+
+    if (!task) {
+      throw new Error("Expected workspace task fixture");
+    }
+
+    renderWorkspaceSection({
+      collapsed: false,
+      workspace: {
+        ...workspaceSummary,
+        tasks: [{ ...task, title: "" }]
+      }
+    });
+
+    expect(screen.getByTestId("workspace-task-task-real-1")).toHaveTextContent(
+      "接入真实接口"
+    );
+  });
 });
 
-function renderWorkspaceSection({ collapsed }: { collapsed: boolean }) {
+function renderWorkspaceSection({
+  collapsed,
+  workspace = workspaceSummary
+}: {
+  collapsed: boolean;
+  workspace?: WorkspaceSummary;
+}) {
   render(
     <AppUiProvider>
       <AppWorkspaceProvider>
-        <WorkspaceSection collapsed={collapsed} workspace={workspaceSummary} />
+        <WorkspaceSection collapsed={collapsed} workspace={workspace} />
       </AppWorkspaceProvider>
     </AppUiProvider>
   );

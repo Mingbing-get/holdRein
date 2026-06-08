@@ -15,7 +15,7 @@ export interface SuggestionItem {
 }
 
 export interface SuggestionGroup {
-  trigger: `${string}` & { length: 1 };
+  trigger: string;
   suggestions: SuggestionItem[]
 }
 
@@ -32,13 +32,13 @@ type CursorSource = {
   selectionStart?: number | null;
 } | null | undefined;
 type InputElement = HTMLTextAreaElement | null;
-type SpaceKeydownSource = {
+interface SpaceKeydownSource {
   code?: string;
   isComposing?: boolean;
   nativeEvent?: {
     isComposing?: boolean;
   };
-};
+}
 
 export function getCurrentCursorCharacterIndex(
   source: CursorSource
