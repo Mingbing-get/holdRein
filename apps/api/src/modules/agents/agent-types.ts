@@ -1,4 +1,5 @@
 import type { AgentHarnessEvent } from "@earendil-works/pi-agent-core";
+import type { TaskRow, WorkspaceRow } from "../../db";
 
 export interface StartAgentInput {
   modelId: string;
@@ -7,10 +8,20 @@ export interface StartAgentInput {
   workspacePath: string;
 }
 
-export interface StartAgentResult {
+export interface AgentRunResult {
   agentId: string;
   sessionId: string;
   status: "running";
+}
+
+export interface StartAgentResult extends AgentRunResult {
+  task: TaskRow;
+  workspace: WorkspaceRow;
+}
+
+export interface TaskTitleResult {
+  id: string;
+  title: string;
 }
 
 export interface AgentEventEnvelope {

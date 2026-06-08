@@ -11,10 +11,33 @@ function createService(overrides: Partial<AgentsService> = {}): AgentsService {
       approvalId: "approval-1",
       approved: true
     }),
+    getTaskTitle: vi.fn().mockResolvedValue({
+      id: "task-1",
+      title: "Inspect project"
+    }),
     startAgent: vi.fn().mockResolvedValue({
       agentId: "agent-1",
       sessionId: "session-1",
-      status: "running"
+      status: "running",
+      task: {
+        createdAt: "2026-06-08T00:00:00.000Z",
+        id: "task-1",
+        initialUserMessage: "Inspect this project",
+        lastContinuedAt: "2026-06-08T00:00:00.000Z",
+        lastModelName: "gpt-4.1",
+        lastModelProvider: "openai",
+        lastModelProviderSource: "built_in",
+        title: "",
+        updatedAt: "2026-06-08T00:00:00.000Z",
+        workspaceId: "workspace-1"
+      },
+      workspace: {
+        createdAt: "2026-06-08T00:00:00.000Z",
+        id: "workspace-1",
+        name: "workspace",
+        path: "/tmp/workspace",
+        updatedAt: "2026-06-08T00:00:00.000Z"
+      }
     }),
     subscribeToAgentEvents: vi.fn().mockImplementation((_input, listener) => {
       listener({
@@ -52,7 +75,16 @@ describe("agent routes", () => {
       data: {
         agentId: "agent-1",
         sessionId: "session-1",
-        status: "running"
+        status: "running",
+        task: expect.objectContaining({
+          id: "task-1",
+          title: "",
+          workspaceId: "workspace-1"
+        }),
+        workspace: expect.objectContaining({
+          id: "workspace-1",
+          path: "/tmp/workspace"
+        })
       }
     });
     expect(service.startAgent).toHaveBeenCalledWith({
@@ -109,6 +141,40 @@ describe("agent routes", () => {
     expect(response.body.msg).toBe(
       "afterSequence must be a non-negative integer"
     );
+  });
+
+  it("waits for a generated task title", async () => {
+    const service = createService();
+
+    const response = await request(createApp({ agentsService: service }))
+      .get("/api/v1/agents/tasks/task-1/title");
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      code: 0,
+      msg: "ok",
+      data: {
+        id: "task-1",
+        title: "Inspect project"
+      }
+    });
+    expect(service.getTaskTitle).toHaveBeenCalledWith({ taskId: "task-1" });
+  });
+
+  it("returns 404 for an unknown task title request", async () => {
+    const service = createService({
+      getTaskTitle: vi.fn().mockResolvedValue(null)
+    });
+
+    const response = await request(createApp({ agentsService: service }))
+      .get("/api/v1/agents/tasks/missing-task/title");
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      code: 40400,
+      msg: "Unknown task",
+      data: null
+    });
   });
 
   it("submits an approval decision", async () => {

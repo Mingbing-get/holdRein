@@ -21,15 +21,15 @@ import type { AgentApprovalStore } from "./agent-approval-store";
 import type { AgentEventBus } from "./agent-event-bus";
 import {
   type HarnessEvent,
+  type AgentRunResult,
   type ShellCommandApprovalRequest,
-  type StartAgentInput,
-  type StartAgentResult
+  type StartAgentInput
 } from "./agent-types";
 import { createShellExecTool } from "./shell-exec-tool";
 import { classifyShellCommandRisk } from "./shell-command-risk";
 
 export interface AgentRuntime {
-  start: (input: StartAgentInput) => Promise<StartAgentResult>;
+  start: (input: StartAgentInput) => Promise<AgentRunResult>;
 }
 
 export interface CreateAgentRuntimeOptions {

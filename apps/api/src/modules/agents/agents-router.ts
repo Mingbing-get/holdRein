@@ -61,6 +61,33 @@ export function createAgentsRouter(
   );
 
   router.get(
+    "/agents/tasks/:taskId/title",
+    (request: Request<{ taskId: string }>, response: Response): void => {
+      void getService()
+        .getTaskTitle({ taskId: request.params.taskId })
+        .then((result) => {
+          if (!result) {
+            sendError(
+              response,
+              RESPONSE_CODE_DEFINITIONS.notFound,
+              "Unknown task"
+            );
+            return;
+          }
+
+          sendSuccess(response, result);
+        })
+        .catch((error) => {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.badRequest,
+            error instanceof Error ? error.message : "Failed to get task title"
+          );
+        });
+    }
+  );
+
+  router.get(
     "/agents/:agentId/events",
     (request: Request<{ agentId: string }>, response: Response): void => {
       const afterSequence = parseAfterSequence(request.query.afterSequence);
