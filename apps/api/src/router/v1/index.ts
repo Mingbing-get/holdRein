@@ -9,16 +9,22 @@ import {
   createModelProvidersRouter,
   type CreateModelProvidersRouterOptions
 } from "../../modules/model-providers/model-providers-router";
+import {
+  createWorkspacesRouter,
+  type CreateWorkspacesRouterOptions
+} from "../../modules/workspaces";
 
 export interface CreateV1RouterOptions
   extends CreateFileSystemRouterOptions,
-    CreateModelProvidersRouterOptions {}
+    CreateModelProvidersRouterOptions,
+    CreateWorkspacesRouterOptions {}
 
 export function createV1Router(options: CreateV1RouterOptions = {}): Router {
   const router = Router();
 
   router.use(createHealthRouter());
   router.use(createFileSystemRouter(options));
+  router.use(createWorkspacesRouter(options));
   router.use(createModelProvidersRouter(options));
 
   return router;

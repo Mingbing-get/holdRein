@@ -37,9 +37,9 @@ export interface AppUiContextValue {
 }
 
 const DEFAULT_APP_UI_STATE: AppUiState = {
-  activeConversationId: "conv-ops-sync",
+  activeConversationId: "",
   activeMainView: "chat",
-  activeWorkspaceId: "workspace-engineering",
+  activeWorkspaceId: "",
   sidebarCollapsed: false,
   sidebarResizing: false,
   sidebarWidth: 240,

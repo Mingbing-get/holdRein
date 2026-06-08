@@ -1,10 +1,12 @@
 import { Layout } from "antd";
+import { useEffect, useState } from "react";
 
 import { useAppUi } from "../../app/app-ui-context";
-import { workspaceSummaries } from "../../shared/mock/workspaces";
 import { ChatWorkspace } from "../chat/chat-workspace";
 import { ModelProvidersView } from "../model-providers";
 import { WorkspaceSidebar } from "../workspace-nav/workspace-sidebar";
+import { fetchWorkspaceNavigation } from "../workspace-nav/workspace-nav-api";
+import type { WorkspaceSummary } from "../workspace-nav/workspace-nav-types";
 import { WorkspaceTopBar } from "../top-bar/workspace-top-bar";
 
 interface HoldReinShellProps {
@@ -20,27 +22,59 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
       sidebarCollapsed,
       sidebarResizing,
       sidebarWidth
-    }
+    },
+    setActiveConversationId,
+    setActiveWorkspaceId
   } = useAppUi();
-  const defaultWorkspace = workspaceSummaries[0];
+  const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
 
-  if (!defaultWorkspace) {
-    throw new Error("At least one workspace summary is required");
-  }
+  useEffect(() => {
+    let ignore = false;
+
+    void fetchWorkspaceNavigation(apiBaseUrl)
+      .then((navigation) => {
+        if (!ignore) {
+          setWorkspaces(navigation.workspaces);
+        }
+      })
+      .catch(() => {
+        if (!ignore) {
+          setWorkspaces([]);
+        }
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [apiBaseUrl]);
 
   const activeWorkspace =
-    workspaceSummaries.find((workspace) => workspace.id === activeWorkspaceId) ??
-    defaultWorkspace;
-  const defaultConversation = activeWorkspace.conversations[0];
+    workspaces.find((workspace) => workspace.id === activeWorkspaceId) ??
+    workspaces[0];
+  const activeTask =
+    activeWorkspace?.tasks.find((task) => task.id === activeConversationId) ??
+    activeWorkspace?.tasks[0];
 
-  if (!defaultConversation) {
-    throw new Error("At least one conversation is required per workspace");
-  }
+  useEffect(() => {
+    if (!activeWorkspace) {
+      return;
+    }
 
-  const activeConversation =
-    activeWorkspace.conversations.find(
-      (conversation) => conversation.id === activeConversationId
-    ) ?? defaultConversation;
+    if (activeWorkspace.id !== activeWorkspaceId) {
+      setActiveWorkspaceId(activeWorkspace.id);
+    }
+
+    if (activeTask && activeTask.id !== activeConversationId) {
+      setActiveConversationId(activeTask.id);
+    }
+  }, [
+    activeConversationId,
+    activeTask,
+    activeWorkspace,
+    activeWorkspaceId,
+    setActiveConversationId,
+    setActiveWorkspaceId
+  ]);
 
   return (
     <Layout
@@ -49,7 +83,7 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
         background: "transparent",
       }}
     >
-      <WorkspaceSidebar />
+      <WorkspaceSidebar workspaces={workspaces} />
       <Layout
         data-testid="workspace-main-layout"
         style={{
@@ -64,7 +98,7 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
             <ModelProvidersView apiBaseUrl={apiBaseUrl} />
           ) : (
             <ChatWorkspace
-              activeConversationName={activeConversation.name}
+              activeConversationName={activeTask?.title ?? ""}
               apiBaseUrl={apiBaseUrl}
             />
           )}

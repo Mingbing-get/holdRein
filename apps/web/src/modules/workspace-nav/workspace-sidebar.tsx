@@ -1,19 +1,23 @@
 import { useCallback, useState } from "react";
 import { PlusOutlined } from "@ant-design/icons";
-import { Button } from "antd";
+import { Button, Typography } from "antd";
 
 import { useAppUi } from "../../app/app-ui-context";
-import { workspaceSummaries } from "../../shared/mock/workspaces";
 import { WorkspaceSection } from "./workspace-section";
+import type { WorkspaceSummary } from "./workspace-nav-types";
 
 const MIN_SIDEBAR_WIDTH = 120;
 const MAX_SIDEBAR_WIDTH = 680;
+
+interface WorkspaceSidebarProps {
+  workspaces: WorkspaceSummary[];
+}
 
 function clampSidebarWidth(width: number): number {
   return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, width));
 }
 
-export function WorkspaceSidebar() {
+export function WorkspaceSidebar({ workspaces }: WorkspaceSidebarProps) {
   const {
     state: { sidebarCollapsed, sidebarResizing, sidebarWidth },
     setSidebarResizing,
@@ -87,7 +91,22 @@ export function WorkspaceSidebar() {
         >
           开启新对话
         </Button>
-        {workspaceSummaries.map((workspace) => (
+        {workspaces.length === 0 && !sidebarCollapsed ? (
+          <Typography.Text
+            data-testid="workspace-sidebar-empty"
+            style={{
+              color: "var(--app-color-text-secondary)",
+              display: "block",
+              fontSize: 12,
+              lineHeight: "20px",
+              padding: "4px 8px",
+              textAlign: 'center'
+            }}
+          >
+            暂无对话
+          </Typography.Text>
+        ) : null}
+        {workspaces.map((workspace) => (
           <WorkspaceSection
             key={workspace.id}
             collapsed={sidebarCollapsed}

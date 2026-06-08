@@ -3,7 +3,10 @@ import { FolderOpenOutlined } from "@ant-design/icons";
 import { Typography } from "antd";
 
 import { useAppUi } from "../../app/app-ui-context";
-import type { WorkspaceSummary } from "../../shared/mock/workspaces";
+import type {
+  WorkspaceSummary,
+  WorkspaceTaskSummary
+} from "./workspace-nav-types";
 
 export interface WorkspaceSectionProps {
   collapsed: boolean;
@@ -20,7 +23,7 @@ export function WorkspaceSection({
     setActiveConversationId,
     setActiveWorkspaceId
   } = useAppUi();
-  const [hoveredConversationId, setHoveredConversationId] = useState<
+  const [hoveredTaskId, setHoveredTaskId] = useState<
     string | null
   >(null);
   const isActiveWorkspace = workspace.id === activeWorkspaceId;
@@ -42,33 +45,32 @@ export function WorkspaceSection({
         </div>
       ) : null}
 
-      {workspace.conversations.map((conversation) => {
-        const isActiveConversation =
-          isActiveWorkspace && conversation.id === activeConversationId;
+      {workspace.tasks.map((task) => {
+        const isActiveTask = isActiveWorkspace && task.id === activeConversationId;
 
         return (
           <Typography.Text
-            key={conversation.id}
-            data-testid={`workspace-conversation-${conversation.id}`}
+            key={task.id}
+            data-testid={`workspace-task-${task.id}`}
             onClick={() => {
               setActiveWorkspaceId(workspace.id);
-              setActiveConversationId(conversation.id);
+              setActiveConversationId(task.id);
               openChatWorkspace();
             }}
             onMouseEnter={() => {
-              setHoveredConversationId(conversation.id);
+              setHoveredTaskId(task.id);
             }}
             onMouseLeave={() => {
-              setHoveredConversationId((currentConversationId) =>
-                currentConversationId === conversation.id
+              setHoveredTaskId((currentTaskId) =>
+                currentTaskId === task.id
                   ? null
-                  : currentConversationId
+                  : currentTaskId
               );
             }}
             ellipsis
             style={{
               background:
-                isActiveConversation || hoveredConversationId === conversation.id
+                isActiveTask || hoveredTaskId === task.id
                   ? "var(--app-color-fill-secondary)"
                   : undefined,
               borderRadius: 6,
@@ -81,10 +83,19 @@ export function WorkspaceSection({
               transition: "background-color 0.16s ease"
             }}
           >
-            {collapsed ? conversation.shortLabel : conversation.name}
+            {collapsed ? getTaskShortLabel(task) : task.title}
           </Typography.Text>
         );
       })}
     </div>
   );
+}
+
+function getTaskShortLabel(task: WorkspaceTaskSummary): string {
+  return task.title
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 }
