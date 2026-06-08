@@ -33,7 +33,7 @@ export interface SelectedModel {
 interface ModelSelectorProps {
   apiBaseUrl: string;
   onChange?: (value: SelectedModel) => void;
-  value?: SelectedModel;
+  value?: SelectedModel | undefined;
 }
 
 const modelCascaderTheme = {

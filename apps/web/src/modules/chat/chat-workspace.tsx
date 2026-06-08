@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Divider, Flex } from "antd";
 import { Bubble, Think } from "@ant-design/x";
 
+import { useAppWorkspace } from "../../app/app-workspace-context";
 import { ModelSelector } from "./model-selector";
 import Sender, { type SuggestionGroup } from "./sender";
 import { WorkspaceSelector } from "./workspace-selector";
@@ -36,6 +37,11 @@ export function ChatWorkspace({
   apiBaseUrl
 }: ChatWorkspaceProps) {
   const [draftMessage, setDraftMessage] = useState("");
+  const {
+    state: { activeAgent, activeWorkspaceId },
+    setActiveAgent
+  } = useAppWorkspace();
+  const senderDisabled = !activeWorkspaceId || !activeAgent;
 
   return (
     <Flex
@@ -93,6 +99,7 @@ export function ChatWorkspace({
       </Flex>
 
       <Sender
+        disabled={senderDisabled}
         suggestionGroups={groups}
         onMessageChange={setDraftMessage}
         autoSize={{ minRows: 1, maxRows: 4 }}
@@ -105,7 +112,11 @@ export function ChatWorkspace({
                 borderColor: "var(--app-color-border-secondary)"
               }}
             />
-            <ModelSelector apiBaseUrl={apiBaseUrl} />
+            <ModelSelector
+              apiBaseUrl={apiBaseUrl}
+              value={activeAgent ?? undefined}
+              onChange={setActiveAgent}
+            />
           </Flex>
         }
         onSubmit={async () => new Promise(resolve => setTimeout(resolve, 2000))}
