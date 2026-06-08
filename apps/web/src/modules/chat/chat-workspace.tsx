@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Flex } from "antd";
+import { Divider, Flex } from "antd";
 import { Bubble, Think } from "@ant-design/x";
 
+import { ModelSelector } from "./model-selector";
 import Sender, { type SuggestionGroup } from "./sender";
 import { WorkspaceSelector } from "./workspace-selector";
 
@@ -95,7 +96,18 @@ export function ChatWorkspace({
         suggestionGroups={groups}
         onMessageChange={setDraftMessage}
         autoSize={{ minRows: 1, maxRows: 4 }}
-        footer={<WorkspaceSelector apiBaseUrl={apiBaseUrl} />}
+        footer={
+          <Flex align="center">
+            <WorkspaceSelector apiBaseUrl={apiBaseUrl} />
+            <Divider
+              type="vertical"
+              style={{
+                borderColor: "var(--app-color-border-secondary)"
+              }}
+            />
+            <ModelSelector apiBaseUrl={apiBaseUrl} />
+          </Flex>
+        }
         onSubmit={async () => new Promise(resolve => setTimeout(resolve, 2000))}
       />
     </Flex>

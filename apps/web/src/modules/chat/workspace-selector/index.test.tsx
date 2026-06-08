@@ -12,7 +12,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { WorkspaceSelector, getWorkspaceLabelFromPath } from "./workspace-selector";
+import { WorkspaceSelector, getWorkspaceLabelFromPath } from ".";
 
 class ResizeObserverMock {
   disconnect() {
@@ -144,10 +144,10 @@ describe("WorkspaceSelector", () => {
 
   it("uses theme variables for selected option and suffix icon colors", () => {
     const workspaceSelectorPathFromPackage =
-      `${process.cwd()}/src/modules/chat/workspace-selector.tsx`;
+      `${process.cwd()}/src/modules/chat/workspace-selector/index.tsx`;
     const workspaceSelectorPath = existsSync(workspaceSelectorPathFromPackage)
       ? workspaceSelectorPathFromPackage
-      : `${process.cwd()}/apps/web/src/modules/chat/workspace-selector.tsx`;
+      : `${process.cwd()}/apps/web/src/modules/chat/workspace-selector/index.tsx`;
     const workspaceSelectorSource = readFileSync(
       workspaceSelectorPath,
       "utf8"
@@ -164,10 +164,10 @@ describe("WorkspaceSelector", () => {
 
   it("keeps the selected value readable while the selector is focused", () => {
     const workspaceSelectorPathFromPackage =
-      `${process.cwd()}/src/modules/chat/workspace-selector.tsx`;
+      `${process.cwd()}/src/modules/chat/workspace-selector/index.tsx`;
     const workspaceSelectorPath = existsSync(workspaceSelectorPathFromPackage)
       ? workspaceSelectorPathFromPackage
-      : `${process.cwd()}/apps/web/src/modules/chat/workspace-selector.tsx`;
+      : `${process.cwd()}/apps/web/src/modules/chat/workspace-selector/index.tsx`;
     const workspaceSelectorSource = readFileSync(
       workspaceSelectorPath,
       "utf8"

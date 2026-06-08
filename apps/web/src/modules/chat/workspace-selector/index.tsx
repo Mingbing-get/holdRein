@@ -2,7 +2,7 @@ import { DownOutlined, FolderOpenOutlined } from "@ant-design/icons";
 import { Button, ConfigProvider, Divider, Select } from "antd";
 import { useCallback, useState } from "react";
 
-import { FileSelector } from "../../components/fileSelector";
+import { FileSelector } from "../../../components/fileSelector";
 
 interface WorkspaceOption {
   label: string;
@@ -110,6 +110,7 @@ export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
         />
       </ConfigProvider>
       <FileSelector
+        title="选择工作空间"
         apiBaseUrl={apiBaseUrl}
         open={selectorOpen}
         selectableTypes={["folder"]}

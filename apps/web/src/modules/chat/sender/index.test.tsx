@@ -10,7 +10,7 @@ import {
   insertTextAtCursor,
   replaceTriggerAtCursor,
   shouldHandleSpaceKeydown
-} from "./sender";
+} from ".";
 
 describe("getCurrentCursorCharacterIndex", () => {
   it("returns null when the textarea is unavailable", () => {
@@ -75,7 +75,7 @@ describe("shouldHandleSpaceKeydown", () => {
 describe("sender suggestion theme styles", () => {
   it("uses the theme text color for the sender caret", () => {
     const senderSource = readFileSync(
-      `${process.cwd()}/apps/web/src/modules/chat/sender.tsx`,
+      `${process.cwd()}/src/modules/chat/sender/index.tsx`,
       "utf8"
     );
 
@@ -84,7 +84,7 @@ describe("sender suggestion theme styles", () => {
 
   it("scopes the selected suggestion text override to the sender popup", () => {
     const themeCss = readFileSync(
-      `${process.cwd()}/apps/web/src/app/theme.css`,
+      `${process.cwd()}/src/app/theme.css`,
       "utf8"
     );
 

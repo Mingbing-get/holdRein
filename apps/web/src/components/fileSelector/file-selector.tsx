@@ -23,6 +23,7 @@ interface FileSelectorBaseProps {
   open: boolean;
   parentPath?: string;
   selectableTypes: FileSelectorSelectableType[];
+  title?: string
 }
 
 export interface SingleFileSelectorProps extends FileSelectorBaseProps {
@@ -43,7 +44,8 @@ export function FileSelector(props: FileSelectorProps) {
   const {
     apiBaseUrl = "",
     open,
-    selectableTypes
+    selectableTypes,
+    title = '选择文件'
   } = props;
   const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
   const hasSelection = selectedPaths.length > 0;
@@ -94,7 +96,7 @@ export function FileSelector(props: FileSelectorProps) {
       okText="确定"
       onOk={handleConfirm}
       open={open}
-      title="选择文件"
+      title={title}
       width={680}
       styles={{
         body: {
