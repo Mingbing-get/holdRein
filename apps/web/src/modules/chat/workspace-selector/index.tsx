@@ -2,7 +2,7 @@ import { DownOutlined, FolderOpenOutlined } from "@ant-design/icons";
 import { Button, ConfigProvider, Divider, Select } from "antd";
 import { useCallback, useMemo, useState } from "react";
 
-import { useAppUi } from "../../../app/app-ui-context";
+import { useAppWorkspace } from "../../../app/app-workspace-context";
 import { FileSelector } from "../../../components/fileSelector";
 import type { WorkspaceSummary } from "../../LeftSide/workspace-nav-types";
 
@@ -38,10 +38,10 @@ export function getWorkspaceLabelFromPath(path: string): string {
 export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
   const {
     state: { activeWorkspaceId, workspaces },
-    setActiveConversationId,
+    setActiveTaskId,
     setActiveWorkspaceId,
     setWorkspaces
-  } = useAppUi();
+  } = useAppWorkspace();
   const [selectOpen, setSelectOpen] = useState(false);
   const [selectorOpen, setSelectorOpen] = useState(false);
   const options = useMemo<WorkspaceOption[]>(
@@ -59,9 +59,9 @@ export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
   const selectWorkspace = useCallback(
     (workspace: WorkspaceSummary) => {
       setActiveWorkspaceId(workspace.id);
-      setActiveConversationId(workspace.tasks[0]?.id ?? "");
+      setActiveTaskId(workspace.tasks[0]?.id ?? "");
     },
-    [setActiveConversationId, setActiveWorkspaceId]
+    [setActiveTaskId, setActiveWorkspaceId]
   );
 
   const handleChangeWorkspace = useCallback(

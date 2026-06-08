@@ -13,6 +13,7 @@ import {
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppUiProvider } from "../../../app/app-ui-context";
+import { AppWorkspaceProvider } from "../../../app/app-workspace-context";
 import { WorkspaceSelector, getWorkspaceLabelFromPath } from ".";
 
 class ResizeObserverMock {
@@ -189,7 +190,9 @@ describe("WorkspaceSelector", () => {
 function renderWorkspaceSelector() {
   render(
     <AppUiProvider>
-      <WorkspaceSelector apiBaseUrl="" />
+      <AppWorkspaceProvider>
+        <WorkspaceSelector apiBaseUrl="" />
+      </AppWorkspaceProvider>
     </AppUiProvider>
   );
 }

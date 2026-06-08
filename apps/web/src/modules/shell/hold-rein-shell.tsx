@@ -2,6 +2,7 @@ import { Layout } from "antd";
 import { useEffect } from "react";
 
 import { useAppUi } from "../../app/app-ui-context";
+import { useAppWorkspace } from "../../app/app-workspace-context";
 import { ChatWorkspace } from "../chat/chat-workspace";
 import { LeftSideAside } from "../LeftSide/aside";
 import { fetchWorkspaceNavigation } from "../LeftSide/workspace-nav-api";
@@ -16,18 +17,18 @@ interface HoldReinShellProps {
 export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
   const {
     state: {
-      activeConversationId,
       activeMainView,
-      activeWorkspaceId,
       sidebarCollapsed,
       sidebarResizing,
-      sidebarWidth,
-      workspaces
-    },
-    setActiveConversationId,
+      sidebarWidth
+    }
+  } = useAppUi();
+  const {
+    state: { activeTaskId, activeWorkspaceId, workspaces },
+    setActiveTaskId,
     setActiveWorkspaceId,
     setWorkspaces
-  } = useAppUi();
+  } = useAppWorkspace();
 
   useEffect(() => {
     let ignore = false;
@@ -53,7 +54,7 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
     workspaces.find((workspace) => workspace.id === activeWorkspaceId) ??
     workspaces[0];
   const activeTask =
-    activeWorkspace?.tasks.find((task) => task.id === activeConversationId) ??
+    activeWorkspace?.tasks.find((task) => task.id === activeTaskId) ??
     activeWorkspace?.tasks[0];
 
   useEffect(() => {
@@ -65,19 +66,19 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
       setActiveWorkspaceId(activeWorkspace.id);
     }
 
-    if (activeTask && activeTask.id !== activeConversationId) {
-      setActiveConversationId(activeTask.id);
+    if (activeTask && activeTask.id !== activeTaskId) {
+      setActiveTaskId(activeTask.id);
     }
 
-    if (!activeTask && activeConversationId) {
-      setActiveConversationId("");
+    if (!activeTask && activeTaskId) {
+      setActiveTaskId("");
     }
   }, [
-    activeConversationId,
+    activeTaskId,
     activeTask,
     activeWorkspace,
     activeWorkspaceId,
-    setActiveConversationId,
+    setActiveTaskId,
     setActiveWorkspaceId
   ]);
 
@@ -105,7 +106,7 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
             <ModelProvidersView apiBaseUrl={apiBaseUrl} />
           ) : (
             <ChatWorkspace
-              activeConversationName={activeTask?.title ?? ""}
+              activeTaskName={activeTask?.title ?? ""}
               apiBaseUrl={apiBaseUrl}
             />
           )}

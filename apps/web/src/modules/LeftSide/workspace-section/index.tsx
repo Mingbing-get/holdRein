@@ -3,6 +3,7 @@ import { FolderOpenOutlined } from "@ant-design/icons";
 import { Typography } from "antd";
 
 import { useAppUi } from "../../../app/app-ui-context";
+import { useAppWorkspace } from "../../../app/app-workspace-context";
 import type {
   WorkspaceSummary,
   WorkspaceTaskSummary
@@ -18,11 +19,13 @@ export function WorkspaceSection({
   workspace
 }: WorkspaceSectionProps) {
   const {
-    state: { activeConversationId, activeWorkspaceId },
-    openChatWorkspace,
-    setActiveConversationId,
-    setActiveWorkspaceId
+    openChatWorkspace
   } = useAppUi();
+  const {
+    state: { activeTaskId, activeWorkspaceId },
+    setActiveTaskId,
+    setActiveWorkspaceId
+  } = useAppWorkspace();
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
   const isActiveWorkspace = workspace.id === activeWorkspaceId;
 
@@ -44,8 +47,7 @@ export function WorkspaceSection({
       ) : null}
 
       {workspace.tasks.map((task) => {
-        const isActiveTask =
-          isActiveWorkspace && task.id === activeConversationId;
+        const isActiveTask = isActiveWorkspace && task.id === activeTaskId;
 
         return (
           <Typography.Text
@@ -54,7 +56,7 @@ export function WorkspaceSection({
             key={task.id}
             onClick={() => {
               setActiveWorkspaceId(workspace.id);
-              setActiveConversationId(task.id);
+              setActiveTaskId(task.id);
               openChatWorkspace();
             }}
             onMouseEnter={() => {

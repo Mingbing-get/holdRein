@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { AppUiProvider } from "../../../app/app-ui-context";
+import { AppWorkspaceProvider } from "../../../app/app-workspace-context";
 import type { WorkspaceSummary } from "../workspace-nav-types";
 import { WorkspaceSection } from ".";
 
@@ -105,7 +106,9 @@ describe("WorkspaceSection", () => {
 function renderWorkspaceSection({ collapsed }: { collapsed: boolean }) {
   render(
     <AppUiProvider>
-      <WorkspaceSection collapsed={collapsed} workspace={workspaceSummary} />
+      <AppWorkspaceProvider>
+        <WorkspaceSection collapsed={collapsed} workspace={workspaceSummary} />
+      </AppWorkspaceProvider>
     </AppUiProvider>
   );
 }

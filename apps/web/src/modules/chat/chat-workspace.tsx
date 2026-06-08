@@ -7,7 +7,7 @@ import Sender, { type SuggestionGroup } from "./sender";
 import { WorkspaceSelector } from "./workspace-selector";
 
 interface ChatWorkspaceProps {
-  activeConversationName: string;
+  activeTaskName: string;
   apiBaseUrl: string;
 }
 
@@ -32,7 +32,7 @@ const groups: SuggestionGroup[] = [
 ]
 
 export function ChatWorkspace({
-  activeConversationName,
+  activeTaskName,
   apiBaseUrl
 }: ChatWorkspaceProps) {
   const [draftMessage, setDraftMessage] = useState("");
@@ -40,7 +40,7 @@ export function ChatWorkspace({
   return (
     <Flex
       data-api-base-url={apiBaseUrl}
-      data-conversation-name={activeConversationName}
+      data-task-name={activeTaskName}
       data-testid="chat-workspace"
       vertical
       style={{

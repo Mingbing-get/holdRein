@@ -2,12 +2,16 @@ import { PlusOutlined } from "@ant-design/icons";
 import { Button, Typography } from "antd";
 
 import { useAppUi } from "../../../app/app-ui-context";
+import { useAppWorkspace } from "../../../app/app-workspace-context";
 import { WorkspaceSection } from "../workspace-section";
 
 export function WorkspaceNav() {
   const {
-    state: { sidebarCollapsed, workspaces }
+    state: { sidebarCollapsed }
   } = useAppUi();
+  const {
+    state: { workspaces }
+  } = useAppWorkspace();
 
   return (
     <nav
@@ -15,7 +19,7 @@ export function WorkspaceNav() {
       style={{ display: "flex", flex: 1, flexDirection: "column", gap: 12 }}
     >
       <Button
-        aria-label="开启新对话"
+        aria-label="开启新任务"
         block
         icon={<PlusOutlined />}
         style={{
@@ -26,7 +30,7 @@ export function WorkspaceNav() {
         }}
         type="text"
       >
-        开启新对话
+        开启新任务
       </Button>
       {workspaces.length === 0 && !sidebarCollapsed ? (
         <Typography.Text
@@ -40,7 +44,7 @@ export function WorkspaceNav() {
             textAlign: "center"
           }}
         >
-          暂无对话
+          暂无任务
         </Typography.Text>
       ) : null}
       {workspaces.map((workspace) => (

@@ -5,7 +5,11 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { AppUiProvider, useAppUi } from "../../../app/app-ui-context";
+import { AppUiProvider } from "../../../app/app-ui-context";
+import {
+  AppWorkspaceProvider,
+  useAppWorkspace
+} from "../../../app/app-workspace-context";
 import type { WorkspaceSummary } from "../workspace-nav-types";
 import { WorkspaceNav } from ".";
 
@@ -66,13 +70,13 @@ describe("WorkspaceNav", () => {
     cleanup();
   });
 
-  it("renders the new conversation action and workspace sections", () => {
+  it("renders the new task action and workspace sections", () => {
     renderWorkspaceNav(workspaceSummaries);
 
     const nav = screen.getByLabelText("Workspace navigation");
 
     expect(
-      within(nav).getByRole("button", { name: "开启新对话" })
+      within(nav).getByRole("button", { name: "开启新任务" })
     ).toHaveStyle({ borderRadius: "6px" });
     expect(
       within(nav).getByTestId("workspace-group-workspace-real")
@@ -87,7 +91,7 @@ describe("WorkspaceNav", () => {
 
     const nav = screen.getByLabelText("Workspace navigation");
 
-    expect(within(nav).getByText("暂无对话")).toBeInTheDocument();
+    expect(within(nav).getByText("暂无任务")).toBeInTheDocument();
     expect(
       within(nav).queryByTestId("workspace-group-workspace-real")
     ).not.toBeInTheDocument();
@@ -97,8 +101,10 @@ describe("WorkspaceNav", () => {
 function renderWorkspaceNav(workspaces: WorkspaceSummary[]) {
   render(
     <AppUiProvider>
-      <WorkspaceNavTestState workspaces={workspaces} />
-      <WorkspaceNav />
+      <AppWorkspaceProvider>
+        <WorkspaceNavTestState workspaces={workspaces} />
+        <WorkspaceNav />
+      </AppWorkspaceProvider>
     </AppUiProvider>
   );
 }
@@ -108,7 +114,7 @@ function WorkspaceNavTestState({
 }: {
   workspaces: WorkspaceSummary[];
 }) {
-  const { setWorkspaces } = useAppUi();
+  const { setWorkspaces } = useAppWorkspace();
 
   useEffect(() => {
     setWorkspaces(workspaces);
