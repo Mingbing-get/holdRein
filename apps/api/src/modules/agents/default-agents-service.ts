@@ -4,6 +4,7 @@ import type { Api, Model } from "@earendil-works/pi-ai";
 import { createSqliteWorkspaceRepository } from "../workspaces";
 import { createAgentApprovalStore } from "./agent-approval-store";
 import { createAgentEventBus } from "./agent-event-bus";
+import type { AgentModelLookup } from "./agent-model-resolver";
 import { createAgentRuntime } from "./agent-runtime";
 import { createDefaultTaskTitleGenerator } from "./agent-task-title-generator";
 import { createAgentsService, type AgentsService } from "./agents-service";
@@ -21,6 +22,7 @@ export function getDefaultAgentsService(): AgentsService {
     const approvalStore = createAgentApprovalStore();
     const eventBus = createAgentEventBus();
     const modelProvidersService = getDefaultModelProvidersService();
+    const getCustomModel = createCustomModelLookup(modelProvidersService);
     migrateDatabase(database.sqlite);
 
     const runtime = createAgentRuntime({
@@ -29,12 +31,7 @@ export function getDefaultAgentsService(): AgentsService {
       getApiKey: async (provider, modelId) =>
         modelProvidersService.getConfiguredModelForProvider(provider, modelId)
           ?.apiKey,
-      getCustomModel: (provider, modelId) => {
-        const configuredModel =
-          modelProvidersService.getConfiguredModelForProvider(provider, modelId);
-
-        return configuredModel ? toAgentModel(configuredModel) : null;
-      }
+      getCustomModel
     });
 
     service = createAgentsService({
@@ -43,11 +40,22 @@ export function getDefaultAgentsService(): AgentsService {
       modelProvidersService,
       repository: createSqliteWorkspaceRepository(database),
       runtime,
-      titleGenerator: createDefaultTaskTitleGenerator()
+      titleGenerator: createDefaultTaskTitleGenerator({ getCustomModel })
     });
   }
 
   return service;
+}
+
+function createCustomModelLookup(
+  modelProvidersService: ReturnType<typeof getDefaultModelProvidersService>
+): AgentModelLookup {
+  return (provider, modelId) => {
+    const configuredModel =
+      modelProvidersService.getConfiguredModelForProvider(provider, modelId);
+
+    return configuredModel ? toAgentModel(configuredModel) : null;
+  };
 }
 
 function toAgentModel(configured: {

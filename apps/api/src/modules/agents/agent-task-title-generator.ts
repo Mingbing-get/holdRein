@@ -1,4 +1,9 @@
-import { complete, getModels, type KnownProvider } from "@earendil-works/pi-ai";
+import { complete } from "@earendil-works/pi-ai";
+
+import {
+  resolveAgentModel,
+  type AgentModelLookup
+} from "./agent-model-resolver";
 
 export interface GenerateTaskTitleInput {
   apiKey?: string;
@@ -11,10 +16,20 @@ export interface TaskTitleGenerator {
   generateTitle: (input: GenerateTaskTitleInput) => Promise<string>;
 }
 
-export function createDefaultTaskTitleGenerator(): TaskTitleGenerator {
+export interface CreateTaskTitleGeneratorOptions {
+  getCustomModel?: AgentModelLookup;
+}
+
+export function createDefaultTaskTitleGenerator(
+  options: CreateTaskTitleGeneratorOptions = {}
+): TaskTitleGenerator {
   return {
     generateTitle: async (input) => {
-      const model = findBuiltInModel(input.provider, input.modelId);
+      const model = await resolveAgentModel(
+        input.provider,
+        input.modelId,
+        options.getCustomModel
+      );
 
       if (!model) {
         return createFallbackTitle(input.prompt);
@@ -60,17 +75,6 @@ export function createDefaultTaskTitleGenerator(): TaskTitleGenerator {
       }
     }
   };
-}
-
-function findBuiltInModel(provider: string, modelId: string) {
-  try {
-    return (
-      getModels(provider as KnownProvider).find((model) => model.id === modelId) ??
-      null
-    );
-  } catch {
-    return null;
-  }
 }
 
 function normalizeGeneratedTitle(title: string, prompt: string): string {
