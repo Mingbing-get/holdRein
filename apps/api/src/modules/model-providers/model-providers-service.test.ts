@@ -6,6 +6,37 @@ import { createModelProvidersService } from "./model-providers-service";
 const TEST_ENCRYPTION_KEY = Buffer.alloc(32, 5).toString("base64");
 
 describe("model providers service", () => {
+  it("returns the provider base URL with a configured custom model", () => {
+    const repository = createInMemoryModelProviderRepository();
+    const service = createModelProvidersService({
+      providerApiKeyEncryptionKey: TEST_ENCRYPTION_KEY,
+      repository
+    });
+
+    service.createCustomModelProvider("acme-ai", "https://example.com/v1");
+    service.createCustomProviderModel("acme-ai", {
+      api: "openai-completions",
+      contextWindow: 32000,
+      input: ["text"],
+      maxTokens: 4096,
+      modelId: "acme-chat",
+      name: "Acme Chat",
+      reasoning: false
+    });
+
+    expect(
+      service.getConfiguredModelForProvider("acme-ai", "acme-chat")
+    ).toEqual(
+      expect.objectContaining({
+        baseUrl: "https://example.com/v1",
+        model: expect.objectContaining({
+          id: "acme-chat",
+          provider: "acme-ai"
+        })
+      })
+    );
+  });
+
   it("deletes a custom provider along with its models and api key", () => {
     const repository = createInMemoryModelProviderRepository();
     const service = createModelProvidersService({

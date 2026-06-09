@@ -10,15 +10,12 @@ import {
   formatSkillsForSystemPrompt,
   loadSkills
 } from "@earendil-works/pi-agent-core/node";
-import {
-  getModels,
-  type Api,
-  type KnownProvider,
-  type Model
-} from "@earendil-works/pi-ai";
-
 import type { AgentApprovalStore } from "./agent-approval-store";
 import type { AgentEventBus } from "./agent-event-bus";
+import {
+  resolveAgentModel,
+  type AgentModelLookup
+} from "./agent-model-resolver";
 import {
   type HarnessEvent,
   type AgentRunResult,
@@ -36,6 +33,7 @@ export interface CreateAgentRuntimeOptions {
   approvalStore: AgentApprovalStore;
   eventBus: AgentEventBus;
   getApiKey?: (provider: string, modelId: string) => Promise<string | undefined>;
+  getCustomModel?: AgentModelLookup;
   skillDirs?: string[];
 }
 
@@ -66,7 +64,11 @@ export function createAgentRuntime(
         input.workspacePath,
         ...skills.map((skill) => dirname(skill.filePath))
       ];
-      const model = findBuiltInModel(input.provider, input.modelId);
+      const model = await resolveAgentModel(
+        input.provider,
+        input.modelId,
+        options.getCustomModel
+      );
 
       if (!model) {
         throw new Error("Unknown model");
@@ -178,17 +180,6 @@ function getSkillDirs(workspacePath: string, configuredSkillDirs?: string[]): st
     join(workspacePath, ".hold-rein", "skills"),
     join(homedir(), ".hold-rein", "skills")
   ];
-}
-
-function findBuiltInModel(provider: string, modelId: string): Model<Api> | null {
-  try {
-    return (
-      getModels(provider as KnownProvider).find((model) => model.id === modelId) ??
-      null
-    );
-  } catch {
-    return null;
-  }
 }
 
 function getEnvApiKey(provider: string): string | undefined {

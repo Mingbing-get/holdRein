@@ -55,6 +55,7 @@ export interface ModelProvidersService {
     modelId: string
   ) => {
     apiKey?: string;
+    baseUrl: string;
     model: ModelSummary;
   } | null;
   hasProvider: (provider: string) => boolean;
@@ -158,14 +159,16 @@ export function createModelProvidersService(
     },
     getConfiguredModelForProvider: (provider, modelId) => {
       const model = findModel(provider, modelId, repository);
+      const baseUrl = findModelBaseUrl(provider, modelId, repository);
 
-      if (!model) {
+      if (!model || baseUrl === null) {
         return null;
       }
 
       const encryptedApiKey = repository.findProviderApiKeyByProvider(provider);
 
       return {
+        baseUrl,
         ...(encryptedApiKey
           ? {
               apiKey: decryptProviderApiKey(
@@ -271,6 +274,18 @@ export function createModelProvidersService(
       return row ? mapCustomProviderModel(customProvider.provider, row) : null;
     }
   };
+}
+
+function findModelBaseUrl(
+  provider: string,
+  modelId: string,
+  repository: ModelProviderRepository
+): string | null {
+  if (hasBuiltInProvider(provider)) {
+    return getModels(provider).find((model) => model.id === modelId)?.baseUrl ?? null;
+  }
+
+  return repository.findCustomModelProviderByProvider(provider)?.baseUrl ?? null;
 }
 
 function findModel(
