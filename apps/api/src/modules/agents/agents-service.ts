@@ -6,12 +6,15 @@ import type { ModelProvidersService } from "../model-providers/model-providers-s
 import type { WorkspaceRepository } from "../workspaces/workspace-repository";
 import type { AgentApprovalStore } from "./agent-approval-store";
 import type { AgentEventBus, AgentEventListener } from "./agent-event-bus";
+import type { AgentMessageRepository } from "./agent-message-repository";
+import { restoreStoredAgentMessage } from "./agent-message-storage";
 import type { AgentRuntime } from "./agent-runtime";
 import type { TaskTitleGenerator } from "./agent-task-title-generator";
 import type {
   AgentEventSubscription,
   ApprovalDecisionInput,
   ApprovalDecisionResult,
+  StoredAgentMessage,
   StartAgentInput,
   StartAgentResult,
   SubscribeAgentEventsInput,
@@ -23,6 +26,8 @@ export interface AgentsService {
     input: ApprovalDecisionInput
   ) => Promise<ApprovalDecisionResult>;
   getTaskTitle: (input: GetTaskTitleInput) => Promise<TaskTitleResult | null>;
+  continueTask: (input: ContinueTaskInput) => Promise<StartAgentResult | null>;
+  listTaskMessages: (input: GetTaskTitleInput) => StoredAgentMessage[];
   startAgent: (input: StartAgentInput) => Promise<StartAgentResult>;
   subscribeToAgentEvents: (
     input: SubscribeAgentEventsInput,
@@ -34,9 +39,15 @@ export interface GetTaskTitleInput {
   taskId: string;
 }
 
+export interface ContinueTaskInput {
+  prompt: string;
+  taskId: string;
+}
+
 export interface CreateAgentsServiceOptions {
   approvalStore: AgentApprovalStore;
   eventBus: AgentEventBus;
+  messageRepository: AgentMessageRepository;
   modelProvidersService?: ModelProvidersService;
   now?: () => Date;
   repository: WorkspaceRepository;
@@ -77,7 +88,7 @@ export function createAgentsService(
 
       startTitleJob({
         input: {
-          modelId: task.lastModelName,
+          modelId: task.lastModelId ?? task.lastModelName,
           prompt: task.initialUserMessage,
           provider: task.lastModelProvider,
           workspacePath: ""
@@ -91,6 +102,32 @@ export function createAgentsService(
 
       return titleJobs.get(task.id) ?? { id: task.id, title: task.title };
     },
+    continueTask: async ({ prompt, taskId }) => {
+      const task = options.repository.findTaskById(taskId);
+      if (!task) return null;
+      const workspace = options.repository.findWorkspaceById(task.workspaceId);
+      if (!workspace) return null;
+      const history = options.messageRepository
+        .listByTaskId(taskId)
+        .map((row) => restoreStoredAgentMessage(row.message));
+      const run = await options.runtime.start({
+        history,
+        modelId: task.lastModelId ?? task.lastModelName,
+        prompt,
+        provider: task.lastModelProvider,
+        taskId,
+        workspacePath: workspace.path
+      });
+      const updatedTask =
+        options.repository.updateTaskContinuedAt(taskId, now().toISOString()) ??
+        task;
+
+      return { ...run, task: updatedTask, workspace };
+    },
+    listTaskMessages: ({ taskId }) =>
+      options.messageRepository
+        .listByTaskId(taskId)
+        .map((row) => row.message),
     startAgent: async (input) => {
       const createdAt = now().toISOString();
       const workspace = ensureWorkspace({
@@ -108,6 +145,7 @@ export function createAgentsService(
         id: `task_${randomUUID()}`,
         initialUserMessage: input.prompt,
         lastContinuedAt: createdAt,
+        lastModelId: input.modelId,
         lastModelName: configuredModel?.model.name ?? input.modelId,
         lastModelProvider: input.provider,
         lastModelProviderSource: options.modelProvidersService?.hasProvider(input.provider)
@@ -128,7 +166,7 @@ export function createAgentsService(
         titleJobs
       });
 
-      const run = await options.runtime.start(input);
+      const run = await options.runtime.start({ ...input, taskId: task.id });
 
       return {
         ...run,

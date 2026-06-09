@@ -1,12 +1,7 @@
-import { Flex } from "antd";
+import { Alert, Flex, Typography } from "antd";
+import { Bubble, Think } from "@ant-design/x";
 
-import type { AgentMessage } from "./agent-message-types";
-import { ApprovalMessage } from "./renderers/approval-message";
-import { AssistantMessage } from "./renderers/assistant-message";
-import { FallbackMessage } from "./renderers/fallback-message";
-import { ThinkingMessage } from "./renderers/thinking-message";
-import { ToolMessage } from "./renderers/tool-message";
-import { UserMessage } from "./renderers/user-message";
+import type { AgentMessage, AssistantMessage } from "./agent-message-types";
 
 export function AgentMessageList({ messages }: { messages: AgentMessage[] }) {
   return (
@@ -19,19 +14,49 @@ export function AgentMessageList({ messages }: { messages: AgentMessage[] }) {
 }
 
 function AgentMessageItem({ message }: { message: AgentMessage }) {
-  switch (message.kind) {
-    case "user":
-      return <UserMessage message={message} />;
-    case "assistant":
-      return <AssistantMessage message={message} />;
-    case "thinking":
-      return <ThinkingMessage message={message} />;
-    case "tool":
-      return <ToolMessage message={message} />;
-    case "approval":
-      return <ApprovalMessage message={message} />;
-    case "error":
-    case "fallback":
-      return <FallbackMessage message={message} />;
+  if (message.role === "user") {
+    return <Bubble content={getText(message.content)} placement="end" />;
   }
+  if (message.role === "assistant") {
+    return <AssistantMessageItem message={message} />;
+  }
+  if (message.role === "toolResult") {
+    return (
+      <Typography.Text code {...(message.isError ? { type: "danger" as const } : {})}>
+        {message.toolName}: {getText(message.content)}
+      </Typography.Text>
+    );
+  }
+  if (message.role === "bashExecution") {
+    return <Typography.Text code>{message.command}: {message.output}</Typography.Text>;
+  }
+  if (message.role === "custom") {
+    return message.display ? <Alert title={message.customType} description={getText(message.content)} /> : null;
+  }
+  return <Alert title={message.role} description={message.summary} />;
+}
+
+function AssistantMessageItem({ message }: { message: AssistantMessage }) {
+  return (
+    <Flex gap={8} vertical>
+      {message.content.map((block, index) => {
+        if (block.type === "text") {
+          return <Bubble key={index} content={block.text} variant="borderless" />;
+        }
+        if (block.type === "thinking") {
+          return <Think key={index} title="思考过程">{block.thinking}</Think>;
+        }
+        return <Typography.Text code key={index}>{block.name}</Typography.Text>;
+      })}
+      {message.errorMessage ? <Alert type="error" title="Agent 错误" description={message.errorMessage} /> : null}
+    </Flex>
+  );
+}
+
+function getText(content: string | { type: string; text?: string }[]): string {
+  if (typeof content === "string") return content;
+  return content
+    .filter((block) => block.type === "text")
+    .map((block) => block.text ?? "")
+    .join("");
 }

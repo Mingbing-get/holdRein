@@ -15,6 +15,7 @@ describe("database", () => {
     expect(schema).toHaveProperty("customProviderModels");
     expect(schema).toHaveProperty("workspaces");
     expect(schema).toHaveProperty("tasks");
+    expect(schema).toHaveProperty("taskMessages");
   });
 
   it("creates the application database schema", () => {
@@ -22,7 +23,7 @@ describe("database", () => {
 
     migrateDatabase({ exec } as { exec: (sql: string) => void });
 
-    expect(exec).toHaveBeenCalledTimes(11);
+    expect(exec).toHaveBeenCalledTimes(15);
     expect(exec).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_model_providers")
@@ -66,6 +67,10 @@ describe("database", () => {
     expect(exec).toHaveBeenNthCalledWith(
       11,
       expect.stringContaining("CREATE INDEX IF NOT EXISTS tasks_workspace_id_idx")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      13,
+      expect.stringContaining("CREATE TABLE IF NOT EXISTS task_messages")
     );
   });
 

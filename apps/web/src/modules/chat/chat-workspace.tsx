@@ -39,7 +39,7 @@ export function ChatWorkspace({
     state: { activeAgent, activeTaskId, activeWorkspaceId, workspaces },
     setActiveAgent
   } = useAppWorkspace();
-  const { getTaskState, startTask } = useAgentTasks();
+  const { continueTask, getTaskState, startTask } = useAgentTasks();
   const activeWorkspace = workspaces.find(
     (workspace) => workspace.id === activeWorkspaceId
   );
@@ -92,6 +92,11 @@ export function ChatWorkspace({
         }
         onSubmit={async (message) => {
           if (!activeAgent || !activeWorkspace || !message.trim()) {
+            return;
+          }
+
+          if (activeTaskId) {
+            await continueTask(activeTaskId, message);
             return;
           }
 

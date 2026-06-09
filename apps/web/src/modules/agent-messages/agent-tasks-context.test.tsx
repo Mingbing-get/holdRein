@@ -66,7 +66,7 @@ function StartTaskProbe() {
       <span data-testid="task-title">{workspaces[0]?.tasks[0]?.title}</span>
       <span data-testid="task-message-kinds">
         {getTaskState("task-1")
-          ?.messages.map((message) => message.kind)
+          ?.messages.map((message) => message.role)
           .join(",")}
       </span>
     </>
@@ -111,7 +111,7 @@ function createAgentFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
         start(controller) {
           controller.enqueue(
             encoder.encode(
-              '{"agentId":"agent-1","payload":{"delta":"Done"},"sequence":1,"timestamp":"now","type":"message_update"}\n'
+              '{"agentId":"agent-1","payload":{"message":{"id":"message-1","role":"assistant","content":[],"api":"openai-responses","provider":"openai","model":"gpt-4.1","stopReason":"stop","timestamp":1}},"sequence":1,"timestamp":"now","type":"message_start"}\n'
             )
           );
           controller.close();

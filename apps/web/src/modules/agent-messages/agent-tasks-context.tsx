@@ -11,6 +11,8 @@ import type { PropsWithChildren } from "react";
 
 import { useAppWorkspace } from "../../app/app-workspace-context";
 import {
+  continueAgentTask,
+  fetchTaskMessages,
   fetchTaskTitle,
   startAgentTask,
   subscribeToAgentEvents
@@ -27,6 +29,7 @@ import type {
 } from "./agent-message-types";
 
 export interface AgentTasksContextValue {
+  continueTask: (taskId: string, prompt: string) => Promise<void>;
   getTaskState: (taskId: string) => AgentTaskState | undefined;
   startTask: (input: StartTaskInput) => Promise<void>;
 }
@@ -43,11 +46,16 @@ export function AgentTasksProvider({
   children,
   fetcher = fetch
 }: AgentTasksProviderProps) {
-  const { updateTaskTitle, upsertStartedTask } = useAppWorkspace();
+  const {
+    state: { activeTaskId },
+    updateTaskTitle,
+    upsertStartedTask
+  } = useAppWorkspace();
   const [taskStates, setTaskStates] = useState<Record<string, AgentTaskState>>(
     {}
   );
   const subscriptions = useRef(new Map<string, AbortController>());
+  const loadedTaskIds = useRef(new Set<string>());
 
   useEffect(
     () => () => {
@@ -58,6 +66,29 @@ export function AgentTasksProvider({
     },
     []
   );
+
+  useEffect(() => {
+    if (!activeTaskId || loadedTaskIds.current.has(activeTaskId)) return;
+    if (taskStates[activeTaskId]?.messages.length) {
+      loadedTaskIds.current.add(activeTaskId);
+      return;
+    }
+    loadedTaskIds.current.add(activeTaskId);
+
+    void fetchTaskMessages(apiBaseUrl, activeTaskId, fetcher)
+      .then((messages) => {
+        setTaskStates((current) => ({
+          ...current,
+          [activeTaskId]: reduceAgentTaskState(
+            current[activeTaskId] ?? createInitialAgentTaskState(activeTaskId),
+            { messages, type: "history_loaded" }
+          )
+        }));
+      })
+      .catch(() => {
+        loadedTaskIds.current.delete(activeTaskId);
+      });
+  }, [activeTaskId, apiBaseUrl, fetcher, taskStates]);
 
   const startTask = useCallback(
     async (input: StartTaskInput) => {
@@ -93,12 +124,37 @@ export function AgentTasksProvider({
     [apiBaseUrl, fetcher, updateTaskTitle, upsertStartedTask]
   );
 
+  const continueTask = useCallback(
+    async (taskId: string, prompt: string) => {
+      const result = await continueAgentTask(apiBaseUrl, taskId, prompt, fetcher);
+      setTaskStates((current) => ({
+        ...current,
+        [taskId]: addRun(
+          reduceAgentTaskState(
+            current[taskId] ?? createInitialAgentTaskState(taskId),
+            { prompt, type: "prompt_submitted" }
+          ),
+          result
+        )
+      }));
+      startSubscription({
+        apiBaseUrl,
+        fetcher,
+        result,
+        setTaskStates,
+        subscriptions
+      });
+    },
+    [apiBaseUrl, fetcher]
+  );
+
   const contextValue = useMemo<AgentTasksContextValue>(
     () => ({
+      continueTask,
       getTaskState: (taskId) => taskStates[taskId],
       startTask
     }),
-    [startTask, taskStates]
+    [continueTask, startTask, taskStates]
   );
 
   return (

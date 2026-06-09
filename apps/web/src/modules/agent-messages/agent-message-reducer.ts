@@ -1,48 +1,20 @@
 import type {
   AgentEventEnvelope,
   AgentMessage,
-  AgentTaskState
+  AgentTaskState,
+  AssistantMessage,
+  ThinkingContent,
+  TextContent
 } from "./agent-message-types";
 
 export type AgentTaskAction =
   | { prompt: string; type: "prompt_submitted" }
   | { event: AgentEventEnvelope; type: "event_received" }
+  | { messages: AgentMessage[]; type: "history_loaded" }
   | { message: string; type: "subscription_failed" };
-
-const MESSAGE_BOUNDARY_EVENT_TYPES = new Set([
-  "agent_start",
-  "agent_end",
-  "message_start",
-  "message_end",
-  "turn_start",
-  "turn_end"
-]);
-
-const NON_RENDERABLE_EVENT_TYPES = new Set([
-  ...MESSAGE_BOUNDARY_EVENT_TYPES,
-  "abort",
-  "after_provider_response",
-  "before_agent_start",
-  "before_provider_payload",
-  "before_provider_request",
-  "context",
-  "model_select",
-  "queue_update",
-  "resources_update",
-  "save_point",
-  "session_before_compact",
-  "session_before_tree",
-  "session_compact",
-  "session_tree",
-  "settled",
-  "thinking_level_select",
-  "tool_call",
-  "tool_result"
-]);
 
 export function createInitialAgentTaskState(taskId: string): AgentTaskState {
   return {
-    activeMessageId: null,
     error: null,
     lastSequence: 0,
     messages: [],
@@ -59,178 +31,133 @@ export function reduceAgentTaskState(
   if (action.type === "prompt_submitted") {
     return {
       ...state,
-      activeMessageId: null,
       messages: [
         ...state.messages,
-        createMessage("user", action.prompt, `prompt-${state.messages.length}`)
+        {
+          content: [{ text: action.prompt, type: "text" }],
+          id: `prompt-${state.messages.length}`,
+          role: "user",
+          timestamp: Date.now()
+        }
       ],
       status: "running"
     };
   }
-
+  if (action.type === "history_loaded") {
+    return { ...state, messages: action.messages };
+  }
   if (action.type === "subscription_failed") {
-    return {
-      ...state,
-      activeMessageId: null,
-      error: action.message,
-      status: "error"
-    };
+    return { ...state, error: action.message, status: "error" };
   }
 
-  const eventState = {
+  const next = {
     ...state,
     lastSequence: Math.max(state.lastSequence, action.event.sequence)
   };
+  const payload = getRecord(action.event.payload);
 
-  if (isMessageBoundary(action.event)) {
-    return {
-      ...eventState,
-      activeMessageId: null
-    };
+  if (action.event.type === "message_start") {
+    const message = payload?.message as AgentMessage | undefined;
+    return message ? upsertMessage(next, message) : next;
   }
-
-  const message = normalizeEvent(action.event);
-
-  if (!message) {
-    return eventState;
+  if (action.event.type === "message_delta") {
+    const messageId = payload?.messageId;
+    const delta = getRecord(payload?.delta);
+    return typeof messageId === "string" && delta
+      ? mergeAssistantDelta(next, messageId, delta)
+      : next;
   }
+  if (action.event.type === "message_end") {
+    const message = payload?.message as AgentMessage | undefined;
+    return message ? upsertMessage(next, message) : next;
+  }
+  if (action.event.type === "agent_error") {
+    const message = typeof payload?.message === "string" ? payload.message : "Agent run failed";
+    return { ...next, error: message, status: "error" };
+  }
+  if (action.event.type === "agent_end") {
+    return { ...next, status: "completed" };
+  }
+  return next;
+}
 
-  if (action.event.type === "message_update" && state.activeMessageId) {
-    const activeMessageIndex = state.messages.findIndex(
-      (candidate) => candidate.id === state.activeMessageId
-    );
-    const activeMessage = state.messages[activeMessageIndex];
-
-    if (activeMessage?.kind === message.kind) {
-      const messages = [...state.messages];
-      messages[activeMessageIndex] = {
-        ...message,
-        content: activeMessage.content + message.content,
-        id: activeMessage.id
-      };
-
-      return {
-        ...eventState,
-        messages
-      };
+function upsertMessage(state: AgentTaskState, message: AgentMessage): AgentTaskState {
+  const index = state.messages.findIndex((candidate) => candidate.id === message.id);
+  if (index === -1) {
+    const optimisticIndex =
+      message.role === "user"
+        ? state.messages.findIndex(
+            (candidate) =>
+              candidate.role === "user" &&
+              candidate.id.startsWith("prompt-") &&
+              getMessageText(candidate) === getMessageText(message)
+          )
+        : -1;
+    if (optimisticIndex === -1) {
+      return { ...state, messages: [...state.messages, message] };
     }
+    const messages = [...state.messages];
+    messages[optimisticIndex] = message;
+    return { ...state, messages };
+  }
+  const messages = [...state.messages];
+  messages[index] = message;
+  return { ...state, messages };
+}
+
+function getMessageText(message: AgentMessage): string {
+  if (!("content" in message)) return "";
+  if (typeof message.content === "string") return message.content;
+  return message.content
+    .filter((block) => block.type === "text")
+    .map((block) => ("text" in block ? block.text : ""))
+    .join("");
+}
+
+function mergeAssistantDelta(
+  state: AgentTaskState,
+  messageId: string,
+  delta: Record<string, unknown>
+): AgentTaskState {
+  const index = state.messages.findIndex((message) => message.id === messageId);
+  const message = state.messages[index];
+  if (!message || message.role !== "assistant") return state;
+  const contentIndex = typeof delta.contentIndex === "number" ? delta.contentIndex : 0;
+  const content = [...message.content];
+  const type = delta.type;
+
+  if (type === "text_start") content[contentIndex] = { text: "", type: "text" };
+  if (type === "thinking_start") {
+    content[contentIndex] = { thinking: "", type: "thinking" };
+  }
+  if (type === "text_delta" && typeof delta.delta === "string") {
+    content[contentIndex] = appendText(content[contentIndex], delta.delta);
+  }
+  if (type === "thinking_delta" && typeof delta.delta === "string") {
+    content[contentIndex] = appendThinking(content[contentIndex], delta.delta);
   }
 
+  const messages = [...state.messages];
+  messages[index] = { ...message, content };
+  return { ...state, messages };
+}
+
+function appendText(value: AssistantMessage["content"][number] | undefined, delta: string): TextContent {
+  return { text: (value?.type === "text" ? value.text : "") + delta, type: "text" };
+}
+
+function appendThinking(
+  value: AssistantMessage["content"][number] | undefined,
+  delta: string
+): ThinkingContent {
   return {
-    ...eventState,
-    activeMessageId:
-      action.event.type === "message_update" ? message.id : null,
-    error: action.event.type === "agent_error" ? message.content : state.error,
-    messages: [...state.messages, message],
-    status: action.event.type === "agent_error" ? "error" : state.status
+    thinking: (value?.type === "thinking" ? value.thinking : "") + delta,
+    type: "thinking"
   };
-}
-
-function normalizeEvent(event: AgentEventEnvelope): AgentMessage | null {
-  if (NON_RENDERABLE_EVENT_TYPES.has(event.type)) return null;
-
-  const kind = getEventKind(event);
-  const content =
-    event.type === "message_update"
-      ? getMessageUpdateContent(event.payload)
-      : getEventContent(event.payload, event.type);
-
-  if (content === null) return null;
-
-  return createMessage(
-    kind,
-    content,
-    `${event.agentId}-${event.sequence}`,
-    event
-  );
-}
-
-function createMessage(
-  kind: AgentMessage["kind"],
-  content: string,
-  id: string,
-  event?: AgentEventEnvelope
-): AgentMessage {
-  return {
-    content,
-    ...(event ? { eventType: event.type, payload: event.payload } : {}),
-    id,
-    kind
-  };
-}
-
-function getEventKind(event: AgentEventEnvelope): AgentMessage["kind"] {
-  const type = event.type;
-  const updateType = getRecord(getRecord(event.payload)?.assistantMessageEvent)
-    ?.type;
-
-  if (updateType === "thinking_delta") return "thinking";
-  if (updateType === "toolcall_delta") return "tool";
-  if (type === "message_update") return "assistant";
-  if (type.includes("thinking") || type.includes("reasoning")) return "thinking";
-  if (type.startsWith("tool_")) return "tool";
-  if (type === "approval_requested") return "approval";
-  if (type === "agent_error") return "error";
-  return "fallback";
-}
-
-function getMessageUpdateContent(payload: unknown): string | null {
-  const update = getRecord(getRecord(payload)?.assistantMessageEvent);
-
-  if (update) {
-    const updateType = update.type;
-    if (typeof updateType === "string" && updateType.endsWith("_delta")) {
-      return typeof update.delta === "string" ? update.delta : null;
-    }
-    return null;
-  }
-
-  return getEventContent(payload, "message_update");
-}
-
-function isMessageBoundary(event: AgentEventEnvelope): boolean {
-  if (MESSAGE_BOUNDARY_EVENT_TYPES.has(event.type)) return true;
-  if (event.type !== "message_update") return false;
-
-  const updateType = getRecord(getRecord(event.payload)?.assistantMessageEvent)
-    ?.type;
-  return (
-    typeof updateType === "string" &&
-    (updateType.endsWith("_start") || updateType.endsWith("_end"))
-  );
 }
 
 function getRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object"
     ? (value as Record<string, unknown>)
     : undefined;
-}
-
-function getEventContent(payload: unknown, eventType: string): string {
-  const text = findText(payload);
-  if (text) return text;
-  if (payload === undefined) return eventType;
-
-  try {
-    return JSON.stringify(payload);
-  } catch {
-    return eventType;
-  }
-}
-
-function findText(value: unknown): string | undefined {
-  if (typeof value === "string") return value;
-  if (!value || typeof value !== "object") return undefined;
-
-  for (const key of ["delta", "text", "content", "message", "command", "toolName"]) {
-    const entry = (value as Record<string, unknown>)[key];
-    if (typeof entry === "string" && entry) return entry;
-  }
-
-  for (const entry of Object.values(value as Record<string, unknown>)) {
-    const nestedText = findText(entry);
-    if (nestedText) return nestedText;
-  }
-
-  return undefined;
 }

@@ -1,4 +1,5 @@
 import type { AgentHarnessEvent } from "@earendil-works/pi-agent-core";
+import type { AgentMessage } from "@earendil-works/pi-agent-core";
 import type { TaskRow, WorkspaceRow } from "../../db";
 
 export interface StartAgentInput {
@@ -6,6 +7,11 @@ export interface StartAgentInput {
   prompt: string;
   provider: string;
   workspacePath: string;
+}
+
+export interface RunAgentInput extends StartAgentInput {
+  history?: AgentMessage[];
+  taskId: string;
 }
 
 export interface AgentRunResult {
@@ -60,3 +66,103 @@ export interface ShellCommandApprovalRequest {
 export type ShellCommandRisk = "safe" | "writes" | "dangerous";
 
 export type HarnessEvent = AgentHarnessEvent;
+
+export interface StoredTextContent {
+  text: string;
+  textSignature?: string;
+  type: "text";
+}
+
+export interface StoredThinkingContent {
+  redacted?: boolean;
+  thinking: string;
+  thinkingSignature?: string;
+  type: "thinking";
+}
+
+export interface StoredImageContent {
+  data: string;
+  mimeType: string;
+  type: "image";
+}
+
+export interface StoredToolCall {
+  arguments: Record<string, unknown>;
+  id: string;
+  name: string;
+  thoughtSignature?: string;
+  type: "toolCall";
+}
+
+export type StoredUserContent = StoredTextContent | StoredImageContent;
+export type StoredAssistantContent =
+  | StoredTextContent
+  | StoredThinkingContent
+  | StoredToolCall;
+
+interface StoredMessageBase {
+  id: string;
+  timestamp: number;
+}
+
+export interface StoredUserMessage extends StoredMessageBase {
+  content: string | StoredUserContent[];
+  role: "user";
+}
+
+export interface StoredAssistantMessage extends StoredMessageBase {
+  api: string;
+  content: StoredAssistantContent[];
+  errorMessage?: string;
+  model: string;
+  provider: string;
+  role: "assistant";
+  stopReason: "stop" | "length" | "toolUse" | "error" | "aborted";
+}
+
+export interface StoredToolResultMessage extends StoredMessageBase {
+  content: StoredUserContent[];
+  isError: boolean;
+  role: "toolResult";
+  toolCallId: string;
+  toolName: string;
+}
+
+export interface StoredBashExecutionMessage extends StoredMessageBase {
+  cancelled: boolean;
+  command: string;
+  excludeFromContext?: boolean;
+  exitCode?: number;
+  fullOutputPath?: string;
+  output: string;
+  role: "bashExecution";
+  truncated: boolean;
+}
+
+export interface StoredCustomMessage extends StoredMessageBase {
+  content: string | StoredUserContent[];
+  customType: string;
+  display: boolean;
+  role: "custom";
+}
+
+export interface StoredBranchSummaryMessage extends StoredMessageBase {
+  fromId: string;
+  role: "branchSummary";
+  summary: string;
+}
+
+export interface StoredCompactionSummaryMessage extends StoredMessageBase {
+  role: "compactionSummary";
+  summary: string;
+  tokensBefore: number;
+}
+
+export type StoredAgentMessage =
+  | StoredUserMessage
+  | StoredAssistantMessage
+  | StoredToolResultMessage
+  | StoredBashExecutionMessage
+  | StoredCustomMessage
+  | StoredBranchSummaryMessage
+  | StoredCompactionSummaryMessage;

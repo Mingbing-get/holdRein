@@ -1,4 +1,5 @@
 import type {
+  AgentMessage,
   AgentEventEnvelope,
   StartTaskInput,
   StartTaskResult,
@@ -40,6 +41,34 @@ export async function fetchTaskTitle(
   return requestData<TaskTitleResult>(
     fetcher,
     `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/agents/tasks/${encodeURIComponent(taskId)}/title`
+  );
+}
+
+export async function fetchTaskMessages(
+  apiBaseUrl: string,
+  taskId: string,
+  fetcher: AgentMessageFetcher = fetch
+): Promise<AgentMessage[]> {
+  return requestData<AgentMessage[]>(
+    fetcher,
+    `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/agents/tasks/${encodeURIComponent(taskId)}/messages`
+  );
+}
+
+export async function continueAgentTask(
+  apiBaseUrl: string,
+  taskId: string,
+  prompt: string,
+  fetcher: AgentMessageFetcher = fetch
+): Promise<StartTaskResult> {
+  return requestData<StartTaskResult>(
+    fetcher,
+    `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/agents/tasks/${encodeURIComponent(taskId)}/continue`,
+    {
+      body: JSON.stringify({ prompt }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST"
+    }
   );
 }
 

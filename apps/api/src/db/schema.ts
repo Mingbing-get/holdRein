@@ -86,6 +86,7 @@ export const tasks = sqliteTable(
     id: text("id").primaryKey(),
     initialUserMessage: text("initial_user_message").notNull(),
     lastContinuedAt: text("last_continued_at"),
+    lastModelId: text("last_model_id"),
     lastModelName: text("last_model_name").notNull(),
     lastModelProvider: text("last_model_provider").notNull(),
     lastModelProviderSource: text("last_model_provider_source", {
@@ -102,6 +103,28 @@ export const tasks = sqliteTable(
   })
 );
 
+export const taskMessages = sqliteTable(
+  "task_messages",
+  {
+    agentId: text("agent_id").notNull(),
+    createdAt: text("created_at").notNull(),
+    id: text("id").primaryKey(),
+    payload: text("payload").notNull(),
+    role: text("role").notNull(),
+    sequence: integer("sequence").notNull(),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    updatedAt: text("updated_at").notNull()
+  },
+  (table) => ({
+    taskIdIndex: index("task_messages_task_id_idx").on(table.taskId),
+    taskSequenceUniqueIndex: uniqueIndex(
+      "task_messages_task_sequence_idx"
+    ).on(table.taskId, table.sequence)
+  })
+);
+
 export type CustomModelProviderRow = typeof customModelProviders.$inferSelect;
 export type NewCustomModelProviderRow = typeof customModelProviders.$inferInsert;
 export type ProviderApiKeyRow = typeof providerApiKeys.$inferSelect;
@@ -112,3 +135,5 @@ export type WorkspaceRow = typeof workspaces.$inferSelect;
 export type NewWorkspaceRow = typeof workspaces.$inferInsert;
 export type TaskRow = typeof tasks.$inferSelect;
 export type NewTaskRow = typeof tasks.$inferInsert;
+export type TaskMessageRow = typeof taskMessages.$inferSelect;
+export type NewTaskMessageRow = typeof taskMessages.$inferInsert;

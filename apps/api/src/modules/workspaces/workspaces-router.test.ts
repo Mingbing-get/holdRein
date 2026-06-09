@@ -161,6 +161,7 @@ function createTask(input: {
     id: input.id,
     initialUserMessage: input.title,
     lastContinuedAt: input.lastContinuedAt,
+    lastModelId: "gpt-4.1",
     lastModelName: "gpt-4.1",
     lastModelProvider: "openai",
     lastModelProviderSource: "built_in" as const,

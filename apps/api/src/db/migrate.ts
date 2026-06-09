@@ -79,6 +79,7 @@ const CREATE_TASKS_TABLE_SQL = `
     initial_user_message TEXT NOT NULL,
     last_model_provider_source TEXT NOT NULL CHECK(last_model_provider_source IN ('built_in', 'custom')),
     last_model_provider TEXT NOT NULL,
+    last_model_id TEXT,
     last_model_name TEXT NOT NULL,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
@@ -90,6 +91,34 @@ const CREATE_TASKS_TABLE_SQL = `
 const CREATE_TASKS_WORKSPACE_ID_INDEX_SQL = `
   CREATE INDEX IF NOT EXISTS tasks_workspace_id_idx
   ON tasks (workspace_id)
+`;
+
+const ADD_TASKS_LAST_MODEL_ID_COLUMN_SQL = `
+  ALTER TABLE tasks ADD COLUMN last_model_id TEXT
+`;
+
+const CREATE_TASK_MESSAGES_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS task_messages (
+    id TEXT PRIMARY KEY NOT NULL,
+    task_id TEXT NOT NULL,
+    agent_id TEXT NOT NULL,
+    sequence INTEGER NOT NULL,
+    role TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+  ) STRICT
+`;
+
+const CREATE_TASK_MESSAGES_TASK_ID_INDEX_SQL = `
+  CREATE INDEX IF NOT EXISTS task_messages_task_id_idx
+  ON task_messages (task_id)
+`;
+
+const CREATE_TASK_MESSAGES_TASK_SEQUENCE_INDEX_SQL = `
+  CREATE UNIQUE INDEX IF NOT EXISTS task_messages_task_sequence_idx
+  ON task_messages (task_id, sequence)
 `;
 
 export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
@@ -110,4 +139,14 @@ export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
   sqlite.exec(CREATE_WORKSPACES_PATH_INDEX_SQL);
   sqlite.exec(CREATE_TASKS_TABLE_SQL);
   sqlite.exec(CREATE_TASKS_WORKSPACE_ID_INDEX_SQL);
+  try {
+    sqlite.exec(ADD_TASKS_LAST_MODEL_ID_COLUMN_SQL);
+  } catch (error) {
+    if (!(error instanceof Error) || !error.message.includes("duplicate column name")) {
+      throw error;
+    }
+  }
+  sqlite.exec(CREATE_TASK_MESSAGES_TABLE_SQL);
+  sqlite.exec(CREATE_TASK_MESSAGES_TASK_ID_INDEX_SQL);
+  sqlite.exec(CREATE_TASK_MESSAGES_TASK_SEQUENCE_INDEX_SQL);
 }

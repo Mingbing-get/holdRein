@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  continueAgentTask,
+  fetchTaskMessages,
   fetchTaskTitle,
   startAgentTask,
   subscribeToAgentEvents
@@ -61,6 +63,37 @@ describe("agent message API", () => {
     await expect(
       fetchTaskTitle("http://localhost:4000", "task-1", fetcher)
     ).resolves.toEqual({ id: "task-1", title: "Inspect project" });
+  });
+
+  it("fetches stored messages and continues an existing task", async () => {
+    const fetcher = vi.fn()
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: [{ content: "History", id: "message-1", role: "user", timestamp: 1 }],
+          msg: "ok"
+        }),
+        ok: true
+      })
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: { agentId: "agent-2", sessionId: "session-2", status: "running" },
+          msg: "ok"
+        }),
+        ok: true
+      });
+
+    await expect(fetchTaskMessages("", "task-1", fetcher)).resolves.toHaveLength(1);
+    await continueAgentTask("", "task-1", "Continue", fetcher);
+
+    expect(fetcher).toHaveBeenLastCalledWith(
+      "/api/v1/agents/tasks/task-1/continue",
+      expect.objectContaining({
+        body: JSON.stringify({ prompt: "Continue" }),
+        method: "POST"
+      })
+    );
   });
 
   it("parses NDJSON events split across response chunks", async () => {

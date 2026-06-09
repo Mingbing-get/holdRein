@@ -13,6 +13,7 @@ import { ChatWorkspace } from "./chat-workspace";
 import type { SelectedModel } from "./model-selector";
 
 const agentTasksMock = vi.hoisted(() => ({
+  continueTask: vi.fn(),
   startTask: vi.fn()
 }));
 
@@ -23,6 +24,7 @@ vi.mock("../agent-messages", () => ({
     </div>
   ),
   useAgentTasks: () => ({
+    continueTask: agentTasksMock.continueTask,
     getTaskState: (taskId: string) =>
       taskId === "task-one"
         ? {
@@ -88,6 +90,7 @@ describe("ChatWorkspace", () => {
   afterEach(() => {
     cleanup();
     agentTasksMock.startTask.mockReset();
+    agentTasksMock.continueTask.mockReset();
   });
 
   it("disables the sender until both a workspace and model are selected", () => {
@@ -127,7 +130,7 @@ describe("ChatWorkspace", () => {
   });
 
   it("starts a task and renders messages for the active task", async () => {
-    agentTasksMock.startTask.mockResolvedValue(undefined);
+    agentTasksMock.continueTask.mockResolvedValue(undefined);
     renderChatWorkspace({
       activeAgent: {
         modelId: "claude-3-5-sonnet",
@@ -142,12 +145,10 @@ describe("ChatWorkspace", () => {
     );
     fireEvent.click(screen.getByTestId("sender"));
 
-    expect(agentTasksMock.startTask).toHaveBeenCalledWith({
-      modelId: "claude-3-5-sonnet",
-      prompt: "Inspect this project",
-      provider: "anthropic",
-      workspacePath: "/Users/mingbing/apps/workspace-one"
-    });
+    expect(agentTasksMock.continueTask).toHaveBeenCalledWith(
+      "task-one",
+      "Inspect this project"
+    );
   });
 });
 

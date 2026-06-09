@@ -6,32 +6,33 @@ import {
   AgentHarness,
   JsonlSessionRepo,
   NodeExecutionEnv,
-  convertToLlm,
   formatSkillsForSystemPrompt,
   loadSkills
 } from "@earendil-works/pi-agent-core/node";
 import type { AgentApprovalStore } from "./agent-approval-store";
 import type { AgentEventBus } from "./agent-event-bus";
+import type { AgentMessageRepository } from "./agent-message-repository";
+import { toStoredAgentMessage } from "./agent-message-storage";
 import {
   resolveAgentModel,
   type AgentModelLookup
 } from "./agent-model-resolver";
 import {
-  type HarnessEvent,
   type AgentRunResult,
   type ShellCommandApprovalRequest,
-  type StartAgentInput
+  type RunAgentInput
 } from "./agent-types";
 import { createShellExecTool } from "./shell-exec-tool";
 import { classifyShellCommandRisk } from "./shell-command-risk";
 
 export interface AgentRuntime {
-  start: (input: StartAgentInput) => Promise<AgentRunResult>;
+  start: (input: RunAgentInput) => Promise<AgentRunResult>;
 }
 
 export interface CreateAgentRuntimeOptions {
   approvalStore: AgentApprovalStore;
   eventBus: AgentEventBus;
+  messageRepository: AgentMessageRepository;
   getApiKey?: (provider: string, modelId: string) => Promise<string | undefined>;
   getCustomModel?: AgentModelLookup;
   skillDirs?: string[];
@@ -99,17 +100,53 @@ export function createAgentRuntime(
         tools: [shellExecTool]
       });
 
-      harness.subscribe((event) => {
-        options.eventBus.emit({
-          agentId,
-          payload: serializeHarnessEvent(event),
-          type: event.type
-        });
-      });
+      for (const message of input.history ?? []) {
+        await harness.appendMessage(message);
+      }
 
-      harness.on("context", (event) => ({
-        messages: convertToLlm(event.messages)
-      }));
+      let activeMessageId: string | undefined;
+      harness.subscribe((event) => {
+        if (event.type === "message_start") {
+          activeMessageId = `message_${randomUUID()}`;
+          options.eventBus.emit({
+            agentId,
+            payload: { message: toStoredAgentMessage(activeMessageId, event.message) },
+            type: "message_start"
+          });
+          return;
+        }
+        if (event.type === "message_update" && activeMessageId) {
+          options.eventBus.emit({
+            agentId,
+            payload: {
+              delta: event.assistantMessageEvent,
+              messageId: activeMessageId
+            },
+            type: "message_delta"
+          });
+          return;
+        }
+        if (event.type === "message_end") {
+          const messageId = activeMessageId ?? `message_${randomUUID()}`;
+          const message = toStoredAgentMessage(messageId, event.message);
+          options.messageRepository.append({
+            agentId,
+            createdAt: new Date().toISOString(),
+            message,
+            taskId: input.taskId
+          });
+          options.eventBus.emit({
+            agentId,
+            payload: { message },
+            type: "message_end"
+          });
+          activeMessageId = undefined;
+          return;
+        }
+        if (event.type === "agent_end") {
+          options.eventBus.emit({ agentId, type: "agent_end" });
+        }
+      });
 
       harness.on("tool_call", async (event) => {
         if (event.toolName !== shellExecTool.name) {
@@ -186,17 +223,6 @@ function getEnvApiKey(provider: string): string | undefined {
   return process.env[`${provider.toUpperCase()}_API_KEY`];
 }
 
-
-function serializeHarnessEvent(event: HarnessEvent): unknown {
-  if (event.type === "message_update") {
-    return {
-      assistantMessageEvent: event.assistantMessageEvent,
-      message: event.message
-    };
-  }
-
-  return event;
-}
 
 function getStringValue(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;

@@ -8,6 +8,7 @@ export {
   customModelProviders,
   customProviderModels,
   providerApiKeys,
+  taskMessages,
   tasks,
   workspaces,
   type CustomModelProviderRow,
@@ -16,8 +17,10 @@ export {
   type NewCustomProviderModelRow,
   type NewProviderApiKeyRow,
   type NewTaskRow,
+  type NewTaskMessageRow,
   type NewWorkspaceRow,
   type ProviderApiKeyRow,
   type TaskRow,
+  type TaskMessageRow,
   type WorkspaceRow
 } from "./schema";

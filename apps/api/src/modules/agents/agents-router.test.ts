@@ -15,6 +15,21 @@ function createService(overrides: Partial<AgentsService> = {}): AgentsService {
       id: "task-1",
       title: "Inspect project"
     }),
+    continueTask: vi.fn().mockResolvedValue({
+      agentId: "agent-2",
+      sessionId: "session-2",
+      status: "running",
+      task: { id: "task-1" },
+      workspace: { id: "workspace-1" }
+    }),
+    listTaskMessages: vi.fn().mockReturnValue([
+      {
+        content: [{ text: "History", type: "text" }],
+        id: "message-1",
+        role: "user",
+        timestamp: 1
+      }
+    ]),
     startAgent: vi.fn().mockResolvedValue({
       agentId: "agent-1",
       sessionId: "session-1",
@@ -105,6 +120,31 @@ describe("agent routes", () => {
       code: 40000,
       msg: "workspacePath, provider, modelId and prompt must be strings",
       data: null
+    });
+  });
+
+  it("returns stored task messages", async () => {
+    const service = createService();
+    const response = await request(createApp({ agentsService: service }))
+      .get("/api/v1/agents/tasks/task-1/messages");
+
+    expect(response.status).toBe(200);
+    expect(response.body.data[0]).toEqual(
+      expect.objectContaining({ id: "message-1", role: "user" })
+    );
+    expect(service.listTaskMessages).toHaveBeenCalledWith({ taskId: "task-1" });
+  });
+
+  it("continues an existing task", async () => {
+    const service = createService();
+    const response = await request(createApp({ agentsService: service }))
+      .post("/api/v1/agents/tasks/task-1/continue")
+      .send({ prompt: "Continue" });
+
+    expect(response.status).toBe(200);
+    expect(service.continueTask).toHaveBeenCalledWith({
+      prompt: "Continue",
+      taskId: "task-1"
     });
   });
 

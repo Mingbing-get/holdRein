@@ -21,6 +21,10 @@ interface ApprovalDecisionBody {
   approved?: boolean;
 }
 
+interface ContinueTaskBody {
+  prompt?: string;
+}
+
 export function createAgentsRouter(
   options: CreateAgentsRouterOptions = {}
 ): Router {
@@ -55,6 +59,46 @@ export function createAgentsRouter(
             response,
             RESPONSE_CODE_DEFINITIONS.badRequest,
             error instanceof Error ? error.message : "Failed to start agent"
+          );
+        });
+    }
+  );
+
+  router.get(
+    "/agents/tasks/:taskId/messages",
+    (request: Request<{ taskId: string }>, response: Response): void => {
+      sendSuccess(
+        response,
+        getService().listTaskMessages({ taskId: request.params.taskId })
+      );
+    }
+  );
+
+  router.post(
+    "/agents/tasks/:taskId/continue",
+    (
+      request: Request<{ taskId: string }, unknown, ContinueTaskBody>,
+      response: Response
+    ): void => {
+      if (typeof request.body.prompt !== "string") {
+        sendError(response, RESPONSE_CODE_DEFINITIONS.badRequest, "prompt must be a string");
+        return;
+      }
+
+      void getService()
+        .continueTask({ prompt: request.body.prompt, taskId: request.params.taskId })
+        .then((result) => {
+          if (!result) {
+            sendError(response, RESPONSE_CODE_DEFINITIONS.notFound, "Unknown task");
+            return;
+          }
+          sendSuccess(response, result);
+        })
+        .catch((error) => {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.badRequest,
+            error instanceof Error ? error.message : "Failed to continue task"
           );
         });
     }

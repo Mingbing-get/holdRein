@@ -35,6 +35,7 @@ export interface WorkspaceRepository {
   listTasksByWorkspaceId: (input: ListWorkspaceTasksInput) => TaskRow[];
   listWorkspaces: () => WorkspaceRow[];
   updateTaskTitle: (taskId: string, title: string, updatedAt: string) => TaskRow | undefined;
+  updateTaskContinuedAt: (taskId: string, continuedAt: string) => TaskRow | undefined;
 }
 
 export function createInMemoryWorkspaceRepository(
@@ -92,6 +93,18 @@ export function createInMemoryWorkspaceRepository(
       const nextTask: TaskRow = { ...existingTask, title, updatedAt };
       taskRows[taskIndex] = nextTask;
 
+      return nextTask;
+    },
+    updateTaskContinuedAt: (taskId, continuedAt) => {
+      const taskIndex = taskRows.findIndex((task) => task.id === taskId);
+      const existingTask = taskRows[taskIndex];
+      if (!existingTask) return undefined;
+      const nextTask = {
+        ...existingTask,
+        lastContinuedAt: continuedAt,
+        updatedAt: continuedAt
+      };
+      taskRows[taskIndex] = nextTask;
       return nextTask;
     }
   };
@@ -169,6 +182,14 @@ export function createSqliteWorkspaceRepository(
         .from(tasks)
         .where(eq(tasks.id, taskId))
         .get();
+    },
+    updateTaskContinuedAt: (taskId, continuedAt) => {
+      database.db
+        .update(tasks)
+        .set({ lastContinuedAt: continuedAt, updatedAt: continuedAt })
+        .where(eq(tasks.id, taskId))
+        .run();
+      return database.db.select().from(tasks).where(eq(tasks.id, taskId)).get();
     }
   };
 }
@@ -182,6 +203,7 @@ function sortTasksDescending(taskRows: TaskRow[]): TaskRow[] {
 function toTaskRow(task: NewTaskRow): TaskRow {
   return {
     ...task,
-    lastContinuedAt: task.lastContinuedAt ?? null
+    lastContinuedAt: task.lastContinuedAt ?? null,
+    lastModelId: task.lastModelId ?? null
   };
 }
