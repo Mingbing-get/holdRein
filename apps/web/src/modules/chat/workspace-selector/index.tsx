@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 
 import { useAppWorkspace } from "../../../app/app-workspace-context";
 import { FileSelector } from "../../../components/fileSelector";
-import type { WorkspaceSummary } from "../../LeftSide/workspace-nav-types";
+import type { WorkspaceSummary } from "../../leftSide/workspace-nav-types";
 
 interface WorkspaceOption {
   label: string;

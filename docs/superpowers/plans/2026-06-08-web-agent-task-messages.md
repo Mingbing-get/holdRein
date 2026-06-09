@@ -15,11 +15,11 @@
 **Files:**
 - Modify: `apps/web/src/app/app-workspace-context.tsx`
 - Modify: `apps/web/src/app/app-workspace-context.test.tsx`
-- Modify: `apps/web/src/modules/LeftSide/workspace-section/index.tsx`
-- Modify: `apps/web/src/modules/LeftSide/workspace-section/index.test.tsx`
+- Modify: `apps/web/src/modules/leftSide/workspace-section/index.tsx`
+- Modify: `apps/web/src/modules/leftSide/workspace-section/index.test.tsx`
 
 - [ ] Write failing tests showing a started task is inserted at the front with the prompt as its temporary title, and a generated title later replaces it.
-- [ ] Run `pnpm exec vitest run apps/web/src/app/app-workspace-context.test.tsx apps/web/src/modules/LeftSide/workspace-section/index.test.tsx` and verify the new tests fail.
+- [ ] Run `pnpm exec vitest run apps/web/src/app/app-workspace-context.test.tsx apps/web/src/modules/leftSide/workspace-section/index.test.tsx` and verify the new tests fail.
 - [ ] Add explicit `upsertStartedTask` and `updateTaskTitle` workspace context operations and navigation title fallback behavior.
 - [ ] Run the focused tests and verify they pass.
 

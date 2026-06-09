@@ -7,8 +7,8 @@ import {
 } from "react";
 import type { Dispatch, PropsWithChildren, SetStateAction } from "react";
 
-import type { WorkspaceSummary } from "../modules/LeftSide/workspace-nav-types";
-import type { WorkspaceTaskSummary } from "../modules/LeftSide/workspace-nav-types";
+import type { WorkspaceSummary } from "../modules/leftSide/workspace-nav-types";
+import type { WorkspaceTaskSummary } from "../modules/leftSide/workspace-nav-types";
 
 const ACTIVE_AGENT_STORAGE_KEY = "hold-rein.active-agent";
 const ACTIVE_WORKSPACE_ID_STORAGE_KEY = "hold-rein.active-workspace-id";

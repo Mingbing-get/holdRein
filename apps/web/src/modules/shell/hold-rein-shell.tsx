@@ -4,9 +4,9 @@ import { useEffect } from "react";
 import { useAppUi } from "../../app/app-ui-context";
 import { useAppWorkspace } from "../../app/app-workspace-context";
 import { ChatWorkspace } from "../chat/chat-workspace";
-import { LeftSideAside } from "../LeftSide/aside";
-import { fetchWorkspaceNavigation } from "../LeftSide/workspace-nav-api";
-import { WorkspaceNav } from "../LeftSide/workspace-nav";
+import { LeftSideAside } from "../leftSide/aside";
+import { fetchWorkspaceNavigation } from "../leftSide/workspace-nav-api";
+import { WorkspaceNav } from "../leftSide/workspace-nav";
 import { ModelProvidersView } from "../model-providers";
 import { WorkspaceTopBar } from "../top-bar/workspace-top-bar";
 
