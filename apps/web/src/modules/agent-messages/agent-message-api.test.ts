@@ -97,4 +97,28 @@ describe("agent message API", () => {
       expect.objectContaining({ sequence: 2, type: "turn_end" })
     );
   });
+
+  it("subscribes with a relative URL when the API base URL is empty", async () => {
+    const response = new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.close();
+        }
+      }),
+      { status: 200 }
+    );
+    const fetcher = vi.fn().mockResolvedValue(response);
+
+    await subscribeToAgentEvents(
+      "",
+      { agentId: "agent-1", afterSequence: 0 },
+      vi.fn(),
+      fetcher
+    );
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/agents/agent-1/events?afterSequence=0",
+      {}
+    );
+  });
 });

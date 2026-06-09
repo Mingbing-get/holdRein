@@ -22,10 +22,7 @@ describe("AgentTasksProvider", () => {
 
     render(
       <AppWorkspaceProvider>
-        <AgentTasksProvider
-          apiBaseUrl="http://localhost:4000"
-          fetcher={fetcher}
-        >
+        <AgentTasksProvider apiBaseUrl="" fetcher={fetcher}>
           <StartTaskProbe />
         </AgentTasksProvider>
       </AppWorkspaceProvider>
@@ -42,9 +39,7 @@ describe("AgentTasksProvider", () => {
 
     expect(screen.getByTestId("active-task-id")).toHaveTextContent("task-1");
     expect(fetcher).toHaveBeenCalledWith(
-      expect.objectContaining({
-        pathname: "/api/v1/agents/agent-1/events"
-      }),
+      "/api/v1/agents/agent-1/events",
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });

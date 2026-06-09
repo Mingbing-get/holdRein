@@ -49,13 +49,11 @@ export async function subscribeToAgentEvents(
   listener: (event: AgentEventEnvelope) => void,
   fetcher: AgentMessageFetcher = fetch
 ): Promise<void> {
-  const url = new URL(
-    `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/agents/${encodeURIComponent(input.agentId)}/events`
-  );
-
-  if (input.afterSequence !== undefined) {
-    url.searchParams.set("afterSequence", String(input.afterSequence));
-  }
+  const eventsUrl = `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/agents/${encodeURIComponent(input.agentId)}/events`;
+  const url =
+    input.afterSequence === undefined
+      ? eventsUrl
+      : `${eventsUrl}?afterSequence=${input.afterSequence}`;
 
   const response = await fetcher(url, {
     ...(input.signal ? { signal: input.signal } : {})
