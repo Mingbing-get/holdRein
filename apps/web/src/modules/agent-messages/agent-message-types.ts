@@ -30,6 +30,7 @@ export interface AgentRun {
 }
 
 export interface AgentTaskState {
+  activeMessageId: string | null;
   error: string | null;
   lastSequence: number;
   messages: AgentMessage[];

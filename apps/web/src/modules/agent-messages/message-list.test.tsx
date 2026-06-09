@@ -36,4 +36,22 @@ describe("AgentMessageList", () => {
     expect(screen.getByText("需要批准")).toBeInTheDocument();
     expect(screen.getByText("new_event")).toBeInTheDocument();
   });
+
+  it("renders assistant responses without bubble styling", () => {
+    render(
+      <AgentMessageList
+        messages={[
+          { content: "User prompt", id: "1", kind: "user" },
+          { content: "Assistant answer", id: "2", kind: "assistant" }
+        ]}
+      />
+    );
+
+    expect(
+      screen.getByText("Assistant answer").closest(".ant-bubble-content")
+    ).toHaveClass("ant-bubble-content-borderless");
+    expect(
+      screen.getByText("User prompt").closest(".ant-bubble-content")
+    ).not.toHaveClass("ant-bubble-content-borderless");
+  });
 });
