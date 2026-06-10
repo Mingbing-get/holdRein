@@ -1,4 +1,5 @@
 import { loadApiEnv } from "../../config/env";
+import { DB_FILE } from "../../config/const";
 import { createDatabase, migrateDatabase } from "../../db";
 import { createSqliteWorkspaceRepository } from "./workspace-repository";
 import {
@@ -16,7 +17,7 @@ export function getDefaultWorkspacesService(): WorkspacesService {
   loadApiEnv();
 
   const database = createDatabase(
-    process.env.SQLITE_DB_PATH ?? "./data/hold-rein.sqlite"
+    process.env.SQLITE_DB_PATH ?? DB_FILE
   );
 
   migrateDatabase(database.sqlite);

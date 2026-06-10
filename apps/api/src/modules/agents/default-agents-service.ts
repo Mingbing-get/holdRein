@@ -1,4 +1,5 @@
 import { loadApiEnv } from "../../config/env";
+import { DB_FILE } from "../../config/const";
 import { createDatabase, migrateDatabase } from "../../db";
 import { createSqliteWorkspaceRepository } from "../workspaces";
 import { createAgentApprovalStore } from "./agent-approval-store";
@@ -18,7 +19,7 @@ export function getDefaultAgentsService(): AgentsService {
     loadApiEnv();
 
     const database = createDatabase(
-      process.env.SQLITE_DB_PATH ?? "./data/hold-rein.sqlite"
+      process.env.SQLITE_DB_PATH ?? DB_FILE
     );
     const approvalStore = createAgentApprovalStore();
     const eventBus = createAgentEventBus();

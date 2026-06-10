@@ -9,6 +9,7 @@ import {
   formatSkillsForSystemPrompt,
   loadSkills
 } from "@earendil-works/pi-agent-core/node";
+import { AGENT_ROOT_DIR, SESSION_DIR_NAME } from '../../config/const';
 import type { AgentApprovalStore } from "./agent-approval-store";
 import type { AgentEventBus } from "./agent-event-bus";
 import type { AgentMessageRepository } from "./agent-message-repository";
@@ -53,8 +54,8 @@ export function createAgentRuntime(
       const agentId = `agent_${randomUUID()}`;
       const env = new NodeExecutionEnv({ cwd: input.workspacePath });
       const sessionRepo = new JsonlSessionRepo({
-        fs: env,
-        sessionsRoot: ".hold-rein/sessions"
+        fs: new NodeExecutionEnv({ cwd: AGENT_ROOT_DIR }),
+        sessionsRoot: `./${SESSION_DIR_NAME}`
       });
       const session = await sessionRepo.create({ cwd: input.workspacePath });
       const sessionMetadata = await session.getMetadata();
