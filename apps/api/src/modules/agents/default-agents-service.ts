@@ -3,6 +3,7 @@ import { DB_FILE } from "../../config/const";
 import { createDatabase, migrateDatabase } from "../../db";
 import { createSqliteWorkspaceRepository } from "../workspaces";
 import { createAgentApprovalStore } from "./agent-approval-store";
+import { getDefaultActiveTaskRunRegistry } from "./active-task-run-registry";
 import { createAgentEventBus } from "./agent-event-bus";
 import type { AgentModelLookup } from "./agent-model-resolver";
 import { createAgentRuntime } from "./agent-runtime";
@@ -36,6 +37,7 @@ export function getDefaultAgentsService(): AgentsService {
     });
 
     service = createAgentsService({
+      activeTaskRuns: getDefaultActiveTaskRunRegistry(),
       approvalStore,
       eventBus,
       modelProvidersService,

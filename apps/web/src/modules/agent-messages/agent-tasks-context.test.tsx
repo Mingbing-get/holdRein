@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -43,6 +43,35 @@ describe("AgentTasksProvider", () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });
+
+  it("resumes a running task subscription and marks an unseen completion", async () => {
+    const fetcher = createResumedTaskFetcher();
+
+    render(
+      <AppWorkspaceProvider>
+        <AgentTasksProvider apiBaseUrl="" fetcher={fetcher}>
+          <ResumedTaskProbe />
+        </AgentTasksProvider>
+      </AppWorkspaceProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("resumed-task-status")).toHaveTextContent(
+        "completed"
+      );
+      expect(screen.getByTestId("unread-completion")).toHaveTextContent("true");
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/agents/agent-resumed/events",
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "查看任务" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("unread-completion")).toHaveTextContent("false");
+    });
+  });
 });
 
 function StartTaskProbe() {
@@ -69,6 +98,54 @@ function StartTaskProbe() {
           ?.messages.map((message) => message.role)
           .join(",")}
       </span>
+    </>
+  );
+}
+
+function ResumedTaskProbe() {
+  const {
+    state: { workspaces },
+    setActiveTaskId,
+    setActiveWorkspaceId,
+    setWorkspaces
+  } = useAppWorkspace();
+  const { hasUnreadCompletion } = useAgentTasks();
+
+  useEffect(() => {
+    setWorkspaces([
+      {
+        hasMore: false,
+        id: "workspace-1",
+        name: "workspace",
+        path: "/workspace",
+        tasks: [
+          {
+            activeAgentId: "agent-resumed",
+            id: "task-resumed",
+            initialUserMessage: "Inspect",
+            lastContinuedAt: "2026-06-11T00:00:00.000Z",
+            lastModelName: "gpt-4.1",
+            lastModelProvider: "openai",
+            lastModelProviderSource: "built_in",
+            status: "running",
+            title: "Inspect"
+          }
+        ]
+      }
+    ]);
+    setActiveWorkspaceId("workspace-1");
+    setActiveTaskId("another-task");
+  }, [setActiveTaskId, setActiveWorkspaceId, setWorkspaces]);
+
+  return (
+    <>
+      <span data-testid="resumed-task-status">
+        {workspaces[0]?.tasks[0]?.status}
+      </span>
+      <span data-testid="unread-completion">
+        {String(hasUnreadCompletion("task-resumed"))}
+      </span>
+      <button onClick={() => setActiveTaskId("task-resumed")}>查看任务</button>
     </>
   );
 }
@@ -113,6 +190,32 @@ function createAgentFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
           controller.enqueue(
             encoder.encode(
               '{"agentId":"agent-1","payload":{"message":{"id":"message-1","role":"assistant","content":[],"api":"openai-responses","provider":"openai","model":"gpt-4.1","stopReason":"stop","timestamp":1}},"sequence":1,"timestamp":"now","type":"message_start"}\n'
+            )
+          );
+          controller.close();
+        }
+      }),
+      { status: 200 }
+    );
+  }) as AgentMessageFetcher & ReturnType<typeof vi.fn>;
+}
+
+function createResumedTaskFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
+  const encoder = new TextEncoder();
+
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+
+    if (url.endsWith("/messages")) {
+      return jsonResponse([]);
+    }
+
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(
+              '{"agentId":"agent-resumed","sequence":1,"timestamp":"now","type":"agent_end"}\n'
             )
           );
           controller.close();

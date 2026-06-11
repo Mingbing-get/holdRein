@@ -3,13 +3,16 @@ import { describe, expect, it, vi } from "vitest";
 import { createInMemoryWorkspaceRepository } from "../workspaces";
 import { createAgentApprovalStore } from "./agent-approval-store";
 import { createAgentEventBus } from "./agent-event-bus";
+import { createActiveTaskRunRegistry } from "./active-task-run-registry";
 import { createAgentsService } from "./agents-service";
 
 describe("agents service task status", () => {
   it("marks a started task completed when the agent run ends", async () => {
     const repository = createInMemoryWorkspaceRepository();
     const eventBus = createAgentEventBus();
+    const activeTaskRuns = createActiveTaskRunRegistry();
     const service = createAgentsService({
+      activeTaskRuns,
       approvalStore: createAgentApprovalStore(),
       eventBus,
       now: () => new Date("2026-06-11T00:00:00.000Z"),
@@ -29,10 +32,12 @@ describe("agents service task status", () => {
     });
 
     expect(repository.findTaskById(result.task.id)?.status).toBe("running");
+    expect(activeTaskRuns.getAgentId(result.task.id)).toBe("agent-1");
 
     eventBus.emit({ agentId: "agent-1", type: "agent_end" });
 
     expect(repository.findTaskById(result.task.id)?.status).toBe("completed");
+    expect(activeTaskRuns.getAgentId(result.task.id)).toBeUndefined();
   });
 
   it("marks a new task as error when runtime startup fails", async () => {

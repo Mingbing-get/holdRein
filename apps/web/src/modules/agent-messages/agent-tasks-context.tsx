@@ -32,6 +32,7 @@ import type {
 export interface AgentTasksContextValue {
   continueTask: (taskId: string, input: ContinueTaskInput) => Promise<void>;
   getTaskState: (taskId: string) => AgentTaskState | undefined;
+  hasUnreadCompletion: (taskId: string) => boolean;
   startTask: (input: StartTaskInput) => Promise<void>;
 }
 
@@ -48,7 +49,8 @@ export function AgentTasksProvider({
   fetcher = fetch
 }: AgentTasksProviderProps) {
   const {
-    state: { activeTaskId },
+    state: { activeTaskId, workspaces },
+    updateTaskStatus,
     updateTaskTitle,
     upsertStartedTask
   } = useAppWorkspace();
@@ -57,6 +59,22 @@ export function AgentTasksProvider({
   );
   const subscriptions = useRef(new Map<string, AbortController>());
   const loadedTaskIds = useRef(new Set<string>());
+  const activeTaskIdRef = useRef(activeTaskId);
+  const [unreadCompletionTaskIds, setUnreadCompletionTaskIds] = useState<
+    Set<string>
+  >(() => new Set());
+
+  useEffect(() => {
+    activeTaskIdRef.current = activeTaskId;
+    if (!activeTaskId) return;
+
+    setUnreadCompletionTaskIds((current) => {
+      if (!current.has(activeTaskId)) return current;
+      const next = new Set(current);
+      next.delete(activeTaskId);
+      return next;
+    });
+  }, [activeTaskId]);
 
   useEffect(
     () => () => {
@@ -91,12 +109,49 @@ export function AgentTasksProvider({
       });
   }, [activeTaskId, apiBaseUrl, fetcher, taskStates]);
 
+  const handleTaskStatus = useCallback(
+    (taskId: string, status: "completed" | "error") => {
+      updateTaskStatus(taskId, status);
+      if (status !== "completed" || activeTaskIdRef.current === taskId) {
+        return;
+      }
+      setUnreadCompletionTaskIds((current) => new Set(current).add(taskId));
+    },
+    [updateTaskStatus]
+  );
+
+  useEffect(() => {
+    for (const task of workspaces.flatMap((workspace) => workspace.tasks)) {
+      if (
+        task.status !== "running" ||
+        !task.activeAgentId ||
+        subscriptions.current.has(task.activeAgentId)
+      ) {
+        continue;
+      }
+
+      startSubscription({
+        agentId: task.activeAgentId,
+        apiBaseUrl,
+        fetcher,
+        onTaskStatus: handleTaskStatus,
+        setTaskStates,
+        subscriptions,
+        taskId: task.id
+      });
+    }
+  }, [apiBaseUrl, fetcher, handleTaskStatus, workspaces]);
+
   const startTask = useCallback(
     async (input: StartTaskInput) => {
       const result = await startAgentTask(apiBaseUrl, input, fetcher);
       const taskId = result.task.id;
 
-      upsertStartedTask(result.workspace, result.task, input.prompt);
+      upsertStartedTask(
+        result.workspace,
+        { ...result.task, activeAgentId: result.agentId },
+        input.prompt
+      );
       setTaskStates((current) => ({
         ...current,
         [taskId]: addRun(
@@ -109,11 +164,13 @@ export function AgentTasksProvider({
       }));
 
       startSubscription({
+        agentId: result.agentId,
         apiBaseUrl,
         fetcher,
-        result,
+        onTaskStatus: handleTaskStatus,
         setTaskStates,
-        subscriptions
+        subscriptions,
+        taskId
       });
 
       void fetchTaskTitle(apiBaseUrl, taskId, fetcher)
@@ -122,12 +179,13 @@ export function AgentTasksProvider({
         })
         .catch(() => undefined);
     },
-    [apiBaseUrl, fetcher, updateTaskTitle, upsertStartedTask]
+    [apiBaseUrl, fetcher, handleTaskStatus, updateTaskTitle, upsertStartedTask]
   );
 
   const continueTask = useCallback(
     async (taskId: string, input: ContinueTaskInput) => {
       const result = await continueAgentTask(apiBaseUrl, taskId, input, fetcher);
+      updateTaskStatus(taskId, "running", result.agentId);
       setTaskStates((current) => ({
         ...current,
         [taskId]: addRun(
@@ -139,23 +197,26 @@ export function AgentTasksProvider({
         )
       }));
       startSubscription({
+        agentId: result.agentId,
         apiBaseUrl,
         fetcher,
-        result,
+        onTaskStatus: handleTaskStatus,
         setTaskStates,
-        subscriptions
+        subscriptions,
+        taskId
       });
     },
-    [apiBaseUrl, fetcher]
+    [apiBaseUrl, fetcher, handleTaskStatus, updateTaskStatus]
   );
 
   const contextValue = useMemo<AgentTasksContextValue>(
     () => ({
       continueTask,
       getTaskState: (taskId) => taskStates[taskId],
+      hasUnreadCompletion: (taskId) => unreadCompletionTaskIds.has(taskId),
       startTask
     }),
-    [continueTask, startTask, taskStates]
+    [continueTask, startTask, taskStates, unreadCompletionTaskIds]
   );
 
   return (
@@ -191,29 +252,36 @@ function addRun(state: AgentTaskState, result: StartTaskResult): AgentTaskState 
 }
 
 function startSubscription(input: {
+  agentId: string;
   apiBaseUrl: string;
   fetcher: AgentMessageFetcher;
-  result: StartTaskResult;
+  onTaskStatus: (taskId: string, status: "completed" | "error") => void;
   setTaskStates: React.Dispatch<
     React.SetStateAction<Record<string, AgentTaskState>>
   >;
   subscriptions: React.RefObject<Map<string, AbortController>>;
+  taskId: string;
 }): void {
   const controller = new AbortController();
-  const taskId = input.result.task.id;
-  input.subscriptions.current.set(input.result.agentId, controller);
+  input.subscriptions.current.set(input.agentId, controller);
 
   void subscribeToAgentEvents(
     input.apiBaseUrl,
-    { agentId: input.result.agentId, signal: controller.signal },
+    { agentId: input.agentId, signal: controller.signal },
     (event) => {
       input.setTaskStates((current) => ({
         ...current,
-        [taskId]: reduceAgentTaskState(
-          current[taskId] ?? createInitialAgentTaskState(taskId),
+        [input.taskId]: reduceAgentTaskState(
+          current[input.taskId] ?? createInitialAgentTaskState(input.taskId),
           { event, type: "event_received" }
         )
       }));
+      if (event.type === "agent_end") {
+        input.onTaskStatus(input.taskId, "completed");
+      }
+      if (event.type === "agent_error") {
+        input.onTaskStatus(input.taskId, "error");
+      }
     },
     input.fetcher
   )
@@ -221,8 +289,8 @@ function startSubscription(input: {
       if (controller.signal.aborted) return;
       input.setTaskStates((current) => ({
         ...current,
-        [taskId]: reduceAgentTaskState(
-          current[taskId] ?? createInitialAgentTaskState(taskId),
+        [input.taskId]: reduceAgentTaskState(
+          current[input.taskId] ?? createInitialAgentTaskState(input.taskId),
           {
             message:
               error instanceof Error ? error.message : "Subscription failed",
@@ -230,8 +298,9 @@ function startSubscription(input: {
           }
         )
       }));
+      input.onTaskStatus(input.taskId, "error");
     })
     .finally(() => {
-      input.subscriptions.current.delete(input.result.agentId);
+      input.subscriptions.current.delete(input.agentId);
     });
 }

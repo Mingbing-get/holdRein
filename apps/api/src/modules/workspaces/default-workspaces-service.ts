@@ -2,6 +2,7 @@ import { loadApiEnv } from "../../config/env";
 import { DB_FILE } from "../../config/const";
 import { createDatabase, migrateDatabase } from "../../db";
 import { createSqliteWorkspaceRepository } from "./workspace-repository";
+import { getDefaultActiveTaskRunRegistry } from "../agents/active-task-run-registry";
 import {
   createWorkspacesService,
   type WorkspacesService
@@ -22,6 +23,7 @@ export function getDefaultWorkspacesService(): WorkspacesService {
 
   migrateDatabase(database.sqlite);
   service = createWorkspacesService({
+    activeTaskRuns: getDefaultActiveTaskRunRegistry(),
     repository: createSqliteWorkspaceRepository(database)
   });
 

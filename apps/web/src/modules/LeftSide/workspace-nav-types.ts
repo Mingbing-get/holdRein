@@ -1,4 +1,5 @@
 export interface WorkspaceTaskSummary {
+  activeAgentId?: string;
   id: string;
   initialUserMessage: string;
   lastContinuedAt: string;

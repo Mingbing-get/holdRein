@@ -10,6 +10,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { TaskRow, WorkspaceRow } from "../../db";
+import { createActiveTaskRunRegistry } from "../agents/active-task-run-registry";
 import { createInMemoryWorkspaceRepository } from "./workspace-repository";
 import { createWorkspacesService } from "./workspaces-service";
 
@@ -102,6 +103,64 @@ describe("workspaces service deletion", () => {
       status: "not_found",
       workspaceId: "missing"
     });
+  });
+});
+
+describe("workspaces service navigation", () => {
+  it("includes the active agent id for a running task", () => {
+    const repository = createRepository({
+      projectPath: "/project",
+      tasks: [createTask({ status: "running" })]
+    });
+    const activeTaskRuns = createActiveTaskRunRegistry();
+    activeTaskRuns.register("task-one", "agent-one");
+    const service = createWorkspacesService({ activeTaskRuns, repository });
+
+    expect(
+      service.listRecentWorkspaceTasks().workspaces[0]?.tasks[0]
+    ).toMatchObject({
+      activeAgentId: "agent-one",
+      id: "task-one",
+      status: "running"
+    });
+  });
+
+  it("marks a stale running task as error when no active agent exists", () => {
+    const repository = createRepository({
+      projectPath: "/project",
+      tasks: [createTask({ status: "running" })]
+    });
+    const service = createWorkspacesService({
+      activeTaskRuns: createActiveTaskRunRegistry(),
+      now: () => new Date("2026-06-11T01:00:00.000Z"),
+      repository
+    });
+
+    expect(
+      service.listRecentWorkspaceTasks().workspaces[0]?.tasks[0]
+    ).toMatchObject({
+      id: "task-one",
+      status: "error"
+    });
+    expect(repository.findTaskById("task-one")?.status).toBe("error");
+  });
+
+  it("keeps a task running while its agent is starting", () => {
+    const repository = createRepository({
+      projectPath: "/project",
+      tasks: [createTask({ status: "running" })]
+    });
+    const activeTaskRuns = createActiveTaskRunRegistry();
+    activeTaskRuns.markStarting("task-one");
+    const service = createWorkspacesService({ activeTaskRuns, repository });
+
+    expect(
+      service.listRecentWorkspaceTasks().workspaces[0]?.tasks[0]
+    ).toMatchObject({
+      id: "task-one",
+      status: "running"
+    });
+    expect(repository.findTaskById("task-one")?.status).toBe("running");
   });
 });
 

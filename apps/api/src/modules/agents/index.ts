@@ -1,4 +1,9 @@
 export {
+  createActiveTaskRunRegistry,
+  getDefaultActiveTaskRunRegistry,
+  type ActiveTaskRunRegistry
+} from "./active-task-run-registry";
+export {
   createAgentApprovalStore,
   type AgentApprovalStore
 } from "./agent-approval-store";

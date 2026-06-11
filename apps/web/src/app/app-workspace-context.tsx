@@ -36,6 +36,11 @@ export interface AppWorkspaceContextValue {
   setActiveWorkspaceId: (workspaceId: string) => void;
   setWorkspaces: Dispatch<SetStateAction<WorkspaceSummary[]>>;
   updateTaskTitle: (taskId: string, title: string) => void;
+  updateTaskStatus: (
+    taskId: string,
+    status: WorkspaceTaskSummary["status"],
+    activeAgentId?: string
+  ) => void;
   upsertStartedTask: (
     workspace: StartedWorkspace,
     task: StartedTask,
@@ -253,6 +258,30 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
     }));
   }, []);
 
+  const updateTaskStatus = useCallback(
+    (
+      taskId: string,
+      status: WorkspaceTaskSummary["status"],
+      activeAgentId?: string
+    ) => {
+      setState((currentState) => ({
+        ...currentState,
+        workspaces: currentState.workspaces.map((workspace) => ({
+          ...workspace,
+          tasks: workspace.tasks.map((task) => {
+            if (task.id !== taskId) return task;
+
+            const nextTask: WorkspaceTaskSummary = { ...task, status };
+            if (activeAgentId) nextTask.activeAgentId = activeAgentId;
+            else delete nextTask.activeAgentId;
+            return nextTask;
+          })
+        }))
+      }));
+    },
+    []
+  );
+
   const upsertStartedTask = useCallback(
     (
       workspace: StartedWorkspace,
@@ -314,6 +343,7 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
       setActiveWorkspaceId,
       setWorkspaces,
       updateTaskTitle,
+      updateTaskStatus,
       upsertStartedTask
     }),
     [
@@ -326,6 +356,7 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
       startNewConversation,
       state,
       updateTaskTitle,
+      updateTaskStatus,
       upsertStartedTask
     ]
   );

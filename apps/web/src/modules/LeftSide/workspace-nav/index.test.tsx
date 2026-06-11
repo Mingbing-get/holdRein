@@ -19,6 +19,12 @@ import {
 import type { WorkspaceSummary } from "../workspace-nav-types";
 import { WorkspaceNav } from ".";
 
+vi.mock("../../agent-messages", () => ({
+  useAgentTasks: () => ({
+    hasUnreadCompletion: () => false
+  })
+}));
+
 class ResizeObserverMock {
   disconnect() {
     return undefined;

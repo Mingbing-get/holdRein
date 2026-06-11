@@ -3,6 +3,7 @@ import { App, Input, Modal } from "antd";
 
 import { useAppUi } from "../../../app/app-ui-context";
 import { useAppWorkspace } from "../../../app/app-workspace-context";
+import { useAgentTasks } from "../../agent-messages";
 import { deleteTask, deleteWorkspace, renameTask } from "../workspace-nav-api";
 import type {
   WorkspaceSummary,
@@ -23,6 +24,7 @@ export function WorkspaceSection({
   workspace
 }: WorkspaceSectionProps) {
   const { message, modal } = App.useApp();
+  const { hasUnreadCompletion } = useAgentTasks();
   const {
     openChatWorkspace
   } = useAppUi();
@@ -125,6 +127,7 @@ export function WorkspaceSection({
         workspace.tasks.map((task) => (
           <WorkspaceTask
             collapsed={collapsed}
+            hasUnreadCompletion={hasUnreadCompletion(task.id)}
             isActive={isActiveWorkspace && task.id === activeTaskId}
             key={task.id}
             onDelete={confirmDeleteTask}

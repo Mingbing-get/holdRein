@@ -1,5 +1,6 @@
 import { unlink } from "node:fs/promises";
 
+import type { ActiveTaskRunRegistry } from "../agents/active-task-run-registry";
 import type {
   RecentWorkspaceTasksResult,
   WorkspaceNavigationTaskRow,
@@ -10,6 +11,7 @@ import type {
 import type { WorkspaceRepository } from "./workspace-repository";
 
 export interface CreateWorkspacesServiceOptions {
+  activeTaskRuns?: ActiveTaskRunRegistry;
   now?: () => Date;
   repository: WorkspaceRepository;
 }
@@ -37,6 +39,7 @@ const RECENT_TASK_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 const RECENT_TASK_FETCH_LIMIT = 500;
 
 export function createWorkspacesService({
+  activeTaskRuns,
   now = () => new Date(),
   repository
 }: CreateWorkspacesServiceOptions): WorkspacesService {
@@ -82,7 +85,12 @@ export function createWorkspacesService({
           id: workspace.id,
           name: workspace.name,
           path: workspace.path,
-          tasks: recentTasks.map(toTaskSummary)
+          tasks: recentTasks.map((task) =>
+            toTaskSummary(
+              resolveTaskStatus(task, activeTaskRuns, repository, now),
+              activeTaskRuns
+            )
+          )
         };
 
         return summary;
@@ -103,7 +111,14 @@ export function createWorkspacesService({
 
       return {
         hasMore: tasks.length > limit,
-        tasks: tasks.slice(0, limit).map(toTaskSummary),
+        tasks: tasks
+          .slice(0, limit)
+          .map((task) =>
+            toTaskSummary(
+              resolveTaskStatus(task, activeTaskRuns, repository, now),
+              activeTaskRuns
+            )
+          ),
         workspaceId
       };
     }
@@ -130,12 +145,35 @@ function isMissingFileError(error: unknown): error is NodeJS.ErrnoException {
   );
 }
 
-function toTaskSummary(task: WorkspaceNavigationTaskRow): WorkspaceTaskSummary {
+function resolveTaskStatus(
+  task: WorkspaceNavigationTaskRow,
+  activeTaskRuns: ActiveTaskRunRegistry | undefined,
+  repository: WorkspaceRepository,
+  now: () => Date
+): WorkspaceNavigationTaskRow {
+  if (
+    task.status !== "running" ||
+    !activeTaskRuns ||
+    activeTaskRuns.hasTask(task.id)
+  ) {
+    return task;
+  }
+
+  return repository.updateTaskStatus(task.id, "error", now().toISOString()) ?? task;
+}
+
+function toTaskSummary(
+  task: WorkspaceNavigationTaskRow,
+  activeTaskRuns?: ActiveTaskRunRegistry
+): WorkspaceTaskSummary {
   if (task.lastContinuedAt === null) {
     throw new Error("Task summary requires lastContinuedAt");
   }
 
+  const activeAgentId = activeTaskRuns?.getAgentId(task.id);
+
   return {
+    ...(activeAgentId ? { activeAgentId } : {}),
     id: task.id,
     initialUserMessage: task.initialUserMessage,
     lastContinuedAt: task.lastContinuedAt,

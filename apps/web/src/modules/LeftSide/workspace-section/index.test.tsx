@@ -17,6 +17,12 @@ const deleteWorkspaceMock = vi.fn();
 const deleteTaskMock = vi.fn();
 const renameTaskMock = vi.fn();
 
+vi.mock("../../agent-messages", () => ({
+  useAgentTasks: () => ({
+    hasUnreadCompletion: () => false
+  })
+}));
+
 vi.mock("../workspace-nav-api", () => ({
   deleteTask: (...args: unknown[]) => deleteTaskMock(...args),
   deleteWorkspace: (...args: unknown[]) => deleteWorkspaceMock(...args),

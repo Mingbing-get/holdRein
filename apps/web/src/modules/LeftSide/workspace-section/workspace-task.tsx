@@ -4,12 +4,13 @@ import {
   EditOutlined,
   EllipsisOutlined
 } from "@ant-design/icons";
-import { Button, Dropdown, Typography } from "antd";
+import { Button, Dropdown, Spin, Typography } from "antd";
 
 import type { WorkspaceTaskSummary } from "../workspace-nav-types";
 
 export interface WorkspaceTaskProps {
   collapsed: boolean;
+  hasUnreadCompletion: boolean;
   isActive: boolean;
   onDelete: (task: WorkspaceTaskSummary) => void;
   onOpen: (task: WorkspaceTaskSummary) => void;
@@ -19,6 +20,7 @@ export interface WorkspaceTaskProps {
 
 export function WorkspaceTask({
   collapsed,
+  hasUnreadCompletion,
   isActive,
   onDelete,
   onOpen,
@@ -59,8 +61,11 @@ export function WorkspaceTask({
       }}
     >
       <Typography.Text
+        data-testid={`task-title-${task.id}`}
         ellipsis
         style={{
+          color:
+            task.status === "error" ? "var(--app-color-danger)" : undefined,
           flex: 1,
           fontSize: 12,
           fontWeight: 400,
@@ -69,6 +74,21 @@ export function WorkspaceTask({
       >
         {collapsed ? getTaskShortLabel(task) : visibleTitle}
       </Typography.Text>
+      {task.status === "running" ? (
+        <Spin data-testid={`task-running-${task.id}`} size="small" />
+      ) : null}
+      {hasUnreadCompletion ? (
+        <span
+          data-testid={`task-completed-unread-${task.id}`}
+          style={{
+            background: "var(--app-color-success)",
+            borderRadius: "50%",
+            flexShrink: 0,
+            height: 6,
+            width: 6
+          }}
+        />
+      ) : null}
       {showActions ? (
         <Dropdown
           menu={{

@@ -16,6 +16,7 @@
   --app-color-primary-hover: #388bfd;
   --app-color-danger: #c93c46;
   --app-color-danger-hover: #b4232d;
+  --app-color-success: #2e9b55;
   --app-color-fill-secondary: rgba(21, 32, 51, 0.06);
   --app-color-fill-tertiary: rgba(21, 32, 51, 0.04);
   --app-color-border: rgba(127, 145, 170, 0.28);
@@ -36,6 +37,7 @@
   --app-color-primary-hover: #a5d8ff;
   --app-color-danger: #ff9ca2;
   --app-color-danger-hover: #ffb4b9;
+  --app-color-success: #65d98b;
   --app-color-fill-secondary: rgba(239, 245, 255, 0.09);
   --app-color-fill-tertiary: rgba(239, 245, 255, 0.06);
   --app-color-border: rgba(142, 165, 196, 0.32);
