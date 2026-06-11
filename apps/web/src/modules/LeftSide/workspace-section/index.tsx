@@ -1,16 +1,17 @@
 import { useState } from "react";
 import {
   DeleteOutlined,
+  EditOutlined,
   EllipsisOutlined,
   FolderOpenOutlined,
   FolderOutlined,
   PlusOutlined
 } from "@ant-design/icons";
-import { App, Button, Dropdown, Typography } from "antd";
+import { App, Button, Dropdown, Input, Modal, Typography } from "antd";
 
 import { useAppUi } from "../../../app/app-ui-context";
 import { useAppWorkspace } from "../../../app/app-workspace-context";
-import { deleteWorkspace } from "../workspace-nav-api";
+import { deleteTask, deleteWorkspace, renameTask } from "../workspace-nav-api";
 import type {
   WorkspaceSummary,
   WorkspaceTaskSummary
@@ -33,12 +34,21 @@ export function WorkspaceSection({
   } = useAppUi();
   const {
     state: { activeTaskId, activeWorkspaceId },
+    removeTask,
     removeWorkspace,
     setActiveTaskId,
     setActiveWorkspaceId,
-    startNewConversation
+    startNewConversation,
+    updateTaskTitle
   } = useAppWorkspace();
+  const [editingTask, setEditingTask] = useState<WorkspaceTaskSummary | null>(
+    null
+  );
+  const [editingTitle, setEditingTitle] = useState("");
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
+  const [taskActionsOpenId, setTaskActionsOpenId] = useState<string | null>(
+    null
+  );
   const [workspaceActionsOpen, setWorkspaceActionsOpen] = useState(false);
   const [workspaceHeadingHovered, setWorkspaceHeadingHovered] = useState(false);
   const [workspaceCollapsed, setWorkspaceCollapsed] = useState(false);
@@ -62,6 +72,48 @@ export function WorkspaceSection({
       },
       title: `删除工作空间 ${workspace.name}？`
     });
+  };
+
+  const confirmDeleteTask = (task: WorkspaceTaskSummary) => {
+    modal.confirm({
+      cancelText: "取消",
+      content: "将删除此任务及其对应的对话记录。",
+      okButtonProps: { danger: true },
+      okText: "确认删除",
+      onOk: async () => {
+        try {
+          await deleteTask(apiBaseUrl, task.id);
+          removeTask(task.id);
+        } catch (error) {
+          void message.error(
+            error instanceof Error ? error.message : "删除任务失败"
+          );
+        }
+      },
+      title: `删除任务 ${getTaskVisibleTitle(task)}？`
+    });
+  };
+
+  const submitRenameTask = async () => {
+    if (!editingTask) {
+      return;
+    }
+
+    const title = editingTitle.trim();
+    if (!title) {
+      void message.error("任务名称不能为空");
+      return;
+    }
+
+    try {
+      const result = await renameTask(apiBaseUrl, editingTask.id, title);
+      updateTaskTitle(result.id, result.title);
+      setEditingTask(null);
+    } catch (error) {
+      void message.error(
+        error instanceof Error ? error.message : "重命名任务失败"
+      );
+    }
   };
 
   return (
@@ -171,11 +223,14 @@ export function WorkspaceSection({
 
       {(!workspaceCollapsed || collapsed) && workspace.tasks.map((task) => {
         const isActiveTask = isActiveWorkspace && task.id === activeTaskId;
+        const visibleTitle = getTaskVisibleTitle(task);
+        const showTaskActions =
+          !collapsed &&
+          (hoveredTaskId === task.id || taskActionsOpenId === task.id);
 
         return (
-          <Typography.Text
+          <div
             data-testid={`workspace-task-${task.id}`}
-            ellipsis
             key={task.id}
             onClick={() => {
               setActiveWorkspaceId(workspace.id);
@@ -191,24 +246,98 @@ export function WorkspaceSection({
               );
             }}
             style={{
+              alignItems: "center",
               background:
                 isActiveTask || hoveredTaskId === task.id
                   ? "var(--app-color-fill-secondary)"
                   : undefined,
               borderRadius: 6,
               cursor: "pointer",
-              display: "block",
+              display: "flex",
               fontSize: 12,
               fontWeight: 400,
+              gap: 4,
               lineHeight: "20px",
+              height: 30,
               padding: collapsed ? "4px 6px" : "4px 8px 4px 20px",
               transition: "background-color 0.16s ease"
             }}
           >
-            {collapsed ? getTaskShortLabel(task) : getTaskVisibleTitle(task)}
-          </Typography.Text>
+            <Typography.Text
+              ellipsis
+              style={{
+                flex: 1,
+                fontSize: 12,
+                fontWeight: 400,
+                minWidth: 0
+              }}
+            >
+              {collapsed ? getTaskShortLabel(task) : visibleTitle}
+            </Typography.Text>
+            {showTaskActions ? (
+              <Dropdown
+                menu={{
+                  items: [
+                    {
+                      icon: <EditOutlined data-testid="task-rename-icon" />,
+                      key: "rename",
+                      label: "重命名",
+                      onClick: () => {
+                        setEditingTask(task);
+                        setEditingTitle(visibleTitle);
+                      }
+                    },
+                    {
+                      danger: true,
+                      icon: <DeleteOutlined data-testid="task-delete-icon" />,
+                      key: "delete",
+                      label: "删除",
+                      onClick: () => {
+                        confirmDeleteTask(task);
+                      }
+                    }
+                  ]
+                }}
+                onOpenChange={(open) => {
+                  setTaskActionsOpenId(open ? task.id : null);
+                }}
+                open={taskActionsOpenId === task.id}
+                trigger={["hover", "click"]}
+              >
+                <Button
+                  aria-label={`任务操作 ${visibleTitle}`}
+                  icon={<EllipsisOutlined />}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                  }}
+                  size="small"
+                  type="text"
+                />
+              </Dropdown>
+            ) : null}
+          </div>
         );
       })}
+      <Modal
+        cancelText="取消"
+        okText="确定"
+        onCancel={() => {
+          setEditingTask(null);
+        }}
+        onOk={() => void submitRenameTask()}
+        open={Boolean(editingTask)}
+        title="重命名任务"
+      >
+        <Input
+          aria-label="任务名称"
+          autoFocus
+          onChange={(event) => {
+            setEditingTitle(event.target.value);
+          }}
+          onPressEnter={() => void submitRenameTask()}
+          value={editingTitle}
+        />
+      </Modal>
     </div>
   );
 }

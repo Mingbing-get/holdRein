@@ -67,6 +67,24 @@ describe("workspace actions state", () => {
     expectSelection("", "");
     expect(window.localStorage.getItem("hold-rein.active-workspace-id")).toBeNull();
   });
+
+  it("removes an inactive task without changing selection", () => {
+    renderActions();
+
+    fireEvent.click(screen.getByRole("button", { name: "remove task two" }));
+
+    expectSelection("workspace-one", "task-one");
+    expect(screen.getByTestId("task-ids")).toHaveTextContent("task-one");
+  });
+
+  it("clears the active task when removing it", () => {
+    renderActions();
+
+    fireEvent.click(screen.getByRole("button", { name: "remove task one" }));
+
+    expectSelection("workspace-one", "");
+    expect(screen.getByTestId("task-ids")).toHaveTextContent("task-two");
+  });
 });
 
 const workspaceSummaries: WorkspaceSummary[] = [
@@ -97,6 +115,7 @@ function renderActions(workspaces = workspaceSummaries) {
 function ActionsProbe({ workspaces }: { workspaces: WorkspaceSummary[] }) {
   const {
     removeWorkspace,
+    removeTask,
     startNewConversation,
     state,
     setActiveTaskId,
@@ -121,6 +140,12 @@ function ActionsProbe({ workspaces }: { workspaces: WorkspaceSummary[] }) {
       <button onClick={() => removeWorkspace("workspace-two")} type="button">
         remove two
       </button>
+      <button onClick={() => removeTask("task-one")} type="button">
+        remove task one
+      </button>
+      <button onClick={() => removeTask("task-two")} type="button">
+        remove task two
+      </button>
       <span data-testid="active-workspace">{state.activeWorkspaceId}</span>
       <span data-testid="active-task">{state.activeTaskId}</span>
       <span data-testid="new-conversation-workspace">
@@ -128,6 +153,9 @@ function ActionsProbe({ workspaces }: { workspaces: WorkspaceSummary[] }) {
       </span>
       <span data-testid="workspace-ids">
         {state.workspaces.map((workspace) => workspace.id).join(",")}
+      </span>
+      <span data-testid="task-ids">
+        {state.workspaces.flatMap((workspace) => workspace.tasks.map((task) => task.id)).join(",")}
       </span>
     </>
   );

@@ -27,6 +27,7 @@ export interface AppWorkspaceState {
 }
 
 export interface AppWorkspaceContextValue {
+  removeTask: (taskId: string) => void;
   removeWorkspace: (workspaceId: string) => void;
   state: AppWorkspaceState;
   startNewConversation: (workspaceId: string) => void;
@@ -215,6 +216,18 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
     });
   }, []);
 
+  const removeTask = useCallback((taskId: string) => {
+    setState((currentState) => ({
+      ...currentState,
+      activeTaskId:
+        currentState.activeTaskId === taskId ? "" : currentState.activeTaskId,
+      workspaces: currentState.workspaces.map((workspace) => ({
+        ...workspace,
+        tasks: workspace.tasks.filter((task) => task.id !== taskId)
+      }))
+    }));
+  }, []);
+
   const setWorkspaces = useCallback(
     (workspaces: SetStateAction<WorkspaceSummary[]>) => {
       setState((currentState) => ({
@@ -292,6 +305,7 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
 
   const contextValue = useMemo<AppWorkspaceContextValue>(
     () => ({
+      removeTask,
       removeWorkspace,
       state,
       startNewConversation,
@@ -304,6 +318,7 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
     }),
     [
       removeWorkspace,
+      removeTask,
       setActiveAgent,
       setActiveTaskId,
       setActiveWorkspaceId,

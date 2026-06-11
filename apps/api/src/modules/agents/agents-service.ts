@@ -8,6 +8,11 @@ import type { AgentApprovalStore } from "./agent-approval-store";
 import type { AgentEventBus, AgentEventListener } from "./agent-event-bus";
 import type { AgentRuntime } from "./agent-runtime";
 import type { TaskTitleGenerator } from "./agent-task-title-generator";
+import {
+  deleteTask,
+  type DeleteTaskResult,
+  renameTask
+} from "./agent-task-actions";
 import type {
   AgentEventSubscription,
   ApprovalDecisionInput,
@@ -23,9 +28,11 @@ export interface AgentsService {
   approveAgentAction: (
     input: ApprovalDecisionInput
   ) => Promise<ApprovalDecisionResult>;
+  deleteTask: (input: GetTaskTitleInput) => Promise<DeleteTaskResult>;
   getTaskTitle: (input: GetTaskTitleInput) => Promise<TaskTitleResult | null>;
   continueTask: (input: ContinueTaskInput) => Promise<StartAgentResult | null>;
   listTaskMessages: (input: GetTaskTitleInput) => Promise<StoredAgentMessage[]>;
+  renameTask: (input: RenameTaskInput) => Promise<TaskTitleResult | null>;
   startAgent: (input: StartAgentInput) => Promise<StartAgentResult>;
   subscribeToAgentEvents: (
     input: SubscribeAgentEventsInput,
@@ -35,6 +42,10 @@ export interface AgentsService {
 
 export interface GetTaskTitleInput {
   taskId: string;
+}
+
+export interface RenameTaskInput extends GetTaskTitleInput {
+  title: string;
 }
 
 interface ContinueTaskBaseInput {
@@ -72,6 +83,7 @@ export function createAgentsService(
 
       return input;
     },
+    deleteTask: ({ taskId }) => deleteTask(options.repository, taskId),
     getTaskTitle: async ({ taskId }) => {
       const task = options.repository.findTaskById(taskId);
 
@@ -161,6 +173,13 @@ export function createAgentsService(
         workspacePath: workspace.path
       });
     },
+    renameTask: async ({ taskId, title }) =>
+      renameTask(
+        options.repository,
+        taskId,
+        title,
+        now().toISOString()
+      ),
     startAgent: async (input) => {
       const createdAt = now().toISOString();
       const workspace = ensureWorkspace({
@@ -386,6 +405,15 @@ function startTitleJob(input: {
       provider: input.input.provider
     })
     .then((title) => {
+      const currentTask = input.repository.findTaskById(input.task.id);
+
+      if (!currentTask || currentTask.title.trim().length > 0) {
+        return {
+          id: input.task.id,
+          title: currentTask?.title ?? title
+        };
+      }
+
       const updatedTask = input.repository.updateTaskTitle(
         input.task.id,
         title,

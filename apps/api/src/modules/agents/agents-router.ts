@@ -27,6 +27,10 @@ interface ContinueTaskBody {
   provider?: string;
 }
 
+interface RenameTaskBody {
+  title?: string;
+}
+
 export function createAgentsRouter(
   options: CreateAgentsRouterOptions = {}
 ): Router {
@@ -77,6 +81,69 @@ export function createAgentsRouter(
             response,
             RESPONSE_CODE_DEFINITIONS.badRequest,
             error instanceof Error ? error.message : "Failed to load task messages"
+          );
+        });
+    }
+  );
+
+  router.patch(
+    "/agents/tasks/:taskId",
+    (
+      request: Request<{ taskId: string }, unknown, RenameTaskBody>,
+      response: Response
+    ): void => {
+      const title =
+        typeof request.body.title === "string" ? request.body.title.trim() : "";
+
+      if (!title) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "title must be a non-empty string"
+        );
+        return;
+      }
+
+      void getService()
+        .renameTask({ taskId: request.params.taskId, title })
+        .then((result) => {
+          if (!result) {
+            sendError(response, RESPONSE_CODE_DEFINITIONS.notFound, "Unknown task");
+            return;
+          }
+          sendSuccess(response, result);
+        })
+        .catch((error) => {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.badRequest,
+            error instanceof Error ? error.message : "Failed to rename task"
+          );
+        });
+    }
+  );
+
+  router.delete(
+    "/agents/tasks/:taskId",
+    (request: Request<{ taskId: string }>, response: Response): void => {
+      void getService()
+        .deleteTask({ taskId: request.params.taskId })
+        .then((result) => {
+          if (result.status === "not_found") {
+            sendError(response, RESPONSE_CODE_DEFINITIONS.notFound, "Unknown task");
+            return;
+          }
+          if (result.status === "running") {
+            sendError(response, RESPONSE_CODE_DEFINITIONS.conflict, "Task is running");
+            return;
+          }
+          sendSuccess(response, { taskId: result.taskId });
+        })
+        .catch((error) => {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.badRequest,
+            error instanceof Error ? error.message : "Failed to delete task"
           );
         });
     }

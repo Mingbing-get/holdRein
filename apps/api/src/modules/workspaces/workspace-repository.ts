@@ -26,6 +26,7 @@ export interface ListWorkspaceTasksAfterInput extends ListWorkspaceTasksInput {
 export interface WorkspaceRepository {
   createTask: (task: NewTaskRow) => TaskRow;
   createWorkspace: (workspace: NewWorkspaceRow) => WorkspaceRow;
+  deleteTaskById: (taskId: string) => void;
   deleteTasksByWorkspaceId: (workspaceId: string) => void;
   deleteWorkspaceById: (workspaceId: string) => void;
   findTaskById: (taskId: string) => TaskRow | undefined;
@@ -75,6 +76,13 @@ export function createInMemoryWorkspaceRepository(
       workspaceRows.push(workspace);
 
       return workspace;
+    },
+    deleteTaskById: (taskId) => {
+      const taskIndex = taskRows.findIndex((task) => task.id === taskId);
+
+      if (taskIndex >= 0) {
+        taskRows.splice(taskIndex, 1);
+      }
     },
     deleteTasksByWorkspaceId: (workspaceId) => {
       for (let index = taskRows.length - 1; index >= 0; index -= 1) {
@@ -191,6 +199,9 @@ export function createSqliteWorkspaceRepository(
       database.db.insert(workspaces).values(workspace).run();
 
       return workspace;
+    },
+    deleteTaskById: (taskId) => {
+      database.db.delete(tasks).where(eq(tasks.id, taskId)).run();
     },
     deleteTasksByWorkspaceId: (workspaceId) => {
       database.db.delete(tasks).where(eq(tasks.workspaceId, workspaceId)).run();

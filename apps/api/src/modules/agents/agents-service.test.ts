@@ -1,4 +1,7 @@
-import { describe, expect, it, vi } from "vitest";
+import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { TaskRow, WorkspaceRow } from "../../db";
 import { createInMemoryWorkspaceRepository } from "../workspaces";
@@ -6,7 +9,111 @@ import { createAgentApprovalStore } from "./agent-approval-store";
 import { createAgentEventBus } from "./agent-event-bus";
 import { createAgentsService } from "./agents-service";
 
+const temporaryPaths: string[] = [];
+
+afterEach(async () => {
+  await Promise.all(
+    temporaryPaths.splice(0).map((path) => rm(path, { force: true, recursive: true }))
+  );
+});
+
 describe("agents service", () => {
+  it("renames an existing task", async () => {
+    const { repository, service } = createTaskService();
+
+    await expect(
+      service.renameTask({ taskId: "task-1", title: "Renamed task" })
+    ).resolves.toEqual({ id: "task-1", title: "Renamed task" });
+    expect(repository.findTaskById("task-1")?.title).toBe("Renamed task");
+  });
+
+  it("deletes a completed task and its session file", async () => {
+    const rootPath = await mkdtemp(join(tmpdir(), "hold-rein-task-delete-"));
+    temporaryPaths.push(rootPath);
+    const sessionPath = join(rootPath, "session.jsonl");
+    await writeFile(sessionPath, "{}");
+    const { repository, service } = createTaskService({ sessionPath });
+
+    await expect(service.deleteTask({ taskId: "task-1" })).resolves.toEqual({
+      status: "deleted",
+      taskId: "task-1"
+    });
+
+    expect(repository.findTaskById("task-1")).toBeUndefined();
+    await expect(access(sessionPath)).rejects.toThrow();
+  });
+
+  it("refuses to delete a running task", async () => {
+    const { repository, service } = createTaskService({ status: "running" });
+
+    await expect(service.deleteTask({ taskId: "task-1" })).resolves.toEqual({
+      status: "running",
+      taskId: "task-1"
+    });
+    expect(repository.findTaskById("task-1")).toBeDefined();
+  });
+
+  it("keeps a task when its session file cannot be deleted", async () => {
+    const rootPath = await mkdtemp(join(tmpdir(), "hold-rein-task-delete-"));
+    temporaryPaths.push(rootPath);
+    const sessionPath = join(rootPath, "session-directory");
+    await mkdir(sessionPath);
+    const { repository, service } = createTaskService({ sessionPath });
+
+    await expect(service.deleteTask({ taskId: "task-1" })).rejects.toThrow();
+    expect(repository.findTaskById("task-1")).toBeDefined();
+  });
+
+  it("reports unknown task mutations", async () => {
+    const { service } = createTaskService();
+
+    await expect(service.deleteTask({ taskId: "missing" })).resolves.toEqual({
+      status: "not_found",
+      taskId: "missing"
+    });
+    await expect(
+      service.renameTask({ taskId: "missing", title: "Missing" })
+    ).resolves.toBeNull();
+  });
+
+  it("keeps a manual rename when a pending generated title finishes", async () => {
+    let resolveTitle: ((title: string) => void) | undefined;
+    const titlePromise = new Promise<string>((resolve) => {
+      resolveTitle = resolve;
+    });
+    const repository = createInMemoryWorkspaceRepository();
+    const service = createAgentsService({
+      approvalStore: createAgentApprovalStore(),
+      eventBus: createAgentEventBus(),
+      repository,
+      runtime: {
+        listMessages: vi.fn(),
+        start: vi.fn().mockResolvedValue({
+          agentId: "agent-1",
+          session: {
+            createdAt: "2026-06-11T00:00:00.000Z",
+            id: "session-1",
+            path: "/sessions/session-1.jsonl"
+          },
+          status: "running"
+        })
+      },
+      titleGenerator: { generateTitle: vi.fn().mockReturnValue(titlePromise) }
+    });
+    const started = await service.startAgent({
+      modelId: "gpt-4.1",
+      prompt: "Initial",
+      provider: "openai",
+      workspacePath: "/tmp/workspace"
+    });
+
+    await service.renameTask({ taskId: started.task.id, title: "Manual title" });
+    resolveTitle?.("Generated title");
+    await service.getTaskTitle({ taskId: started.task.id });
+
+    expect(repository.findTaskById(started.task.id)?.title).toBe("Manual title");
+  });
+
   it("creates workspace and task metadata while starting the agent immediately", async () => {
     let resolveTitle: ((title: string) => void) | undefined;
     const titlePromise = new Promise<string>((resolve) => {
@@ -411,3 +518,49 @@ describe("agents service", () => {
     );
   });
 });
+
+function createTaskService(input: {
+  sessionPath?: string;
+  status?: TaskRow["status"];
+} = {}) {
+  const repository = createInMemoryWorkspaceRepository({
+    tasks: [
+      {
+        createdAt: "2026-06-11T00:00:00.000Z",
+        id: "task-1",
+        initialUserMessage: "Initial",
+        lastContinuedAt: "2026-06-11T00:00:00.000Z",
+        lastModelId: "gpt-4.1",
+        lastModelName: "gpt-4.1",
+        lastModelProvider: "openai",
+        lastModelProviderSource: "built_in",
+        sessionCreatedAt: input.sessionPath ? "2026-06-11T00:00:00.000Z" : null,
+        sessionId: input.sessionPath ? "session-1" : null,
+        sessionPath: input.sessionPath ?? null,
+        status: input.status ?? "completed",
+        title: "Task",
+        updatedAt: "2026-06-11T00:00:00.000Z",
+        workspaceId: "workspace-1"
+      }
+    ],
+    workspaces: [
+      {
+        createdAt: "2026-06-11T00:00:00.000Z",
+        id: "workspace-1",
+        name: "Workspace",
+        path: "/tmp/workspace",
+        updatedAt: "2026-06-11T00:00:00.000Z"
+      }
+    ]
+  });
+  const service = createAgentsService({
+    approvalStore: createAgentApprovalStore(),
+    eventBus: createAgentEventBus(),
+    now: () => new Date("2026-06-11T01:00:00.000Z"),
+    repository,
+    runtime: { listMessages: vi.fn(), start: vi.fn() },
+    titleGenerator: { generateTitle: vi.fn() }
+  });
+
+  return { repository, service };
+}

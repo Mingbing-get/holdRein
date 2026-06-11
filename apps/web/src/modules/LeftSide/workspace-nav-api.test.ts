@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { deleteWorkspace } from "./workspace-nav-api";
+import {
+  deleteTask,
+  deleteWorkspace,
+  renameTask
+} from "./workspace-nav-api";
 
 describe("workspace navigation API", () => {
   it("deletes an encoded workspace id", async () => {
@@ -35,6 +39,48 @@ describe("workspace navigation API", () => {
 
     await expect(deleteWorkspace("", "workspace-one", fetcher)).rejects.toThrow(
       "Workspace has running tasks"
+    );
+  });
+
+  it("renames an encoded task id", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      json: async () => ({
+        code: 0,
+        data: { id: "task/one", title: "Renamed" },
+        msg: "ok"
+      }),
+      ok: true
+    });
+
+    await expect(
+      renameTask("http://localhost:4000/", "task/one", "Renamed", fetcher)
+    ).resolves.toEqual({ id: "task/one", title: "Renamed" });
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://localhost:4000/api/v1/agents/tasks/task%2Fone",
+      {
+        body: JSON.stringify({ title: "Renamed" }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH"
+      }
+    );
+  });
+
+  it("deletes an encoded task id", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      json: async () => ({
+        code: 0,
+        data: { taskId: "task/one" },
+        msg: "ok"
+      }),
+      ok: true
+    });
+
+    await expect(
+      deleteTask("http://localhost:4000/", "task/one", fetcher)
+    ).resolves.toEqual({ taskId: "task/one" });
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://localhost:4000/api/v1/agents/tasks/task%2Fone",
+      { method: "DELETE" }
     );
   });
 });

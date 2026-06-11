@@ -14,9 +14,13 @@ import type { WorkspaceSummary } from "../workspace-nav-types";
 import { WorkspaceSection } from ".";
 
 const deleteWorkspaceMock = vi.fn();
+const deleteTaskMock = vi.fn();
+const renameTaskMock = vi.fn();
 
 vi.mock("../workspace-nav-api", () => ({
-  deleteWorkspace: (...args: unknown[]) => deleteWorkspaceMock(...args)
+  deleteTask: (...args: unknown[]) => deleteTaskMock(...args),
+  deleteWorkspace: (...args: unknown[]) => deleteWorkspaceMock(...args),
+  renameTask: (...args: unknown[]) => renameTaskMock(...args)
 }));
 
 class ResizeObserverMock {
@@ -73,7 +77,9 @@ describe("WorkspaceSection", () => {
 
   afterEach(() => {
     cleanup();
+    deleteTaskMock.mockReset();
     deleteWorkspaceMock.mockReset();
+    renameTaskMock.mockReset();
   });
 
   it("renders a workspace heading and task rows when expanded", () => {
@@ -223,6 +229,75 @@ describe("WorkspaceSection", () => {
       "workspace-real"
     );
   });
+
+  it("shows task actions on task hover with edit and delete icons", async () => {
+    renderWorkspaceSection({ collapsed: false });
+
+    expect(
+      screen.queryByRole("button", { name: "任务操作 接入真实 workspace nav" })
+    ).toBeNull();
+
+    fireEvent.mouseEnter(screen.getByTestId("workspace-task-task-real-1"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "任务操作 接入真实 workspace nav" })
+    );
+
+    expect(await screen.findByText("重命名")).toBeInTheDocument();
+    expect(screen.getAllByText("删除")).toHaveLength(1);
+    expect(screen.getByTestId("task-rename-icon")).toBeInTheDocument();
+    expect(screen.getByTestId("task-delete-icon")).toBeInTheDocument();
+  });
+
+  it("renames a task from the action menu", async () => {
+    renameTaskMock.mockResolvedValue({
+      id: "task-real-1",
+      title: "新的任务名称"
+    });
+    renderWorkspaceSection({ collapsed: false });
+
+    openTaskAction("重命名");
+    const input = await screen.findByRole("textbox", { name: "任务名称" });
+    fireEvent.change(input, { target: { value: " 新的任务名称 " } });
+    fireEvent.click(screen.getByRole("button", { name: /确\s*定/ }));
+
+    await waitFor(() => {
+      expect(renameTaskMock).toHaveBeenCalledWith(
+        "http://localhost:4000",
+        "task-real-1",
+        "新的任务名称"
+      );
+    });
+    expect(screen.getByTestId("task-titles")).toHaveTextContent("新的任务名称");
+  });
+
+  it("confirms before deleting a task and clears its selection", async () => {
+    deleteTaskMock.mockResolvedValue({ taskId: "task-real-1" });
+    renderWorkspaceSection({ collapsed: false });
+
+    openTaskAction("删除");
+    expect(deleteTaskMock).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: "确认删除" }));
+
+    await waitFor(() => {
+      expect(deleteTaskMock).toHaveBeenCalledWith(
+        "http://localhost:4000",
+        "task-real-1"
+      );
+    });
+    expect(screen.getByTestId("selected-task")).toBeEmptyDOMElement();
+    expect(screen.getByTestId("task-ids")).toBeEmptyDOMElement();
+  });
+
+  it("keeps a running task after delete conflict", async () => {
+    deleteTaskMock.mockRejectedValue(new Error("Task is running"));
+    renderWorkspaceSection({ collapsed: false });
+
+    openTaskAction("删除");
+    fireEvent.click(await screen.findByRole("button", { name: "确认删除" }));
+
+    expect(await screen.findByText("Task is running")).toBeInTheDocument();
+    expect(screen.getByTestId("workspace-task-task-real-1")).toBeInTheDocument();
+  });
 });
 
 function openDeleteAction(): void {
@@ -231,6 +306,14 @@ function openDeleteAction(): void {
     screen.getByRole("button", { name: "工作空间操作 Real Workspace" })
   );
   fireEvent.click(screen.getByText("删除"));
+}
+
+function openTaskAction(action: "重命名" | "删除"): void {
+  fireEvent.mouseEnter(screen.getByTestId("workspace-task-task-real-1"));
+  fireEvent.click(
+    screen.getByRole("button", { name: "任务操作 接入真实 workspace nav" })
+  );
+  fireEvent.click(screen.getByText(action));
 }
 
 function renderWorkspaceSection({
@@ -283,6 +366,12 @@ function WorkspaceSectionTestState({
       <span data-testid="selected-task">{state.activeTaskId}</span>
       <span data-testid="workspace-ids">
         {state.workspaces.map((item) => item.id).join(",")}
+      </span>
+      <span data-testid="task-ids">
+        {state.workspaces.flatMap((item) => item.tasks.map((task) => task.id)).join(",")}
+      </span>
+      <span data-testid="task-titles">
+        {state.workspaces.flatMap((item) => item.tasks.map((task) => task.title)).join(",")}
       </span>
     </>
   );

@@ -22,6 +22,10 @@ function createService(overrides: Partial<AgentsService> = {}): AgentsService {
       task: { id: "task-1" },
       workspace: { id: "workspace-1" }
     }),
+    deleteTask: vi.fn().mockResolvedValue({
+      status: "deleted",
+      taskId: "task-1"
+    }),
     listTaskMessages: vi.fn().mockResolvedValue([
       {
         content: [{ text: "History", type: "text" }],
@@ -30,6 +34,10 @@ function createService(overrides: Partial<AgentsService> = {}): AgentsService {
         timestamp: 1
       }
     ]),
+    renameTask: vi.fn().mockResolvedValue({
+      id: "task-1",
+      title: "Renamed task"
+    }),
     startAgent: vi.fn().mockResolvedValue({
       agentId: "agent-1",
       sessionId: "session-1",
@@ -247,6 +255,59 @@ describe("agent routes", () => {
       msg: "Unknown task",
       data: null
     });
+  });
+
+  it("renames a task", async () => {
+    const service = createService();
+    const response = await request(createApp({ agentsService: service }))
+      .patch("/api/v1/agents/tasks/task-1")
+      .send({ title: " Renamed task " });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({
+      id: "task-1",
+      title: "Renamed task"
+    });
+    expect(service.renameTask).toHaveBeenCalledWith({
+      taskId: "task-1",
+      title: "Renamed task"
+    });
+  });
+
+  it("rejects an empty task title", async () => {
+    const service = createService();
+    const response = await request(createApp({ agentsService: service }))
+      .patch("/api/v1/agents/tasks/task-1")
+      .send({ title: "   " });
+
+    expect(response.status).toBe(400);
+    expect(service.renameTask).not.toHaveBeenCalled();
+  });
+
+  it("deletes a task", async () => {
+    const service = createService();
+    const response = await request(createApp({ agentsService: service })).delete(
+      "/api/v1/agents/tasks/task-1"
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({ taskId: "task-1" });
+    expect(service.deleteTask).toHaveBeenCalledWith({ taskId: "task-1" });
+  });
+
+  it("returns conflict when deleting a running task", async () => {
+    const service = createService({
+      deleteTask: vi.fn().mockResolvedValue({
+        status: "running",
+        taskId: "task-1"
+      })
+    });
+    const response = await request(createApp({ agentsService: service })).delete(
+      "/api/v1/agents/tasks/task-1"
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.body.msg).toBe("Task is running");
   });
 
   it("submits an approval decision", async () => {
