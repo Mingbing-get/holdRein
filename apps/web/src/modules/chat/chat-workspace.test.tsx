@@ -1,9 +1,16 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor
+} from "@testing-library/react";
 import { useEffect } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   AppWorkspaceProvider,
@@ -14,6 +21,9 @@ import type { SelectedModel } from "./model-selector";
 
 const agentTasksMock = vi.hoisted(() => ({
   continueTask: vi.fn(),
+  messages: [
+    { content: "Real message", id: "message-1", kind: "assistant" }
+  ] as { content: string; id: string; kind: string }[],
   startTask: vi.fn()
 }));
 
@@ -28,7 +38,7 @@ vi.mock("../agent-messages", () => ({
     getTaskState: (taskId: string) =>
       taskId === "task-one"
         ? {
-            messages: [{ content: "Real message", id: "message-1", kind: "assistant" }]
+            messages: agentTasksMock.messages
           }
         : undefined,
     startTask: agentTasksMock.startTask
@@ -87,10 +97,23 @@ vi.mock("./model-selector", () => ({
 }));
 
 describe("ChatWorkspace", () => {
+  const scrollIntoView = vi.fn();
+
+  beforeEach(() => {
+    Object.defineProperty(Element.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView
+    });
+  });
+
   afterEach(() => {
     cleanup();
     agentTasksMock.startTask.mockReset();
     agentTasksMock.continueTask.mockReset();
+    agentTasksMock.messages = [
+      { content: "Real message", id: "message-1", kind: "assistant" }
+    ];
+    scrollIntoView.mockReset();
   });
 
   it("disables the sender until both a workspace and model are selected", () => {
@@ -175,6 +198,115 @@ describe("ChatWorkspace", () => {
     });
     expect(agentTasksMock.continueTask).not.toHaveBeenCalled();
   });
+
+  it("scrolls to the bottom when entering a task", async () => {
+    renderChatWorkspace({ activeTaskId: "task-one" });
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+  });
+
+  it("keeps scrolling to the bottom as messages update", async () => {
+    const view = renderChatWorkspace({ activeTaskId: "task-one" });
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+    scrollIntoView.mockClear();
+    agentTasksMock.messages = [
+      ...agentTasksMock.messages,
+      { content: "New message", id: "message-2", kind: "assistant" }
+    ];
+    view.rerender(getChatWorkspaceElement({ activeTaskId: "task-one" }));
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+  });
+
+  it("pauses following after a trusted user scrolls away and resumes at the bottom", async () => {
+    const view = renderChatWorkspace({ activeTaskId: "task-one" });
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+    const container = screen.getByTestId("chat-message-scroll");
+    setScrollPosition(container, { clientHeight: 100, scrollHeight: 300, scrollTop: 50 });
+    dispatchScroll(container, true);
+    scrollIntoView.mockClear();
+    agentTasksMock.messages = [
+      ...agentTasksMock.messages,
+      { content: "Paused message", id: "message-2", kind: "assistant" }
+    ];
+    view.rerender(getChatWorkspaceElement({ activeTaskId: "task-one" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("agent-message-list")).toHaveTextContent(
+        "Paused message"
+      );
+    });
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    setScrollPosition(container, { clientHeight: 100, scrollHeight: 300, scrollTop: 200 });
+    dispatchScroll(container, true);
+    agentTasksMock.messages = [
+      ...agentTasksMock.messages,
+      { content: "Following message", id: "message-3", kind: "assistant" }
+    ];
+    view.rerender(getChatWorkspaceElement({ activeTaskId: "task-one" }));
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+  });
+
+  it("starts following again when switching tasks", async () => {
+    const view = renderChatWorkspace({ activeTaskId: "task-one" });
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+    const container = screen.getByTestId("chat-message-scroll");
+    setScrollPosition(container, {
+      clientHeight: 100,
+      scrollHeight: 300,
+      scrollTop: 50
+    });
+    dispatchScroll(container, true);
+    scrollIntoView.mockClear();
+
+    view.rerender(getChatWorkspaceElement({ activeTaskId: "task-two" }));
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+  });
+
+  it("ignores programmatic scroll events when deciding whether to follow", async () => {
+    const view = renderChatWorkspace({ activeTaskId: "task-one" });
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+    const container = screen.getByTestId("chat-message-scroll");
+    setScrollPosition(container, {
+      clientHeight: 100,
+      scrollHeight: 300,
+      scrollTop: 50
+    });
+    dispatchScroll(container, false);
+    scrollIntoView.mockClear();
+    agentTasksMock.messages = [
+      ...agentTasksMock.messages,
+      { content: "Programmatic message", id: "message-2", kind: "assistant" }
+    ];
+    view.rerender(getChatWorkspaceElement({ activeTaskId: "task-one" }));
+
+    await waitFor(() => {
+      expect(scrollIntoView).toHaveBeenCalled();
+    });
+  });
 });
 
 interface RenderOptions {
@@ -184,12 +316,49 @@ interface RenderOptions {
 }
 
 function renderChatWorkspace(options: RenderOptions = {}) {
-  render(
+  return render(getChatWorkspaceElement(options));
+}
+
+function getChatWorkspaceElement(options: RenderOptions = {}) {
+  return (
     <AppWorkspaceProvider>
       <WorkspaceStateSetup {...options} />
       <ChatWorkspace activeTaskName="Task One" apiBaseUrl="http://localhost:4000" />
     </AppWorkspaceProvider>
   );
+}
+
+function dispatchScroll(element: HTMLElement, isTrusted: boolean) {
+  const reactPropsKey = Object.keys(element).find((key) =>
+    key.startsWith("__reactProps$")
+  );
+  if (!reactPropsKey) {
+    throw new Error("React props were not found on the scroll container");
+  }
+  const props = (
+    element as unknown as Record<
+      string,
+      { onScroll?: (event: React.UIEvent<HTMLDivElement>) => void }
+    >
+  )[reactPropsKey];
+
+  act(() => {
+    props?.onScroll?.({
+      currentTarget: element,
+      isTrusted
+    } as React.UIEvent<HTMLDivElement>);
+  });
+}
+
+function setScrollPosition(
+  element: HTMLElement,
+  position: { clientHeight: number; scrollHeight: number; scrollTop: number }
+) {
+  Object.defineProperties(element, {
+    clientHeight: { configurable: true, value: position.clientHeight },
+    scrollHeight: { configurable: true, value: position.scrollHeight },
+    scrollTop: { configurable: true, value: position.scrollTop, writable: true }
+  });
 }
 
 function WorkspaceStateSetup({

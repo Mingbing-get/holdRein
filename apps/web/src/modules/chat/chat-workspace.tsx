@@ -1,4 +1,5 @@
 import { Divider, Flex } from "antd";
+import { useLayoutEffect, useRef } from "react";
 
 import { useAppWorkspace } from "../../app/app-workspace-context";
 import { AgentMessageList, useAgentTasks } from "../agent-messages";
@@ -31,6 +32,8 @@ const groups: SuggestionGroup[] = [
   }
 ]
 
+const BOTTOM_TOLERANCE_PX = 2;
+
 export function ChatWorkspace({
   activeTaskName,
   apiBaseUrl
@@ -45,6 +48,20 @@ export function ChatWorkspace({
   );
   const taskState = getTaskState(activeTaskId);
   const senderDisabled = !activeWorkspaceId || !activeAgent;
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const previousTaskIdRef = useRef(activeTaskId);
+  const shouldFollowMessagesRef = useRef(true);
+
+  useLayoutEffect(() => {
+    if (previousTaskIdRef.current !== activeTaskId) {
+      previousTaskIdRef.current = activeTaskId;
+      shouldFollowMessagesRef.current = true;
+    }
+
+    if (shouldFollowMessagesRef.current) {
+      bottomRef.current?.scrollIntoView?.({ block: "end" });
+    }
+  }, [activeTaskId, taskState?.messages]);
 
   return (
     <Flex
@@ -60,14 +77,25 @@ export function ChatWorkspace({
       }}
     >
       <Flex
+        data-testid="chat-message-scroll"
         vertical
         gap={16}
+        onScroll={(event) => {
+          if (!event.isTrusted) {
+            return;
+          }
+
+          const { clientHeight, scrollHeight, scrollTop } = event.currentTarget;
+          shouldFollowMessagesRef.current =
+            scrollHeight - clientHeight - scrollTop <= BOTTOM_TOLERANCE_PX;
+        }}
         style={{
           flex: 1,
           overflow: "auto",
         }}
       >
         <AgentMessageList messages={taskState?.messages ?? []} />
+        <div aria-hidden ref={bottomRef} />
       </Flex>
 
       <Sender
