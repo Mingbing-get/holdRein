@@ -2,12 +2,22 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { AppUiProvider } from "../../../app/app-ui-context";
-import { AppWorkspaceProvider } from "../../../app/app-workspace-context";
+import {
+  AppWorkspaceProvider,
+  useAppWorkspace
+} from "../../../app/app-workspace-context";
 import type { WorkspaceSummary } from "../workspace-nav-types";
 import { WorkspaceSection } from ".";
+
+const deleteWorkspaceMock = vi.fn();
+
+vi.mock("../workspace-nav-api", () => ({
+  deleteWorkspace: (...args: unknown[]) => deleteWorkspaceMock(...args)
+}));
 
 class ResizeObserverMock {
   disconnect() {
@@ -63,6 +73,7 @@ describe("WorkspaceSection", () => {
 
   afterEach(() => {
     cleanup();
+    deleteWorkspaceMock.mockReset();
   });
 
   it("renders a workspace heading and task rows when expanded", () => {
@@ -73,7 +84,9 @@ describe("WorkspaceSection", () => {
 
     expect(workspaceGroup).toHaveTextContent("Real Workspace");
     expect(screen.getByTestId("workspace-folder-open-icon")).toBeInTheDocument();
-    expect(workspaceGroup.parentElement).toHaveStyle({ gap: "2px" });
+    expect(workspaceGroup.parentElement?.parentElement).toHaveStyle({
+      gap: "2px"
+    });
     expect(task).toHaveTextContent("接入真实 workspace nav");
     expect(task).toHaveStyle({
       borderRadius: "6px",
@@ -142,7 +155,83 @@ describe("WorkspaceSection", () => {
       "接入真实接口"
     );
   });
+
+  it("shows workspace actions on heading hover with plus and delete icons", async () => {
+    renderWorkspaceSection({ collapsed: false });
+
+    expect(
+      screen.queryByRole("button", { name: "工作空间操作 Real Workspace" })
+    ).toBeNull();
+
+    fireEvent.mouseEnter(screen.getByTestId("workspace-heading-workspace-real"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "工作空间操作 Real Workspace" })
+    );
+
+    expect(await screen.findByText("新对话")).toBeInTheDocument();
+    expect(screen.getByText("删除")).toBeInTheDocument();
+    expect(screen.getByTestId("workspace-new-conversation-icon")).toBeInTheDocument();
+    expect(screen.getByTestId("workspace-delete-icon")).toBeInTheDocument();
+  });
+
+  it("starts a new conversation in the selected workspace", async () => {
+    renderWorkspaceSection({ collapsed: false });
+
+    fireEvent.mouseEnter(screen.getByTestId("workspace-heading-workspace-real"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "工作空间操作 Real Workspace" })
+    );
+    fireEvent.click(await screen.findByText("新对话"));
+
+    expect(screen.getByTestId("selected-workspace")).toHaveTextContent(
+      "workspace-real"
+    );
+    expect(screen.getByTestId("selected-task")).toBeEmptyDOMElement();
+  });
+
+  it("confirms before deleting a workspace", async () => {
+    deleteWorkspaceMock.mockResolvedValue({ workspaceId: "workspace-real" });
+    renderWorkspaceSection({ collapsed: false });
+
+    openDeleteAction();
+
+    expect(deleteWorkspaceMock).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: "确认删除" }));
+
+    await waitFor(() => {
+      expect(deleteWorkspaceMock).toHaveBeenCalledWith(
+        "http://localhost:4000",
+        "workspace-real"
+      );
+    });
+    expect(screen.getByTestId("workspace-ids")).toBeEmptyDOMElement();
+  });
+
+  it("keeps a workspace after delete failure", async () => {
+    deleteWorkspaceMock.mockRejectedValue(
+      new Error("Workspace has running tasks")
+    );
+    renderWorkspaceSection({ collapsed: false });
+
+    openDeleteAction();
+    fireEvent.click(await screen.findByRole("button", { name: "确认删除" }));
+
+    expect(
+      await screen.findByText("Workspace has running tasks")
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("workspace-ids")).toHaveTextContent(
+      "workspace-real"
+    );
+  });
 });
+
+function openDeleteAction(): void {
+  fireEvent.mouseEnter(screen.getByTestId("workspace-heading-workspace-real"));
+  fireEvent.click(
+    screen.getByRole("button", { name: "工作空间操作 Real Workspace" })
+  );
+  fireEvent.click(screen.getByText("删除"));
+}
 
 function renderWorkspaceSection({
   collapsed,
@@ -154,8 +243,47 @@ function renderWorkspaceSection({
   render(
     <AppUiProvider>
       <AppWorkspaceProvider>
-        <WorkspaceSection collapsed={collapsed} workspace={workspace} />
+        <WorkspaceSectionTestState workspace={workspace} />
+        <WorkspaceSection
+          apiBaseUrl="http://localhost:4000"
+          collapsed={collapsed}
+          workspace={workspace}
+        />
       </AppWorkspaceProvider>
     </AppUiProvider>
+  );
+}
+
+function WorkspaceSectionTestState({
+  workspace
+}: {
+  workspace: WorkspaceSummary;
+}) {
+  const {
+    state,
+    setActiveTaskId,
+    setActiveWorkspaceId,
+    setWorkspaces
+  } = useAppWorkspace();
+
+  useEffect(() => {
+    setWorkspaces([workspace]);
+    setActiveWorkspaceId(workspace.id);
+    setActiveTaskId(workspace.tasks[0]?.id ?? "");
+  }, [
+    setActiveTaskId,
+    setActiveWorkspaceId,
+    setWorkspaces,
+    workspace
+  ]);
+
+  return (
+    <>
+      <span data-testid="selected-workspace">{state.activeWorkspaceId}</span>
+      <span data-testid="selected-task">{state.activeTaskId}</span>
+      <span data-testid="workspace-ids">
+        {state.workspaces.map((item) => item.id).join(",")}
+      </span>
+    </>
   );
 }

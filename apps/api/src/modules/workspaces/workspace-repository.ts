@@ -26,12 +26,15 @@ export interface ListWorkspaceTasksAfterInput extends ListWorkspaceTasksInput {
 export interface WorkspaceRepository {
   createTask: (task: NewTaskRow) => TaskRow;
   createWorkspace: (workspace: NewWorkspaceRow) => WorkspaceRow;
+  deleteTasksByWorkspaceId: (workspaceId: string) => void;
+  deleteWorkspaceById: (workspaceId: string) => void;
   findTaskById: (taskId: string) => TaskRow | undefined;
   findWorkspaceById: (workspaceId: string) => WorkspaceRow | undefined;
   findWorkspaceByPath: (workspacePath: string) => WorkspaceRow | undefined;
   listTasksAfterLastContinuedAt: (
     input: ListWorkspaceTasksAfterInput
   ) => TaskRow[];
+  listAllTasksByWorkspaceId: (workspaceId: string) => TaskRow[];
   listTasksByWorkspaceId: (input: ListWorkspaceTasksInput) => TaskRow[];
   listWorkspaces: () => WorkspaceRow[];
   updateTaskTitle: (taskId: string, title: string, updatedAt: string) => TaskRow | undefined;
@@ -73,6 +76,22 @@ export function createInMemoryWorkspaceRepository(
 
       return workspace;
     },
+    deleteTasksByWorkspaceId: (workspaceId) => {
+      for (let index = taskRows.length - 1; index >= 0; index -= 1) {
+        if (taskRows[index]?.workspaceId === workspaceId) {
+          taskRows.splice(index, 1);
+        }
+      }
+    },
+    deleteWorkspaceById: (workspaceId) => {
+      const workspaceIndex = workspaceRows.findIndex(
+        (workspace) => workspace.id === workspaceId
+      );
+
+      if (workspaceIndex >= 0) {
+        workspaceRows.splice(workspaceIndex, 1);
+      }
+    },
     findTaskById: (taskId) => taskRows.find((task) => task.id === taskId),
     findWorkspaceById: (workspaceId) =>
       workspaceRows.find((workspace) => workspace.id === workspaceId),
@@ -91,6 +110,8 @@ export function createInMemoryWorkspaceRepository(
             task.lastContinuedAt < afterLastContinuedAt
         )
       ).slice(0, limit),
+    listAllTasksByWorkspaceId: (workspaceId) =>
+      taskRows.filter((task) => task.workspaceId === workspaceId),
     listTasksByWorkspaceId: ({ limit, workspaceId }) =>
       sortTasksDescending(
         taskRows.filter(
@@ -171,6 +192,12 @@ export function createSqliteWorkspaceRepository(
 
       return workspace;
     },
+    deleteTasksByWorkspaceId: (workspaceId) => {
+      database.db.delete(tasks).where(eq(tasks.workspaceId, workspaceId)).run();
+    },
+    deleteWorkspaceById: (workspaceId) => {
+      database.db.delete(workspaces).where(eq(workspaces.id, workspaceId)).run();
+    },
     findTaskById: (taskId) =>
       database.db
         .select()
@@ -206,6 +233,12 @@ export function createSqliteWorkspaceRepository(
             task.lastContinuedAt < afterLastContinuedAt
         )
         .slice(0, limit),
+    listAllTasksByWorkspaceId: (workspaceId) =>
+      database.db
+        .select()
+        .from(tasks)
+        .where(eq(tasks.workspaceId, workspaceId))
+        .all(),
     listTasksByWorkspaceId: ({ limit, workspaceId }) =>
       database.db
         .select()

@@ -36,6 +36,12 @@ export const RESPONSE_CODE_DEFINITIONS = {
     description: "The requested resource does not exist.",
     httpStatus: 404
   },
+  conflict: {
+    code: 40900,
+    defaultMessage: "Conflict",
+    description: "The request conflicts with the current resource state.",
+    httpStatus: 409
+  },
   internalError: {
     code: 50000,
     defaultMessage: "Internal Server Error",

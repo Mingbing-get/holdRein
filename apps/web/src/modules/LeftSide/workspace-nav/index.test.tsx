@@ -146,7 +146,7 @@ function renderWorkspaceNav(
           {...activeSelection}
           workspaces={workspaces}
         />
-        <WorkspaceNav />
+        <WorkspaceNav apiBaseUrl="http://localhost:4000" />
       </AppWorkspaceProvider>
     </AppUiProvider>
   );

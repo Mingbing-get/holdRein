@@ -68,6 +68,55 @@ function createTestApp() {
 }
 
 describe("workspace routes", () => {
+  it("deletes a workspace and all of its tasks", async () => {
+    const app = createTestApp();
+    const deleteResponse = await request(app).delete(
+      "/api/v1/workspaces/workspace-beta"
+    );
+
+    expect(deleteResponse.status).toBe(200);
+    expect(deleteResponse.body).toEqual({
+      code: 0,
+      msg: "ok",
+      data: { workspaceId: "workspace-beta" }
+    });
+
+    const navigationResponse = await request(app).get(
+      "/api/v1/workspaces/recent-tasks"
+    );
+    expect(navigationResponse.body.data.workspaces).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "workspace-beta" })
+      ])
+    );
+  });
+
+  it("returns not found when deleting an unknown workspace", async () => {
+    const response = await request(createTestApp()).delete(
+      "/api/v1/workspaces/missing"
+    );
+
+    expect(response.status).toBe(404);
+    expect(response.body).toEqual({
+      code: 40400,
+      msg: "Unknown workspace",
+      data: null
+    });
+  });
+
+  it("returns conflict when deleting a workspace with a running task", async () => {
+    const response = await request(createTestApp()).delete(
+      "/api/v1/workspaces/workspace-alpha"
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({
+      code: 40900,
+      msg: "Workspace has running tasks",
+      data: null
+    });
+  });
+
   it("lists every workspace with tasks continued in the last seven days", async () => {
     const response = await request(createTestApp()).get(
       "/api/v1/workspaces/recent-tasks"

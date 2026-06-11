@@ -98,7 +98,7 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
       }}
     >
       <LeftSideAside>
-        <WorkspaceNav />
+        <WorkspaceNav apiBaseUrl={apiBaseUrl} />
       </LeftSideAside>
       <Layout
         data-testid="workspace-main-layout"

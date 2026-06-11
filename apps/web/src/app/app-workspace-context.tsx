@@ -27,8 +27,9 @@ export interface AppWorkspaceState {
 }
 
 export interface AppWorkspaceContextValue {
+  removeWorkspace: (workspaceId: string) => void;
   state: AppWorkspaceState;
-  startNewConversation: () => void;
+  startNewConversation: (workspaceId: string) => void;
   setActiveAgent: (activeAgent: ActiveAgentSelection | null) => void;
   setActiveTaskId: (taskId: string) => void;
   setActiveWorkspaceId: (workspaceId: string) => void;
@@ -180,12 +181,38 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
     }));
   }, []);
 
-  const startNewConversation = useCallback(() => {
+  const startNewConversation = useCallback((workspaceId: string) => {
+    storeActiveWorkspaceId(workspaceId);
     setState((currentState) => ({
       ...currentState,
       activeTaskId: "",
-      newConversationWorkspaceId: currentState.activeWorkspaceId
+      activeWorkspaceId: workspaceId,
+      newConversationWorkspaceId: workspaceId
     }));
+  }, []);
+
+  const removeWorkspace = useCallback((workspaceId: string) => {
+    setState((currentState) => {
+      const nextWorkspaces = currentState.workspaces.filter(
+        (workspace) => workspace.id !== workspaceId
+      );
+
+      if (currentState.activeWorkspaceId !== workspaceId) {
+        return { ...currentState, workspaces: nextWorkspaces };
+      }
+
+      const nextWorkspace = nextWorkspaces[0];
+      const activeWorkspaceId = nextWorkspace?.id ?? "";
+      storeActiveWorkspaceId(activeWorkspaceId);
+
+      return {
+        ...currentState,
+        activeTaskId: nextWorkspace?.tasks[0]?.id ?? "",
+        activeWorkspaceId,
+        newConversationWorkspaceId: "",
+        workspaces: nextWorkspaces
+      };
+    });
   }, []);
 
   const setWorkspaces = useCallback(
@@ -265,6 +292,7 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
 
   const contextValue = useMemo<AppWorkspaceContextValue>(
     () => ({
+      removeWorkspace,
       state,
       startNewConversation,
       setActiveAgent,
@@ -275,6 +303,7 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
       upsertStartedTask
     }),
     [
+      removeWorkspace,
       setActiveAgent,
       setActiveTaskId,
       setActiveWorkspaceId,

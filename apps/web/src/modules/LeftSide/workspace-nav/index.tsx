@@ -5,7 +5,7 @@ import { useAppUi } from "../../../app/app-ui-context";
 import { useAppWorkspace } from "../../../app/app-workspace-context";
 import { WorkspaceSection } from "../workspace-section";
 
-export function WorkspaceNav() {
+export function WorkspaceNav({ apiBaseUrl }: { apiBaseUrl: string }) {
   const {
     openChatWorkspace,
     state: { sidebarCollapsed }
@@ -36,7 +36,7 @@ export function WorkspaceNav() {
         disabled={!hasActiveWorkspace}
         icon={<PlusOutlined />}
         onClick={() => {
-          startNewConversation();
+          startNewConversation(activeWorkspaceId);
           openChatWorkspace();
         }}
         style={{
@@ -78,6 +78,7 @@ export function WorkspaceNav() {
         ) : null}
         {workspaces.map((workspace) => (
           <WorkspaceSection
+            apiBaseUrl={apiBaseUrl}
             collapsed={sidebarCollapsed}
             key={workspace.id}
             workspace={workspace}

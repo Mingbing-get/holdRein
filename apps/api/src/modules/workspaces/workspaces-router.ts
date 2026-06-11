@@ -1,4 +1,9 @@
-import { Router, type Request, type Response } from "express";
+import {
+  Router,
+  type NextFunction,
+  type Request,
+  type Response
+} from "express";
 
 import { sendError, sendSuccess } from "../../response";
 import { RESPONSE_CODE_DEFINITIONS } from "../../response/response-codes";
@@ -23,6 +28,43 @@ export function createWorkspacesRouter(
     "/workspaces/recent-tasks",
     (_request: Request, response: Response): void => {
       sendSuccess(response, getService().listRecentWorkspaceTasks());
+    }
+  );
+
+  router.delete(
+    "/workspaces/:workspaceId",
+    async (
+      request: Request<{ workspaceId: string }>,
+      response: Response,
+      next: NextFunction
+    ): Promise<void> => {
+      try {
+        const result = await getService().deleteWorkspace(
+          request.params.workspaceId
+        );
+
+        if (result.status === "not_found") {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.notFound,
+            "Unknown workspace"
+          );
+          return;
+        }
+
+        if (result.status === "has_running_tasks") {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.conflict,
+            "Workspace has running tasks"
+          );
+          return;
+        }
+
+        sendSuccess(response, { workspaceId: result.workspaceId });
+      } catch (error) {
+        next(error);
+      }
     }
   );
 
