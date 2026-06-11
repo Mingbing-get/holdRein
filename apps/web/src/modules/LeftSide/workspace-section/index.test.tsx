@@ -49,6 +49,7 @@ const workspaceSummary: WorkspaceSummary = {
       lastModelName: "gpt-4.1",
       lastModelProvider: "openai",
       lastModelProviderSource: "built_in",
+      status: "completed",
       title: "接入真实 workspace nav"
     }
   ]

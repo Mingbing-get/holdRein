@@ -91,6 +91,7 @@ function createAgentFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
           lastModelName: "gpt-4.1",
           lastModelProvider: "openai",
           lastModelProviderSource: "built_in",
+          status: "running",
           title: "",
           workspaceId: "workspace-1"
         },

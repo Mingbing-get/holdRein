@@ -23,7 +23,7 @@ describe("database", () => {
 
     migrateDatabase({ exec } as { exec: (sql: string) => void });
 
-    expect(exec).toHaveBeenCalledTimes(16);
+    expect(exec).toHaveBeenCalledTimes(17);
     expect(exec).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_model_providers")
@@ -75,6 +75,10 @@ describe("database", () => {
     expect(exec).toHaveBeenNthCalledWith(
       10,
       expect.stringContaining("session_created_at TEXT")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      10,
+      expect.stringContaining("status TEXT NOT NULL")
     );
     expect(exec).toHaveBeenNthCalledWith(
       11,
@@ -131,7 +135,7 @@ describe("database", () => {
 
       const task = sqlite
         .prepare(
-          "SELECT title, last_model_provider_source, session_id, session_path, session_created_at FROM tasks"
+          "SELECT title, last_model_provider_source, session_id, session_path, session_created_at, status FROM tasks"
         )
         .get();
 
@@ -140,6 +144,7 @@ describe("database", () => {
         session_created_at: null,
         session_id: null,
         session_path: null,
+        status: "completed",
         title: "Add persistence"
       });
       expect(
@@ -228,14 +233,15 @@ describe("database", () => {
       expect(
         sqlite
           .prepare(
-            "SELECT id, session_id, session_path, session_created_at FROM tasks WHERE id = 'task-1'"
+            "SELECT id, session_id, session_path, session_created_at, status FROM tasks WHERE id = 'task-1'"
           )
           .get()
       ).toEqual({
         id: "task-1",
         session_created_at: null,
         session_id: null,
-        session_path: null
+        session_path: null,
+        status: "completed"
       });
       expect(
         sqlite

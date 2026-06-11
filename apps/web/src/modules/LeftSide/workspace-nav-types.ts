@@ -5,6 +5,7 @@ export interface WorkspaceTaskSummary {
   lastModelName: string;
   lastModelProvider: string;
   lastModelProviderSource: "built_in" | "custom";
+  status: "running" | "completed" | "error";
   title: string;
 }
 

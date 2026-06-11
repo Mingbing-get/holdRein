@@ -87,6 +87,7 @@ const CREATE_TASKS_TABLE_SQL = `
     session_id TEXT,
     session_path TEXT,
     session_created_at TEXT,
+    status TEXT NOT NULL DEFAULT 'completed' CHECK(status IN ('running', 'completed', 'error')),
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
   ) STRICT
 `;
@@ -110,6 +111,10 @@ const ADD_TASKS_SESSION_PATH_COLUMN_SQL = `
 
 const ADD_TASKS_SESSION_CREATED_AT_COLUMN_SQL = `
   ALTER TABLE tasks ADD COLUMN session_created_at TEXT
+`;
+
+const ADD_TASKS_STATUS_COLUMN_SQL = `
+  ALTER TABLE tasks ADD COLUMN status TEXT NOT NULL DEFAULT 'completed' CHECK(status IN ('running', 'completed', 'error'))
 `;
 
 const DROP_TASK_MESSAGES_TABLE_SQL = `
@@ -138,6 +143,7 @@ export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
   addColumnIfMissing(sqlite, ADD_TASKS_SESSION_ID_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_SESSION_PATH_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_SESSION_CREATED_AT_COLUMN_SQL);
+  addColumnIfMissing(sqlite, ADD_TASKS_STATUS_COLUMN_SQL);
   sqlite.exec(DROP_TASK_MESSAGES_TABLE_SQL);
 }
 

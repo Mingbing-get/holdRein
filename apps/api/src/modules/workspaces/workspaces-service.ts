@@ -92,6 +92,7 @@ function toTaskSummary(task: WorkspaceNavigationTaskRow): WorkspaceTaskSummary {
     lastModelName: task.lastModelName,
     lastModelProvider: task.lastModelProvider,
     lastModelProviderSource: task.lastModelProviderSource,
+    status: task.status,
     title: task.title
   };
 }

@@ -15,6 +15,7 @@ function createTestApp() {
       createTask({
         id: "task-recent-1",
         lastContinuedAt: "2026-06-08T08:00:00.000Z",
+        status: "running",
         title: "今天继续的任务",
         workspaceId: "workspace-alpha"
       }),
@@ -87,11 +88,13 @@ describe("workspace routes", () => {
               expect.objectContaining({
                 id: "task-recent-1",
                 lastContinuedAt: "2026-06-08T08:00:00.000Z",
+                status: "running",
                 title: "今天继续的任务"
               }),
               expect.objectContaining({
                 id: "task-recent-2",
                 lastContinuedAt: "2026-06-07T08:00:00.000Z",
+                status: "completed",
                 title: "昨天继续的任务"
               })
             ]
@@ -105,6 +108,7 @@ describe("workspace routes", () => {
               expect.objectContaining({
                 id: "task-beta-recent",
                 lastContinuedAt: "2026-06-06T08:00:00.000Z",
+                status: "completed",
                 title: "Beta 最近任务"
               })
             ]
@@ -128,7 +132,8 @@ describe("workspace routes", () => {
         tasks: [
           expect.objectContaining({
             id: "task-recent-2",
-            lastContinuedAt: "2026-06-07T08:00:00.000Z"
+            lastContinuedAt: "2026-06-07T08:00:00.000Z",
+            status: "completed"
           })
         ],
         workspaceId: "workspace-alpha"
@@ -153,6 +158,7 @@ describe("workspace routes", () => {
 function createTask(input: {
   id: string;
   lastContinuedAt: string | null;
+  status?: "running" | "completed" | "error";
   title: string;
   workspaceId: string;
 }) {
@@ -168,6 +174,7 @@ function createTask(input: {
     sessionCreatedAt: null,
     sessionId: null,
     sessionPath: null,
+    status: input.status ?? "completed",
     title: input.title,
     updatedAt: "2026-06-08T00:00:00.000Z",
     workspaceId: input.workspaceId

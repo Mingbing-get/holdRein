@@ -120,13 +120,22 @@ export function createAgentsService(
               options.modelProvidersService
             )
           : null;
-      const run = await options.runtime.start({
-        modelId: selectedModel?.lastModelId ?? task.lastModelId ?? task.lastModelName,
-        prompt,
-        provider: selectedModel?.lastModelProvider ?? task.lastModelProvider,
-        ...(session ? { session } : {}),
-        taskId,
-        workspacePath: workspace.path
+      options.repository.updateTaskStatus(taskId, "running", now().toISOString());
+      const run = await startTaskRun({
+        eventBus: options.eventBus,
+        now,
+        repository: options.repository,
+        runtime: options.runtime,
+        runtimeInput: {
+          modelId:
+            selectedModel?.lastModelId ?? task.lastModelId ?? task.lastModelName,
+          prompt,
+          provider: selectedModel?.lastModelProvider ?? task.lastModelProvider,
+          ...(session ? { session } : {}),
+          taskId,
+          workspacePath: workspace.path
+        },
+        taskId
       });
       options.repository.updateTaskSession(taskId, run.session);
       const continuedAt = now().toISOString();
@@ -178,6 +187,7 @@ export function createAgentsService(
         sessionCreatedAt: null,
         sessionId: null,
         sessionPath: null,
+        status: "running",
         title: "",
         updatedAt: createdAt,
         workspaceId: workspace.id
@@ -193,7 +203,14 @@ export function createAgentsService(
         titleJobs
       });
 
-      const run = await options.runtime.start({ ...input, taskId: task.id });
+      const run = await startTaskRun({
+        eventBus: options.eventBus,
+        now,
+        repository: options.repository,
+        runtime: options.runtime,
+        runtimeInput: { ...input, taskId: task.id },
+        taskId: task.id
+      });
       const updatedTask = options.repository.updateTaskSession(task.id, run.session) ?? task;
 
       return toStartAgentResult(run, updatedTask, workspace);
@@ -201,6 +218,72 @@ export function createAgentsService(
     subscribeToAgentEvents: (input, listener) =>
       options.eventBus.subscribe(input, listener)
   };
+}
+
+async function startTaskRun(input: {
+  eventBus: AgentEventBus;
+  now: () => Date;
+  repository: WorkspaceRepository;
+  runtime: AgentRuntime;
+  runtimeInput: Parameters<AgentRuntime["start"]>[0];
+  taskId: string;
+}) {
+  try {
+    const run = await input.runtime.start(input.runtimeInput);
+    monitorTaskRun({
+      agentId: run.agentId,
+      eventBus: input.eventBus,
+      now: input.now,
+      repository: input.repository,
+      taskId: input.taskId
+    });
+    return run;
+  } catch (error) {
+    input.repository.updateTaskStatus(
+      input.taskId,
+      "error",
+      input.now().toISOString()
+    );
+    throw error;
+  }
+}
+
+function monitorTaskRun(input: {
+  agentId: string;
+  eventBus: AgentEventBus;
+  now: () => Date;
+  repository: WorkspaceRepository;
+  taskId: string;
+}): void {
+  let terminal = false;
+  let subscription: AgentEventSubscription | undefined;
+  subscription = input.eventBus.subscribe(
+    { agentId: input.agentId },
+    (event) => {
+      const status: TaskRow["status"] | undefined =
+        event.type === "agent_end"
+          ? "completed"
+          : event.type === "agent_error"
+            ? "error"
+            : undefined;
+
+      if (!status || terminal) {
+        return;
+      }
+
+      terminal = true;
+      input.repository.updateTaskStatus(
+        input.taskId,
+        status,
+        input.now().toISOString()
+      );
+      subscription?.unsubscribe();
+    }
+  );
+
+  if (terminal) {
+    subscription.unsubscribe();
+  }
 }
 
 function getTaskSession(task: TaskRow) {

@@ -95,6 +95,11 @@ export const tasks = sqliteTable(
     sessionCreatedAt: text("session_created_at"),
     sessionId: text("session_id"),
     sessionPath: text("session_path"),
+    status: text("status", {
+      enum: ["running", "completed", "error"]
+    })
+      .notNull()
+      .default("completed"),
     title: text("title").notNull(),
     updatedAt: text("updated_at").notNull(),
     workspaceId: text("workspace_id")

@@ -48,6 +48,11 @@ export interface WorkspaceRepository {
     taskId: string,
     session: { createdAt: string; id: string; path: string }
   ) => TaskRow | undefined;
+  updateTaskStatus: (
+    taskId: string,
+    status: TaskRow["status"],
+    updatedAt: string
+  ) => TaskRow | undefined;
 }
 
 export function createInMemoryWorkspaceRepository(
@@ -137,6 +142,14 @@ export function createInMemoryWorkspaceRepository(
         sessionId: session.id,
         sessionPath: session.path
       };
+      taskRows[taskIndex] = nextTask;
+      return nextTask;
+    },
+    updateTaskStatus: (taskId, status, updatedAt) => {
+      const taskIndex = taskRows.findIndex((task) => task.id === taskId);
+      const existingTask = taskRows[taskIndex];
+      if (!existingTask) return undefined;
+      const nextTask = { ...existingTask, status, updatedAt };
       taskRows[taskIndex] = nextTask;
       return nextTask;
     }
@@ -243,6 +256,14 @@ export function createSqliteWorkspaceRepository(
         .where(eq(tasks.id, taskId))
         .run();
       return database.db.select().from(tasks).where(eq(tasks.id, taskId)).get();
+    },
+    updateTaskStatus: (taskId, status, updatedAt) => {
+      database.db
+        .update(tasks)
+        .set({ status, updatedAt })
+        .where(eq(tasks.id, taskId))
+        .run();
+      return database.db.select().from(tasks).where(eq(tasks.id, taskId)).get();
     }
   };
 }
@@ -260,6 +281,7 @@ function toTaskRow(task: NewTaskRow): TaskRow {
     lastModelId: task.lastModelId ?? null,
     sessionCreatedAt: task.sessionCreatedAt ?? null,
     sessionId: task.sessionId ?? null,
-    sessionPath: task.sessionPath ?? null
+    sessionPath: task.sessionPath ?? null,
+    status: task.status ?? "completed"
   };
 }

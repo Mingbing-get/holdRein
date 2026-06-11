@@ -247,6 +247,7 @@ function StartedTaskStateProbe() {
             lastModelName: "gpt-4.1",
             lastModelProvider: "openai",
             lastModelProviderSource: "built_in",
+            status: "completed",
             title: "Old title"
           }
         ]
@@ -265,6 +266,7 @@ function StartedTaskStateProbe() {
         lastModelName: "gpt-4.1",
         lastModelProvider: "openai",
         lastModelProviderSource: "built_in",
+        status: "running",
         title: "",
         workspaceId: "workspace-one"
       },

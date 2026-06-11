@@ -7,6 +7,7 @@ export interface WorkspaceTaskSummary {
   lastModelName: string;
   lastModelProvider: string;
   lastModelProviderSource: TaskRow["lastModelProviderSource"];
+  status: TaskRow["status"];
   title: string;
 }
 

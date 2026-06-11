@@ -51,6 +51,7 @@ describe("agents service", () => {
         sessionCreatedAt: "2026-06-08T00:00:00.000Z",
         sessionId: "session-1",
         sessionPath: "/sessions/session-1.jsonl",
+        status: "running",
         title: "",
         workspaceId: result.workspace.id
       }) as TaskRow,
@@ -87,6 +88,7 @@ describe("agents service", () => {
           sessionCreatedAt: "2026-06-08T00:00:00.000Z",
           sessionId: "session-1",
           sessionPath: "/sessions/session-1.jsonl",
+          status: "completed",
           title: "Task",
           updatedAt: "now",
           workspaceId: "workspace-1"
@@ -159,6 +161,7 @@ describe("agents service", () => {
           sessionCreatedAt: "2026-06-08T00:00:00.000Z",
           sessionId: "session-1",
           sessionPath: "/sessions/session-1.jsonl",
+          status: "completed",
           title: "Task",
           updatedAt: "now",
           workspaceId: "workspace-1"
@@ -239,6 +242,7 @@ describe("agents service", () => {
           sessionCreatedAt: null,
           sessionId: null,
           sessionPath: null,
+          status: "completed",
           title: "Task",
           updatedAt: "now",
           workspaceId: "workspace-1"
@@ -306,6 +310,7 @@ describe("agents service", () => {
           sessionCreatedAt: "created",
           sessionId: "session-1",
           sessionPath: "/sessions/session-1.jsonl",
+          status: "completed",
           title: "Task",
           updatedAt: "now",
           workspaceId: "workspace-1"
@@ -361,6 +366,7 @@ describe("agents service", () => {
           sessionCreatedAt: null,
           sessionId: null,
           sessionPath: null,
+          status: "completed",
           title: "",
           updatedAt: "2026-06-08T00:00:00.000Z",
           workspaceId: "workspace-1"

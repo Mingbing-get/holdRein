@@ -74,6 +74,7 @@ const workspaceNavigationResponse = {
             lastModelName: "gpt-4.1",
             lastModelProvider: "openai",
             lastModelProviderSource: "built_in",
+            status: "completed",
             title: "First task"
           }
         ]
@@ -91,6 +92,7 @@ const workspaceNavigationResponse = {
             lastModelName: "gpt-4.1",
             lastModelProvider: "openai",
             lastModelProviderSource: "built_in",
+            status: "completed",
             title: "Second task"
           }
         ]
