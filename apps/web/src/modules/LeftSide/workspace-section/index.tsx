@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FolderOpenOutlined } from "@ant-design/icons";
+import { FolderOpenOutlined, FolderOutlined } from "@ant-design/icons";
 import { Typography } from "antd";
 
 import { useAppUi } from "../../../app/app-ui-context";
@@ -27,26 +27,52 @@ export function WorkspaceSection({
     setActiveWorkspaceId
   } = useAppWorkspace();
   const [hoveredTaskId, setHoveredTaskId] = useState<string | null>(null);
+  const [workspaceCollapsed, setWorkspaceCollapsed] = useState(false);
   const isActiveWorkspace = workspace.id === activeWorkspaceId;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {!collapsed ? (
-        <div
+        <button
+          aria-expanded={!workspaceCollapsed}
+          aria-label={`${workspaceCollapsed ? "展开" : "折叠"}工作空间 ${workspace.name}`}
           data-testid={`workspace-group-${workspace.id}`}
-          style={{ alignItems: "center", display: "flex", gap: 6 }}
+          onClick={() => {
+            setWorkspaceCollapsed((currentValue) => !currentValue);
+          }}
+          style={{
+            alignItems: "center",
+            appearance: "none",
+            background: "transparent",
+            border: 0,
+            color: "var(--app-color-text)",
+            cursor: "pointer",
+            display: "flex",
+            fontFamily: "inherit",
+            gap: 6,
+            padding: 0,
+            textAlign: "left"
+          }}
+          type="button"
         >
-          <FolderOpenOutlined
-            data-testid="workspace-folder-open-icon"
-            style={{ color: "var(--app-color-text-secondary)", fontSize: 14 }}
-          />
+          {workspaceCollapsed ? (
+            <FolderOutlined
+              data-testid="workspace-folder-icon"
+              style={{ color: "var(--app-color-text-secondary)", fontSize: 14 }}
+            />
+          ) : (
+            <FolderOpenOutlined
+              data-testid="workspace-folder-open-icon"
+              style={{ color: "var(--app-color-text-secondary)", fontSize: 14 }}
+            />
+          )}
           <Typography.Text strong style={{ fontSize: 12, lineHeight: "20px" }}>
             {workspace.name}
           </Typography.Text>
-        </div>
+        </button>
       ) : null}
 
-      {workspace.tasks.map((task) => {
+      {(!workspaceCollapsed || collapsed) && workspace.tasks.map((task) => {
         const isActiveTask = isActiveWorkspace && task.id === activeTaskId;
 
         return (

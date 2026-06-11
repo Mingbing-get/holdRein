@@ -94,6 +94,26 @@ describe("WorkspaceSection", () => {
     });
   });
 
+  it("toggles the workspace task list from the workspace name", () => {
+    renderWorkspaceSection({ collapsed: false });
+
+    const workspaceToggle = screen.getByRole("button", {
+      name: "折叠工作空间 Real Workspace"
+    });
+
+    fireEvent.click(workspaceToggle);
+
+    expect(screen.queryByTestId("workspace-task-task-real-1")).toBeNull();
+    expect(screen.getByTestId("workspace-folder-icon")).toBeInTheDocument();
+    expect(workspaceToggle).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(workspaceToggle);
+
+    expect(screen.getByTestId("workspace-task-task-real-1")).toBeInTheDocument();
+    expect(screen.getByTestId("workspace-folder-open-icon")).toBeInTheDocument();
+    expect(workspaceToggle).toHaveAttribute("aria-expanded", "true");
+  });
+
   it("uses a short task label when the section is collapsed", () => {
     renderWorkspaceSection({ collapsed: true });
 
