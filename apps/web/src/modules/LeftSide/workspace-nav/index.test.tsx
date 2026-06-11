@@ -81,16 +81,26 @@ describe("WorkspaceNav", () => {
     renderWorkspaceNav(workspaceSummaries);
 
     const nav = screen.getByLabelText("Workspace navigation");
-
-    expect(
-      within(nav).getByRole("button", { name: "开启新任务" })
-    ).toHaveStyle({ borderRadius: "6px" });
-    expect(
-      within(nav).getByTestId("workspace-group-workspace-real")
-    ).toBeInTheDocument();
-    expect(within(nav).getByTestId("workspace-task-task-real-1")).toHaveTextContent(
-      "接入真实 workspace nav"
+    const scrollRegion = within(nav).getByLabelText(
+      "Workspace and task navigation"
     );
+    const newTaskButton = within(nav).getByRole("button", {
+      name: "开启新任务"
+    });
+
+    expect(newTaskButton).toHaveStyle({ borderRadius: "6px", flexShrink: "0" });
+    expect(scrollRegion).toHaveStyle({
+      flex: "1",
+      minHeight: "0",
+      overflowY: "auto"
+    });
+    expect(scrollRegion).not.toContainElement(newTaskButton);
+    expect(
+      within(scrollRegion).getByTestId("workspace-group-workspace-real")
+    ).toBeInTheDocument();
+    expect(
+      within(scrollRegion).getByTestId("workspace-task-task-real-1")
+    ).toHaveTextContent("接入真实 workspace nav");
   });
 
   it("shows an empty state when no workspace namespaces are available", () => {

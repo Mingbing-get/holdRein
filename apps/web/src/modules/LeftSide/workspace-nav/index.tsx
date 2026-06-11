@@ -21,7 +21,14 @@ export function WorkspaceNav() {
   return (
     <nav
       aria-label="Workspace navigation"
-      style={{ display: "flex", flex: 1, flexDirection: "column", gap: 12 }}
+      style={{
+        display: "flex",
+        flex: 1,
+        flexDirection: "column",
+        gap: 12,
+        minHeight: 0,
+        overflow: "hidden"
+      }}
     >
       <Button
         aria-label="开启新任务"
@@ -36,34 +43,47 @@ export function WorkspaceNav() {
           borderColor: "var(--app-color-border-secondary)",
           borderRadius: 6,
           color: "var(--app-color-text)",
-          fontSize: 12
+          fontSize: 12,
+          flexShrink: 0
         }}
         type="text"
       >
         开启新任务
       </Button>
-      {workspaces.length === 0 && !sidebarCollapsed ? (
-        <Typography.Text
-          data-testid="workspace-sidebar-empty"
-          style={{
-            color: "var(--app-color-text-secondary)",
-            display: "block",
-            fontSize: 12,
-            lineHeight: "20px",
-            padding: "4px 8px",
-            textAlign: "center"
-          }}
-        >
-          暂无任务
-        </Typography.Text>
-      ) : null}
-      {workspaces.map((workspace) => (
-        <WorkspaceSection
-          collapsed={sidebarCollapsed}
-          key={workspace.id}
-          workspace={workspace}
-        />
-      ))}
+      <div
+        aria-label="Workspace and task navigation"
+        style={{
+          display: "flex",
+          flex: 1,
+          flexDirection: "column",
+          gap: 12,
+          minHeight: 0,
+          overflowY: "auto"
+        }}
+      >
+        {workspaces.length === 0 && !sidebarCollapsed ? (
+          <Typography.Text
+            data-testid="workspace-sidebar-empty"
+            style={{
+              color: "var(--app-color-text-secondary)",
+              display: "block",
+              fontSize: 12,
+              lineHeight: "20px",
+              padding: "4px 8px",
+              textAlign: "center"
+            }}
+          >
+            暂无任务
+          </Typography.Text>
+        ) : null}
+        {workspaces.map((workspace) => (
+          <WorkspaceSection
+            collapsed={sidebarCollapsed}
+            key={workspace.id}
+            workspace={workspace}
+          />
+        ))}
+      </div>
     </nav>
   );
 }
