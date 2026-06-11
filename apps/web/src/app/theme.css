@@ -19,6 +19,7 @@
   --app-color-success: #2e9b55;
   --app-color-fill-secondary: rgba(21, 32, 51, 0.06);
   --app-color-fill-tertiary: rgba(21, 32, 51, 0.04);
+  --app-color-markdown-code-bg: rgba(21, 32, 51, 0.06);
   --app-color-border: rgba(127, 145, 170, 0.28);
   --app-color-border-secondary: rgba(127, 145, 170, 0.18);
   --app-color-shadow: rgba(21, 32, 51, 0.12);
@@ -40,6 +41,7 @@
   --app-color-success: #65d98b;
   --app-color-fill-secondary: rgba(239, 245, 255, 0.09);
   --app-color-fill-tertiary: rgba(239, 245, 255, 0.06);
+  --app-color-markdown-code-bg: rgba(239, 245, 255, 0.09);
   --app-color-border: rgba(142, 165, 196, 0.32);
   --app-color-border-secondary: rgba(142, 165, 196, 0.22);
   --app-color-shadow: rgba(0, 0, 0, 0.3);

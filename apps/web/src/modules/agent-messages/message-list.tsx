@@ -2,6 +2,7 @@ import { Alert, Flex, Typography } from "antd";
 import { Bubble, Think } from "@ant-design/x";
 
 import type { AgentMessage, AssistantMessage } from "./agent-message-types";
+import { MarkdownContent } from "./markdown-content";
 
 export function AgentMessageList({ messages }: { messages: AgentMessage[] }) {
   return (
@@ -41,7 +42,13 @@ function AssistantMessageItem({ message }: { message: AssistantMessage }) {
     <Flex gap={8} vertical>
       {message.content.map((block, index) => {
         if (block.type === "text") {
-          return <Bubble key={index} content={block.text} variant="borderless" />;
+          return (
+            <Bubble
+              key={index}
+              content={<MarkdownContent>{block.text}</MarkdownContent>}
+              variant="borderless"
+            />
+          );
         }
         if (block.type === "thinking") {
           return <Think key={index} title="思考过程">{block.thinking}</Think>;
