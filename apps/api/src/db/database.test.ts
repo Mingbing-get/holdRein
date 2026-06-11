@@ -15,7 +15,7 @@ describe("database", () => {
     expect(schema).toHaveProperty("customProviderModels");
     expect(schema).toHaveProperty("workspaces");
     expect(schema).toHaveProperty("tasks");
-    expect(schema).toHaveProperty("taskMessages");
+    expect(schema).not.toHaveProperty("taskMessages");
   });
 
   it("creates the application database schema", () => {
@@ -23,7 +23,7 @@ describe("database", () => {
 
     migrateDatabase({ exec } as { exec: (sql: string) => void });
 
-    expect(exec).toHaveBeenCalledTimes(15);
+    expect(exec).toHaveBeenCalledTimes(16);
     expect(exec).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_model_providers")
@@ -65,12 +65,23 @@ describe("database", () => {
       expect.stringContaining("last_continued_at TEXT")
     );
     expect(exec).toHaveBeenNthCalledWith(
+      10,
+      expect.stringContaining("session_id TEXT")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      10,
+      expect.stringContaining("session_path TEXT")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      10,
+      expect.stringContaining("session_created_at TEXT")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
       11,
       expect.stringContaining("CREATE INDEX IF NOT EXISTS tasks_workspace_id_idx")
     );
-    expect(exec).toHaveBeenNthCalledWith(
-      13,
-      expect.stringContaining("CREATE TABLE IF NOT EXISTS task_messages")
+    expect(exec).toHaveBeenLastCalledWith(
+      expect.stringContaining("DROP TABLE IF EXISTS task_messages")
     );
   });
 
@@ -119,13 +130,25 @@ describe("database", () => {
         .run();
 
       const task = sqlite
-        .prepare("SELECT title, last_model_provider_source FROM tasks")
+        .prepare(
+          "SELECT title, last_model_provider_source, session_id, session_path, session_created_at FROM tasks"
+        )
         .get();
 
       expect(task).toEqual({
         last_model_provider_source: "built_in",
+        session_created_at: null,
+        session_id: null,
+        session_path: null,
         title: "Add persistence"
       });
+      expect(
+        sqlite
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'task_messages'"
+          )
+          .get()
+      ).toBeUndefined();
       expect(() =>
         sqlite
           .prepare(
@@ -156,6 +179,71 @@ describe("database", () => {
           )
           .run()
       ).toThrow();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("upgrades legacy tasks and removes the task messages table", () => {
+    const sqlite = new Database(":memory:");
+
+    try {
+      sqlite.exec(`
+        CREATE TABLE workspaces (
+          id TEXT PRIMARY KEY NOT NULL,
+          name TEXT NOT NULL,
+          path TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        ) STRICT;
+        CREATE TABLE tasks (
+          id TEXT PRIMARY KEY NOT NULL,
+          workspace_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          initial_user_message TEXT NOT NULL,
+          last_model_provider_source TEXT NOT NULL,
+          last_model_provider TEXT NOT NULL,
+          last_model_name TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          last_continued_at TEXT
+        ) STRICT;
+        CREATE TABLE task_messages (
+          id TEXT PRIMARY KEY NOT NULL
+        ) STRICT;
+        INSERT INTO workspaces (id, name, path, created_at, updated_at)
+        VALUES ('workspace-1', 'Workspace', '/tmp/workspace', 'now', 'now');
+        INSERT INTO tasks (
+          id, workspace_id, title, initial_user_message,
+          last_model_provider_source, last_model_provider, last_model_name,
+          created_at, updated_at, last_continued_at
+        ) VALUES (
+          'task-1', 'workspace-1', 'Legacy', 'Prompt',
+          'built_in', 'openai', 'gpt-4.1', 'now', 'now', 'now'
+        );
+      `);
+
+      migrateDatabase(sqlite);
+
+      expect(
+        sqlite
+          .prepare(
+            "SELECT id, session_id, session_path, session_created_at FROM tasks WHERE id = 'task-1'"
+          )
+          .get()
+      ).toEqual({
+        id: "task-1",
+        session_created_at: null,
+        session_id: null,
+        session_path: null
+      });
+      expect(
+        sqlite
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'task_messages'"
+          )
+          .get()
+      ).toBeUndefined();
     } finally {
       sqlite.close();
     }

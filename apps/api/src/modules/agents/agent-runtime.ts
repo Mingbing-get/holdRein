@@ -7,12 +7,12 @@ import {
   JsonlSessionRepo,
   NodeExecutionEnv,
   formatSkillsForSystemPrompt,
-  loadSkills
+  loadSkills,
+  type JsonlSessionRepoApi
 } from "@earendil-works/pi-agent-core/node";
-import { AGENT_ROOT_DIR, SESSION_DIR_NAME } from '../../config/const';
+import { SESSIONS_DIR } from "../../config/const";
 import type { AgentApprovalStore } from "./agent-approval-store";
 import type { AgentEventBus } from "./agent-event-bus";
-import type { AgentMessageRepository } from "./agent-message-repository";
 import { toStoredAgentMessage } from "./agent-message-storage";
 import {
   resolveAgentModel,
@@ -20,6 +20,8 @@ import {
 } from "./agent-model-resolver";
 import {
   type AgentRunResult,
+  type AgentSessionMetadata,
+  type StoredAgentMessage,
   type ShellCommandApprovalRequest,
   type RunAgentInput
 } from "./agent-types";
@@ -27,15 +29,19 @@ import { createShellExecTool } from "./shell-exec-tool";
 import { classifyShellCommandRisk } from "./shell-command-risk";
 
 export interface AgentRuntime {
+  listMessages: (input: {
+    session: AgentSessionMetadata;
+    workspacePath: string;
+  }) => Promise<StoredAgentMessage[]>;
   start: (input: RunAgentInput) => Promise<AgentRunResult>;
 }
 
 export interface CreateAgentRuntimeOptions {
   approvalStore: AgentApprovalStore;
   eventBus: AgentEventBus;
-  messageRepository: AgentMessageRepository;
   getApiKey?: (provider: string, modelId: string) => Promise<string | undefined>;
   getCustomModel?: AgentModelLookup;
+  sessionRepo?: JsonlSessionRepoApi;
   skillDirs?: string[];
 }
 
@@ -48,16 +54,23 @@ export function createAgentRuntime(
   options: CreateAgentRuntimeOptions
 ): AgentRuntime {
   const runningAgents = new Map<string, RunningAgent>();
+  const sessionRepo = options.sessionRepo ?? createSessionRepo();
 
   return {
+    listMessages: async ({ session: metadata, workspacePath }) => {
+      const session = await sessionRepo.open({ ...metadata, cwd: workspacePath });
+      const context = await session.buildContext();
+
+      return context.messages.map((message) =>
+        toStoredAgentMessage(`message_${randomUUID()}`, message)
+      );
+    },
     start: async (input) => {
       const agentId = `agent_${randomUUID()}`;
       const env = new NodeExecutionEnv({ cwd: input.workspacePath });
-      const sessionRepo = new JsonlSessionRepo({
-        fs: new NodeExecutionEnv({ cwd: AGENT_ROOT_DIR }),
-        sessionsRoot: `./${SESSION_DIR_NAME}`
-      });
-      const session = await sessionRepo.create({ cwd: input.workspacePath });
+      const session = input.session
+        ? await sessionRepo.open({ ...input.session, cwd: input.workspacePath })
+        : await sessionRepo.create({ cwd: input.workspacePath });
       const sessionMetadata = await session.getMetadata();
       const skillDirs = getSkillDirs(input.workspacePath, options.skillDirs);
       const { skills } = await loadSkills(env, skillDirs);
@@ -101,10 +114,6 @@ export function createAgentRuntime(
         tools: [shellExecTool]
       });
 
-      for (const message of input.history ?? []) {
-        await harness.appendMessage(message);
-      }
-
       let activeMessageId: string | undefined;
       harness.subscribe((event) => {
         if (event.type === "message_start") {
@@ -130,12 +139,6 @@ export function createAgentRuntime(
         if (event.type === "message_end") {
           const messageId = activeMessageId ?? `message_${randomUUID()}`;
           const message = toStoredAgentMessage(messageId, event.message);
-          options.messageRepository.append({
-            agentId,
-            createdAt: new Date().toISOString(),
-            message,
-            taskId: input.taskId
-          });
           options.eventBus.emit({
             agentId,
             payload: { message },
@@ -206,11 +209,22 @@ export function createAgentRuntime(
 
       return {
         agentId,
-        sessionId: sessionMetadata.id,
+        session: {
+          createdAt: sessionMetadata.createdAt,
+          id: sessionMetadata.id,
+          path: sessionMetadata.path
+        },
         status: "running"
       };
     }
   };
+}
+
+function createSessionRepo(): JsonlSessionRepoApi {
+  return new JsonlSessionRepo({
+    fs: new NodeExecutionEnv({ cwd: SESSIONS_DIR }),
+    sessionsRoot: SESSIONS_DIR
+  });
 }
 
 function getSkillDirs(workspacePath: string, configuredSkillDirs?: string[]): string[] {

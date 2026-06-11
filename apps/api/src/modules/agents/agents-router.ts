@@ -67,10 +67,16 @@ export function createAgentsRouter(
   router.get(
     "/agents/tasks/:taskId/messages",
     (request: Request<{ taskId: string }>, response: Response): void => {
-      sendSuccess(
-        response,
-        getService().listTaskMessages({ taskId: request.params.taskId })
-      );
+      void getService()
+        .listTaskMessages({ taskId: request.params.taskId })
+        .then((messages) => sendSuccess(response, messages))
+        .catch((error) => {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.badRequest,
+            error instanceof Error ? error.message : "Failed to load task messages"
+          );
+        });
     }
   );
 

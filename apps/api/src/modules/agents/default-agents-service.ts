@@ -4,7 +4,6 @@ import { createDatabase, migrateDatabase } from "../../db";
 import { createSqliteWorkspaceRepository } from "../workspaces";
 import { createAgentApprovalStore } from "./agent-approval-store";
 import { createAgentEventBus } from "./agent-event-bus";
-import { createSqliteAgentMessageRepository } from "./agent-message-repository";
 import type { AgentModelLookup } from "./agent-model-resolver";
 import { createAgentRuntime } from "./agent-runtime";
 import { createDefaultTaskTitleGenerator } from "./agent-task-title-generator";
@@ -23,7 +22,6 @@ export function getDefaultAgentsService(): AgentsService {
     );
     const approvalStore = createAgentApprovalStore();
     const eventBus = createAgentEventBus();
-    const messageRepository = createSqliteAgentMessageRepository(database);
     const modelProvidersService = getDefaultModelProvidersService();
     const getCustomModel = createCustomModelLookup(modelProvidersService);
     migrateDatabase(database.sqlite);
@@ -31,7 +29,6 @@ export function getDefaultAgentsService(): AgentsService {
     const runtime = createAgentRuntime({
       approvalStore,
       eventBus,
-      messageRepository,
       getApiKey: async (provider, modelId) =>
         modelProvidersService.getConfiguredModelForProvider(provider, modelId)
           ?.apiKey,
@@ -41,7 +38,6 @@ export function getDefaultAgentsService(): AgentsService {
     service = createAgentsService({
       approvalStore,
       eventBus,
-      messageRepository,
       modelProvidersService,
       repository: createSqliteWorkspaceRepository(database),
       runtime,

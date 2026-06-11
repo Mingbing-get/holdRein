@@ -6,8 +6,6 @@ import type { ModelProvidersService } from "../model-providers/model-providers-s
 import type { WorkspaceRepository } from "../workspaces/workspace-repository";
 import type { AgentApprovalStore } from "./agent-approval-store";
 import type { AgentEventBus, AgentEventListener } from "./agent-event-bus";
-import type { AgentMessageRepository } from "./agent-message-repository";
-import { restoreStoredAgentMessage } from "./agent-message-storage";
 import type { AgentRuntime } from "./agent-runtime";
 import type { TaskTitleGenerator } from "./agent-task-title-generator";
 import type {
@@ -27,7 +25,7 @@ export interface AgentsService {
   ) => Promise<ApprovalDecisionResult>;
   getTaskTitle: (input: GetTaskTitleInput) => Promise<TaskTitleResult | null>;
   continueTask: (input: ContinueTaskInput) => Promise<StartAgentResult | null>;
-  listTaskMessages: (input: GetTaskTitleInput) => StoredAgentMessage[];
+  listTaskMessages: (input: GetTaskTitleInput) => Promise<StoredAgentMessage[]>;
   startAgent: (input: StartAgentInput) => Promise<StartAgentResult>;
   subscribeToAgentEvents: (
     input: SubscribeAgentEventsInput,
@@ -47,7 +45,6 @@ export interface ContinueTaskInput {
 export interface CreateAgentsServiceOptions {
   approvalStore: AgentApprovalStore;
   eventBus: AgentEventBus;
-  messageRepository: AgentMessageRepository;
   modelProvidersService?: ModelProvidersService;
   now?: () => Date;
   repository: WorkspaceRepository;
@@ -107,27 +104,35 @@ export function createAgentsService(
       if (!task) return null;
       const workspace = options.repository.findWorkspaceById(task.workspaceId);
       if (!workspace) return null;
-      const history = options.messageRepository
-        .listByTaskId(taskId)
-        .map((row) => restoreStoredAgentMessage(row.message));
+      const session = getTaskSession(task);
       const run = await options.runtime.start({
-        history,
         modelId: task.lastModelId ?? task.lastModelName,
         prompt,
         provider: task.lastModelProvider,
+        ...(session ? { session } : {}),
         taskId,
         workspacePath: workspace.path
       });
-      const updatedTask =
-        options.repository.updateTaskContinuedAt(taskId, now().toISOString()) ??
-        task;
+      options.repository.updateTaskSession(taskId, run.session);
+      const updatedTask = options.repository.updateTaskContinuedAt(
+        taskId,
+        now().toISOString()
+      ) ?? task;
 
-      return { ...run, task: updatedTask, workspace };
+      return toStartAgentResult(run, updatedTask, workspace);
     },
-    listTaskMessages: ({ taskId }) =>
-      options.messageRepository
-        .listByTaskId(taskId)
-        .map((row) => row.message),
+    listTaskMessages: async ({ taskId }) => {
+      const task = options.repository.findTaskById(taskId);
+      if (!task) return [];
+      const workspace = options.repository.findWorkspaceById(task.workspaceId);
+      const session = getTaskSession(task);
+      if (!workspace || !session) return [];
+
+      return options.runtime.listMessages({
+        session,
+        workspacePath: workspace.path
+      });
+    },
     startAgent: async (input) => {
       const createdAt = now().toISOString();
       const workspace = ensureWorkspace({
@@ -151,6 +156,9 @@ export function createAgentsService(
         lastModelProviderSource: options.modelProvidersService?.hasProvider(input.provider)
           ? getProviderSource(input.provider, options.modelProvidersService)
           : "built_in",
+        sessionCreatedAt: null,
+        sessionId: null,
+        sessionPath: null,
         title: "",
         updatedAt: createdAt,
         workspaceId: workspace.id
@@ -167,15 +175,38 @@ export function createAgentsService(
       });
 
       const run = await options.runtime.start({ ...input, taskId: task.id });
+      const updatedTask = options.repository.updateTaskSession(task.id, run.session) ?? task;
 
-      return {
-        ...run,
-        task,
-        workspace
-      };
+      return toStartAgentResult(run, updatedTask, workspace);
     },
     subscribeToAgentEvents: (input, listener) =>
       options.eventBus.subscribe(input, listener)
+  };
+}
+
+function getTaskSession(task: TaskRow) {
+  if (!task.sessionId || !task.sessionPath || !task.sessionCreatedAt) {
+    return undefined;
+  }
+
+  return {
+    createdAt: task.sessionCreatedAt,
+    id: task.sessionId,
+    path: task.sessionPath
+  };
+}
+
+function toStartAgentResult(
+  run: Awaited<ReturnType<AgentRuntime["start"]>>,
+  task: TaskRow,
+  workspace: WorkspaceRow
+): StartAgentResult {
+  return {
+    agentId: run.agentId,
+    sessionId: run.session.id,
+    status: run.status,
+    task,
+    workspace
   };
 }
 

@@ -36,6 +36,10 @@ export interface WorkspaceRepository {
   listWorkspaces: () => WorkspaceRow[];
   updateTaskTitle: (taskId: string, title: string, updatedAt: string) => TaskRow | undefined;
   updateTaskContinuedAt: (taskId: string, continuedAt: string) => TaskRow | undefined;
+  updateTaskSession: (
+    taskId: string,
+    session: { createdAt: string; id: string; path: string }
+  ) => TaskRow | undefined;
 }
 
 export function createInMemoryWorkspaceRepository(
@@ -103,6 +107,19 @@ export function createInMemoryWorkspaceRepository(
         ...existingTask,
         lastContinuedAt: continuedAt,
         updatedAt: continuedAt
+      };
+      taskRows[taskIndex] = nextTask;
+      return nextTask;
+    },
+    updateTaskSession: (taskId, session) => {
+      const taskIndex = taskRows.findIndex((task) => task.id === taskId);
+      const existingTask = taskRows[taskIndex];
+      if (!existingTask) return undefined;
+      const nextTask = {
+        ...existingTask,
+        sessionCreatedAt: session.createdAt,
+        sessionId: session.id,
+        sessionPath: session.path
       };
       taskRows[taskIndex] = nextTask;
       return nextTask;
@@ -190,6 +207,18 @@ export function createSqliteWorkspaceRepository(
         .where(eq(tasks.id, taskId))
         .run();
       return database.db.select().from(tasks).where(eq(tasks.id, taskId)).get();
+    },
+    updateTaskSession: (taskId, session) => {
+      database.db
+        .update(tasks)
+        .set({
+          sessionCreatedAt: session.createdAt,
+          sessionId: session.id,
+          sessionPath: session.path
+        })
+        .where(eq(tasks.id, taskId))
+        .run();
+      return database.db.select().from(tasks).where(eq(tasks.id, taskId)).get();
     }
   };
 }
@@ -204,6 +233,9 @@ function toTaskRow(task: NewTaskRow): TaskRow {
   return {
     ...task,
     lastContinuedAt: task.lastContinuedAt ?? null,
-    lastModelId: task.lastModelId ?? null
+    lastModelId: task.lastModelId ?? null,
+    sessionCreatedAt: task.sessionCreatedAt ?? null,
+    sessionId: task.sessionId ?? null,
+    sessionPath: task.sessionPath ?? null
   };
 }

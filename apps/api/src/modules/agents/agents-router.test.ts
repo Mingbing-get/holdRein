@@ -22,7 +22,7 @@ function createService(overrides: Partial<AgentsService> = {}): AgentsService {
       task: { id: "task-1" },
       workspace: { id: "workspace-1" }
     }),
-    listTaskMessages: vi.fn().mockReturnValue([
+    listTaskMessages: vi.fn().mockResolvedValue([
       {
         content: [{ text: "History", type: "text" }],
         id: "message-1",

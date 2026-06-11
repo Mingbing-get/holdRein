@@ -165,6 +165,9 @@ function createTask(input: {
     lastModelName: "gpt-4.1",
     lastModelProvider: "openai",
     lastModelProviderSource: "built_in" as const,
+    sessionCreatedAt: null,
+    sessionId: null,
+    sessionPath: null,
     title: input.title,
     updatedAt: "2026-06-08T00:00:00.000Z",
     workspaceId: input.workspaceId

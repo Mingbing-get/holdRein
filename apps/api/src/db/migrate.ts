@@ -84,6 +84,9 @@ const CREATE_TASKS_TABLE_SQL = `
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     last_continued_at TEXT,
+    session_id TEXT,
+    session_path TEXT,
+    session_created_at TEXT,
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
   ) STRICT
 `;
@@ -97,28 +100,20 @@ const ADD_TASKS_LAST_MODEL_ID_COLUMN_SQL = `
   ALTER TABLE tasks ADD COLUMN last_model_id TEXT
 `;
 
-const CREATE_TASK_MESSAGES_TABLE_SQL = `
-  CREATE TABLE IF NOT EXISTS task_messages (
-    id TEXT PRIMARY KEY NOT NULL,
-    task_id TEXT NOT NULL,
-    agent_id TEXT NOT NULL,
-    sequence INTEGER NOT NULL,
-    role TEXT NOT NULL,
-    payload TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
-  ) STRICT
+const ADD_TASKS_SESSION_ID_COLUMN_SQL = `
+  ALTER TABLE tasks ADD COLUMN session_id TEXT
 `;
 
-const CREATE_TASK_MESSAGES_TASK_ID_INDEX_SQL = `
-  CREATE INDEX IF NOT EXISTS task_messages_task_id_idx
-  ON task_messages (task_id)
+const ADD_TASKS_SESSION_PATH_COLUMN_SQL = `
+  ALTER TABLE tasks ADD COLUMN session_path TEXT
 `;
 
-const CREATE_TASK_MESSAGES_TASK_SEQUENCE_INDEX_SQL = `
-  CREATE UNIQUE INDEX IF NOT EXISTS task_messages_task_sequence_idx
-  ON task_messages (task_id, sequence)
+const ADD_TASKS_SESSION_CREATED_AT_COLUMN_SQL = `
+  ALTER TABLE tasks ADD COLUMN session_created_at TEXT
+`;
+
+const DROP_TASK_MESSAGES_TABLE_SQL = `
+  DROP TABLE IF EXISTS task_messages
 `;
 
 export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
@@ -139,14 +134,22 @@ export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
   sqlite.exec(CREATE_WORKSPACES_PATH_INDEX_SQL);
   sqlite.exec(CREATE_TASKS_TABLE_SQL);
   sqlite.exec(CREATE_TASKS_WORKSPACE_ID_INDEX_SQL);
+  addColumnIfMissing(sqlite, ADD_TASKS_LAST_MODEL_ID_COLUMN_SQL);
+  addColumnIfMissing(sqlite, ADD_TASKS_SESSION_ID_COLUMN_SQL);
+  addColumnIfMissing(sqlite, ADD_TASKS_SESSION_PATH_COLUMN_SQL);
+  addColumnIfMissing(sqlite, ADD_TASKS_SESSION_CREATED_AT_COLUMN_SQL);
+  sqlite.exec(DROP_TASK_MESSAGES_TABLE_SQL);
+}
+
+function addColumnIfMissing(
+  sqlite: { exec: (sql: string) => void },
+  sql: string
+): void {
   try {
-    sqlite.exec(ADD_TASKS_LAST_MODEL_ID_COLUMN_SQL);
+    sqlite.exec(sql);
   } catch (error) {
     if (!(error instanceof Error) || !error.message.includes("duplicate column name")) {
       throw error;
     }
   }
-  sqlite.exec(CREATE_TASK_MESSAGES_TABLE_SQL);
-  sqlite.exec(CREATE_TASK_MESSAGES_TASK_ID_INDEX_SQL);
-  sqlite.exec(CREATE_TASK_MESSAGES_TASK_SEQUENCE_INDEX_SQL);
 }

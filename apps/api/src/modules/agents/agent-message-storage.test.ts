@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { AgentMessage } from "@earendil-works/pi-agent-core";
 
 import {
-  restoreStoredAgentMessage,
   toStoredAgentMessage
 } from "./agent-message-storage";
 
@@ -45,29 +44,5 @@ describe("agent message storage", () => {
       stopReason: "stop",
       timestamp: 1
     });
-  });
-
-  it("restores assistant messages with empty usage", () => {
-    const restored = restoreStoredAgentMessage({
-      api: "openai-responses",
-      content: [{ text: "Answer", type: "text" }],
-      id: "message-1",
-      model: "gpt-4.1",
-      provider: "openai",
-      role: "assistant",
-      stopReason: "stop",
-      timestamp: 1
-    });
-
-    expect(restored).toEqual(
-      expect.objectContaining({
-        role: "assistant",
-        usage: expect.objectContaining({
-          cost: expect.objectContaining({ total: 0 }),
-          totalTokens: 0
-        })
-      })
-    );
-    expect(restored).not.toHaveProperty("id");
   });
 });
