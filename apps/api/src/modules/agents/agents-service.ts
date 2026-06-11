@@ -37,10 +37,16 @@ export interface GetTaskTitleInput {
   taskId: string;
 }
 
-export interface ContinueTaskInput {
+interface ContinueTaskBaseInput {
   prompt: string;
   taskId: string;
 }
+
+export type ContinueTaskInput = ContinueTaskBaseInput &
+  (
+    | { modelId: string; provider: string }
+    | { modelId?: never; provider?: never }
+  );
 
 export interface CreateAgentsServiceOptions {
   approvalStore: AgentApprovalStore;
@@ -99,24 +105,37 @@ export function createAgentsService(
 
       return titleJobs.get(task.id) ?? { id: task.id, title: task.title };
     },
-    continueTask: async ({ prompt, taskId }) => {
+    continueTask: async (input) => {
+      const { prompt, taskId } = input;
       const task = options.repository.findTaskById(taskId);
       if (!task) return null;
       const workspace = options.repository.findWorkspaceById(task.workspaceId);
       if (!workspace) return null;
       const session = getTaskSession(task);
+      const selectedModel =
+        input.modelId !== undefined && input.provider !== undefined
+          ? getTaskModelMetadata(
+              input.provider,
+              input.modelId,
+              options.modelProvidersService
+            )
+          : null;
       const run = await options.runtime.start({
-        modelId: task.lastModelId ?? task.lastModelName,
+        modelId: selectedModel?.lastModelId ?? task.lastModelId ?? task.lastModelName,
         prompt,
-        provider: task.lastModelProvider,
+        provider: selectedModel?.lastModelProvider ?? task.lastModelProvider,
         ...(session ? { session } : {}),
         taskId,
         workspacePath: workspace.path
       });
       options.repository.updateTaskSession(taskId, run.session);
+      const continuedAt = now().toISOString();
+      if (selectedModel) {
+        options.repository.updateTaskModel(taskId, selectedModel, continuedAt);
+      }
       const updatedTask = options.repository.updateTaskContinuedAt(
         taskId,
-        now().toISOString()
+        continuedAt
       ) ?? task;
 
       return toStartAgentResult(run, updatedTask, workspace);
@@ -145,17 +164,17 @@ export function createAgentsService(
           input.provider,
           input.modelId
         ) ?? null;
+      const taskModel = getTaskModelMetadata(
+        input.provider,
+        input.modelId,
+        options.modelProvidersService
+      );
       const task = options.repository.createTask({
         createdAt,
         id: `task_${randomUUID()}`,
         initialUserMessage: input.prompt,
         lastContinuedAt: createdAt,
-        lastModelId: input.modelId,
-        lastModelName: configuredModel?.model.name ?? input.modelId,
-        lastModelProvider: input.provider,
-        lastModelProviderSource: options.modelProvidersService?.hasProvider(input.provider)
-          ? getProviderSource(input.provider, options.modelProvidersService)
-          : "built_in",
+        ...taskModel,
         sessionCreatedAt: null,
         sessionId: null,
         sessionPath: null,
@@ -243,6 +262,28 @@ function getProviderSource(
     .find((item) => item.id === provider);
 
   return summary?.source === "custom" ? "custom" : "built_in";
+}
+
+function getTaskModelMetadata(
+  provider: string,
+  modelId: string,
+  modelProvidersService?: ModelProvidersService
+): Pick<
+  TaskRow,
+  "lastModelId" | "lastModelName" | "lastModelProvider" | "lastModelProviderSource"
+> {
+  const configuredModel =
+    modelProvidersService?.getConfiguredModelForProvider(provider, modelId) ?? null;
+
+  return {
+    lastModelId: modelId,
+    lastModelName: configuredModel?.model.name ?? modelId,
+    lastModelProvider: provider,
+    lastModelProviderSource:
+      modelProvidersService?.hasProvider(provider)
+        ? getProviderSource(provider, modelProvidersService)
+        : "built_in"
+  };
 }
 
 function startTitleJob(input: {

@@ -147,7 +147,11 @@ describe("ChatWorkspace", () => {
 
     expect(agentTasksMock.continueTask).toHaveBeenCalledWith(
       "task-one",
-      "Inspect this project"
+      {
+        modelId: "claude-3-5-sonnet",
+        prompt: "Inspect this project",
+        provider: "anthropic"
+      }
     );
   });
 });

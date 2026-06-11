@@ -139,6 +139,25 @@ describe("agent routes", () => {
     const service = createService();
     const response = await request(createApp({ agentsService: service }))
       .post("/api/v1/agents/tasks/task-1/continue")
+      .send({
+        modelId: "claude-3-5-sonnet",
+        prompt: "Continue",
+        provider: "anthropic"
+      });
+
+    expect(response.status).toBe(200);
+    expect(service.continueTask).toHaveBeenCalledWith({
+      modelId: "claude-3-5-sonnet",
+      prompt: "Continue",
+      provider: "anthropic",
+      taskId: "task-1"
+    });
+  });
+
+  it("continues with the previous model when model fields are omitted", async () => {
+    const service = createService();
+    const response = await request(createApp({ agentsService: service }))
+      .post("/api/v1/agents/tasks/task-1/continue")
       .send({ prompt: "Continue" });
 
     expect(response.status).toBe(200);
@@ -146,6 +165,19 @@ describe("agent routes", () => {
       prompt: "Continue",
       taskId: "task-1"
     });
+  });
+
+  it("rejects continue requests with only one model field", async () => {
+    const service = createService();
+    const response = await request(createApp({ agentsService: service }))
+      .post("/api/v1/agents/tasks/task-1/continue")
+      .send({ prompt: "Continue", provider: "anthropic" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.msg).toBe(
+      "prompt must be a string and provider and modelId must both be strings when provided"
+    );
+    expect(service.continueTask).not.toHaveBeenCalled();
   });
 
   it("streams agent events as NDJSON after the requested sequence", async () => {

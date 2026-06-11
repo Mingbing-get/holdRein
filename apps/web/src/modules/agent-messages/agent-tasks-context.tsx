@@ -24,12 +24,13 @@ import {
 } from "./agent-message-reducer";
 import type {
   AgentTaskState,
+  ContinueTaskInput,
   StartTaskInput,
   StartTaskResult
 } from "./agent-message-types";
 
 export interface AgentTasksContextValue {
-  continueTask: (taskId: string, prompt: string) => Promise<void>;
+  continueTask: (taskId: string, input: ContinueTaskInput) => Promise<void>;
   getTaskState: (taskId: string) => AgentTaskState | undefined;
   startTask: (input: StartTaskInput) => Promise<void>;
 }
@@ -125,14 +126,14 @@ export function AgentTasksProvider({
   );
 
   const continueTask = useCallback(
-    async (taskId: string, prompt: string) => {
-      const result = await continueAgentTask(apiBaseUrl, taskId, prompt, fetcher);
+    async (taskId: string, input: ContinueTaskInput) => {
+      const result = await continueAgentTask(apiBaseUrl, taskId, input, fetcher);
       setTaskStates((current) => ({
         ...current,
         [taskId]: addRun(
           reduceAgentTaskState(
             current[taskId] ?? createInitialAgentTaskState(taskId),
-            { prompt, type: "prompt_submitted" }
+            { prompt: input.prompt, type: "prompt_submitted" }
           ),
           result
         )

@@ -85,12 +85,25 @@ describe("agent message API", () => {
       });
 
     await expect(fetchTaskMessages("", "task-1", fetcher)).resolves.toHaveLength(1);
-    await continueAgentTask("", "task-1", "Continue", fetcher);
+    await continueAgentTask(
+      "",
+      "task-1",
+      {
+        modelId: "claude-3-5-sonnet",
+        prompt: "Continue",
+        provider: "anthropic"
+      },
+      fetcher
+    );
 
     expect(fetcher).toHaveBeenLastCalledWith(
       "/api/v1/agents/tasks/task-1/continue",
       expect.objectContaining({
-        body: JSON.stringify({ prompt: "Continue" }),
+        body: JSON.stringify({
+          modelId: "claude-3-5-sonnet",
+          prompt: "Continue",
+          provider: "anthropic"
+        }),
         method: "POST"
       })
     );

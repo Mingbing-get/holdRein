@@ -130,7 +130,9 @@ describe("agents service", () => {
     expect(result?.task.id).toBe("task-1");
     expect(runtime.start).toHaveBeenCalledWith(
       expect.objectContaining({
+        modelId: "gpt-4.1",
         prompt: "Continue",
+        provider: "openai",
         session: {
           createdAt: "2026-06-08T00:00:00.000Z",
           id: "session-1",
@@ -138,6 +140,86 @@ describe("agents service", () => {
         },
         taskId: "task-1",
         workspacePath: "/tmp/workspace"
+      })
+    );
+  });
+
+  it("continues with a new model and stores it for the next run", async () => {
+    const repository = createInMemoryWorkspaceRepository({
+      tasks: [
+        {
+          createdAt: "now",
+          id: "task-1",
+          initialUserMessage: "Initial",
+          lastContinuedAt: "now",
+          lastModelId: "gpt-4.1",
+          lastModelName: "gpt-4.1",
+          lastModelProvider: "openai",
+          lastModelProviderSource: "built_in",
+          sessionCreatedAt: "2026-06-08T00:00:00.000Z",
+          sessionId: "session-1",
+          sessionPath: "/sessions/session-1.jsonl",
+          title: "Task",
+          updatedAt: "now",
+          workspaceId: "workspace-1"
+        }
+      ],
+      workspaces: [
+        {
+          createdAt: "now",
+          id: "workspace-1",
+          name: "workspace",
+          path: "/tmp/workspace",
+          updatedAt: "now"
+        }
+      ]
+    });
+    const runtime = {
+      listMessages: vi.fn(),
+      start: vi.fn().mockResolvedValue({
+        agentId: "agent-2",
+        session: {
+          createdAt: "2026-06-08T00:00:00.000Z",
+          id: "session-1",
+          path: "/sessions/session-1.jsonl"
+        },
+        status: "running"
+      })
+    };
+    const service = createAgentsService({
+      approvalStore: createAgentApprovalStore(),
+      eventBus: createAgentEventBus(),
+      now: () => new Date("2026-06-11T00:00:00.000Z"),
+      repository,
+      runtime,
+      titleGenerator: { generateTitle: vi.fn() }
+    });
+
+    const result = await service.continueTask({
+      modelId: "claude-3-5-sonnet",
+      prompt: "Continue",
+      provider: "anthropic",
+      taskId: "task-1"
+    });
+
+    expect(runtime.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelId: "claude-3-5-sonnet",
+        provider: "anthropic"
+      })
+    );
+    expect(result?.task).toEqual(
+      expect.objectContaining({
+        lastModelId: "claude-3-5-sonnet",
+        lastModelName: "claude-3-5-sonnet",
+        lastModelProvider: "anthropic",
+        lastModelProviderSource: "built_in"
+      })
+    );
+    expect(repository.findTaskById("task-1")).toEqual(
+      expect.objectContaining({
+        lastModelId: "claude-3-5-sonnet",
+        lastModelProvider: "anthropic"
       })
     );
   });

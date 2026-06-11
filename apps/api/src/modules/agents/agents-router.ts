@@ -22,7 +22,9 @@ interface ApprovalDecisionBody {
 }
 
 interface ContinueTaskBody {
+  modelId?: string;
   prompt?: string;
+  provider?: string;
 }
 
 export function createAgentsRouter(
@@ -86,13 +88,19 @@ export function createAgentsRouter(
       request: Request<{ taskId: string }, unknown, ContinueTaskBody>,
       response: Response
     ): void => {
-      if (typeof request.body.prompt !== "string") {
-        sendError(response, RESPONSE_CODE_DEFINITIONS.badRequest, "prompt must be a string");
+      const input = parseContinueTaskBody(request.body, request.params.taskId);
+
+      if (!input) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "prompt must be a string and provider and modelId must both be strings when provided"
+        );
         return;
       }
 
       void getService()
-        .continueTask({ prompt: request.body.prompt, taskId: request.params.taskId })
+        .continueTask(input)
         .then((result) => {
           if (!result) {
             sendError(response, RESPONSE_CODE_DEFINITIONS.notFound, "Unknown task");
@@ -212,6 +220,30 @@ export function createAgentsRouter(
   );
 
   return router;
+}
+
+function parseContinueTaskBody(
+  body: ContinueTaskBody,
+  taskId: string
+): Parameters<AgentsService["continueTask"]>[0] | null {
+  if (typeof body.prompt !== "string") {
+    return null;
+  }
+
+  if (body.provider === undefined && body.modelId === undefined) {
+    return { prompt: body.prompt, taskId };
+  }
+
+  if (typeof body.provider !== "string" || typeof body.modelId !== "string") {
+    return null;
+  }
+
+  return {
+    modelId: body.modelId,
+    prompt: body.prompt,
+    provider: body.provider,
+    taskId
+  };
 }
 
 function parseStartAgentBody(body: StartAgentBody): StartAgentInput | null {

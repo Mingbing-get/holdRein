@@ -36,6 +36,14 @@ export interface WorkspaceRepository {
   listWorkspaces: () => WorkspaceRow[];
   updateTaskTitle: (taskId: string, title: string, updatedAt: string) => TaskRow | undefined;
   updateTaskContinuedAt: (taskId: string, continuedAt: string) => TaskRow | undefined;
+  updateTaskModel: (
+    taskId: string,
+    model: Pick<
+      TaskRow,
+      "lastModelId" | "lastModelName" | "lastModelProvider" | "lastModelProviderSource"
+    >,
+    updatedAt: string
+  ) => TaskRow | undefined;
   updateTaskSession: (
     taskId: string,
     session: { createdAt: string; id: string; path: string }
@@ -108,6 +116,14 @@ export function createInMemoryWorkspaceRepository(
         lastContinuedAt: continuedAt,
         updatedAt: continuedAt
       };
+      taskRows[taskIndex] = nextTask;
+      return nextTask;
+    },
+    updateTaskModel: (taskId, model, updatedAt) => {
+      const taskIndex = taskRows.findIndex((task) => task.id === taskId);
+      const existingTask = taskRows[taskIndex];
+      if (!existingTask) return undefined;
+      const nextTask = { ...existingTask, ...model, updatedAt };
       taskRows[taskIndex] = nextTask;
       return nextTask;
     },
@@ -204,6 +220,14 @@ export function createSqliteWorkspaceRepository(
       database.db
         .update(tasks)
         .set({ lastContinuedAt: continuedAt, updatedAt: continuedAt })
+        .where(eq(tasks.id, taskId))
+        .run();
+      return database.db.select().from(tasks).where(eq(tasks.id, taskId)).get();
+    },
+    updateTaskModel: (taskId, model, updatedAt) => {
+      database.db
+        .update(tasks)
+        .set({ ...model, updatedAt })
         .where(eq(tasks.id, taskId))
         .run();
       return database.db.select().from(tasks).where(eq(tasks.id, taskId)).get();

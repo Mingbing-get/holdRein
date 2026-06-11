@@ -1,6 +1,7 @@
 import type {
   AgentMessage,
   AgentEventEnvelope,
+  ContinueTaskInput,
   StartTaskInput,
   StartTaskResult,
   TaskTitleResult
@@ -58,14 +59,14 @@ export async function fetchTaskMessages(
 export async function continueAgentTask(
   apiBaseUrl: string,
   taskId: string,
-  prompt: string,
+  input: ContinueTaskInput,
   fetcher: AgentMessageFetcher = fetch
 ): Promise<StartTaskResult> {
   return requestData<StartTaskResult>(
     fetcher,
     `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/agents/tasks/${encodeURIComponent(taskId)}/continue`,
     {
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify(input),
       headers: { "Content-Type": "application/json" },
       method: "POST"
     }

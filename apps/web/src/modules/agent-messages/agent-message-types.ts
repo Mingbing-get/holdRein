@@ -112,6 +112,12 @@ export interface StartTaskInput {
   workspacePath: string;
 }
 
+export interface ContinueTaskInput {
+  modelId: string;
+  prompt: string;
+  provider: string;
+}
+
 export interface StartedWorkspace {
   id: string;
   name: string;

@@ -96,7 +96,11 @@ export function ChatWorkspace({
           }
 
           if (activeTaskId) {
-            await continueTask(activeTaskId, message);
+            await continueTask(activeTaskId, {
+              modelId: activeAgent.modelId,
+              prompt: message,
+              provider: activeAgent.providerId
+            });
             return;
           }
 
