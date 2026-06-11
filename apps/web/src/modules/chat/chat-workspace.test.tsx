@@ -154,6 +154,27 @@ describe("ChatWorkspace", () => {
       }
     );
   });
+
+  it("starts a new task when no task is active", () => {
+    agentTasksMock.startTask.mockResolvedValue(undefined);
+    renderChatWorkspace({
+      activeAgent: {
+        modelId: "claude-3-5-sonnet",
+        providerId: "anthropic"
+      },
+      activeWorkspaceId: "workspace-one"
+    });
+
+    fireEvent.click(screen.getByTestId("sender"));
+
+    expect(agentTasksMock.startTask).toHaveBeenCalledWith({
+      modelId: "claude-3-5-sonnet",
+      prompt: "Inspect this project",
+      provider: "anthropic",
+      workspacePath: "/Users/mingbing/apps/workspace-one"
+    });
+    expect(agentTasksMock.continueTask).not.toHaveBeenCalled();
+  });
 });
 
 interface RenderOptions {

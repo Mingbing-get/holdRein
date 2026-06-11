@@ -22,11 +22,13 @@ export interface AppWorkspaceState {
   activeAgent: ActiveAgentSelection | null;
   activeTaskId: string;
   activeWorkspaceId: string;
+  newConversationWorkspaceId: string;
   workspaces: WorkspaceSummary[];
 }
 
 export interface AppWorkspaceContextValue {
   state: AppWorkspaceState;
+  startNewConversation: () => void;
   setActiveAgent: (activeAgent: ActiveAgentSelection | null) => void;
   setActiveTaskId: (taskId: string) => void;
   setActiveWorkspaceId: (workspaceId: string) => void;
@@ -53,6 +55,7 @@ const DEFAULT_APP_WORKSPACE_STATE: AppWorkspaceState = {
   activeAgent: null,
   activeTaskId: "",
   activeWorkspaceId: "",
+  newConversationWorkspaceId: "",
   workspaces: []
 };
 
@@ -160,7 +163,8 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
   const setActiveTaskId = useCallback((activeTaskId: string) => {
     setState((currentState) => ({
       ...currentState,
-      activeTaskId
+      activeTaskId,
+      newConversationWorkspaceId: ""
     }));
   }, []);
 
@@ -168,7 +172,19 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
     storeActiveWorkspaceId(activeWorkspaceId);
     setState((currentState) => ({
       ...currentState,
-      activeWorkspaceId
+      activeWorkspaceId,
+      newConversationWorkspaceId:
+        activeWorkspaceId === currentState.activeWorkspaceId
+          ? currentState.newConversationWorkspaceId
+          : ""
+    }));
+  }, []);
+
+  const startNewConversation = useCallback(() => {
+    setState((currentState) => ({
+      ...currentState,
+      activeTaskId: "",
+      newConversationWorkspaceId: currentState.activeWorkspaceId
     }));
   }, []);
 
@@ -233,6 +249,7 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
           ...currentState,
           activeTaskId: task.id,
           activeWorkspaceId: workspace.id,
+          newConversationWorkspaceId: "",
           workspaces: [
             nextWorkspace,
             ...currentState.workspaces.filter(
@@ -249,6 +266,7 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
   const contextValue = useMemo<AppWorkspaceContextValue>(
     () => ({
       state,
+      startNewConversation,
       setActiveAgent,
       setActiveTaskId,
       setActiveWorkspaceId,
@@ -261,6 +279,7 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
       setActiveTaskId,
       setActiveWorkspaceId,
       setWorkspaces,
+      startNewConversation,
       state,
       updateTaskTitle,
       upsertStartedTask

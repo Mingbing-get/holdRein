@@ -234,6 +234,45 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps a new conversation blank in the active workspace", async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input);
+
+      if (url.endsWith("/api/v1/workspaces/recent-tasks")) {
+        return {
+          json: async () => workspaceNavigationResponse,
+          ok: true
+        } as Response;
+      }
+
+      return {
+        json: async () => modelProvidersResponse,
+        ok: true
+      } as Response;
+    });
+
+    render(<App />);
+
+    expect(await screen.findByTestId("chat-workspace")).toHaveAttribute(
+      "data-task-name",
+      "First task"
+    );
+
+    const newTaskButton = screen.getByRole("button", { name: "开启新任务" });
+
+    await waitFor(() => {
+      expect(newTaskButton).toBeEnabled();
+    });
+    fireEvent.click(newTaskButton);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("chat-workspace")).toHaveAttribute(
+        "data-task-name",
+        ""
+      );
+    });
+  });
+
   it("switches the active workspace from the workspace selector", async () => {
     fetchMock.mockImplementation(async (input) => {
       const url = String(input);

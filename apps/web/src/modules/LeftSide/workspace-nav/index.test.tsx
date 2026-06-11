@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within
+} from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -94,16 +100,42 @@ describe("WorkspaceNav", () => {
 
     expect(within(nav).getByText("暂无任务")).toBeInTheDocument();
     expect(
+      within(nav).getByRole("button", { name: "开启新任务" })
+    ).toBeDisabled();
+    expect(
       within(nav).queryByTestId("workspace-group-workspace-real")
     ).not.toBeInTheDocument();
   });
+
+  it("starts a blank conversation in the active workspace", () => {
+    renderWorkspaceNav(workspaceSummaries, {
+      activeTaskId: "task-real-1",
+      activeWorkspaceId: "workspace-real"
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "开启新任务" }));
+
+    expect(screen.getByTestId("active-workspace-id")).toHaveTextContent(
+      "workspace-real"
+    );
+    expect(screen.getByTestId("active-task-id")).toBeEmptyDOMElement();
+  });
 });
 
-function renderWorkspaceNav(workspaces: WorkspaceSummary[]) {
+function renderWorkspaceNav(
+  workspaces: WorkspaceSummary[],
+  activeSelection: {
+    activeTaskId?: string;
+    activeWorkspaceId?: string;
+  } = {}
+) {
   render(
     <AppUiProvider>
       <AppWorkspaceProvider>
-        <WorkspaceNavTestState workspaces={workspaces} />
+        <WorkspaceNavTestState
+          {...activeSelection}
+          workspaces={workspaces}
+        />
         <WorkspaceNav />
       </AppWorkspaceProvider>
     </AppUiProvider>
@@ -111,15 +143,38 @@ function renderWorkspaceNav(workspaces: WorkspaceSummary[]) {
 }
 
 function WorkspaceNavTestState({
+  activeTaskId,
+  activeWorkspaceId,
   workspaces
 }: {
+  activeTaskId?: string;
+  activeWorkspaceId?: string;
   workspaces: WorkspaceSummary[];
 }) {
-  const { setWorkspaces } = useAppWorkspace();
+  const {
+    state,
+    setActiveTaskId,
+    setActiveWorkspaceId,
+    setWorkspaces
+  } = useAppWorkspace();
 
   useEffect(() => {
     setWorkspaces(workspaces);
-  }, [setWorkspaces, workspaces]);
+    setActiveTaskId(activeTaskId ?? "");
+    setActiveWorkspaceId(activeWorkspaceId ?? "");
+  }, [
+    activeTaskId,
+    activeWorkspaceId,
+    setActiveTaskId,
+    setActiveWorkspaceId,
+    setWorkspaces,
+    workspaces
+  ]);
 
-  return null;
+  return (
+    <>
+      <span data-testid="active-workspace-id">{state.activeWorkspaceId}</span>
+      <span data-testid="active-task-id">{state.activeTaskId}</span>
+    </>
+  );
 }

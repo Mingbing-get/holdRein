@@ -7,11 +7,16 @@ import { WorkspaceSection } from "../workspace-section";
 
 export function WorkspaceNav() {
   const {
+    openChatWorkspace,
     state: { sidebarCollapsed }
   } = useAppUi();
   const {
-    state: { workspaces }
+    state: { activeWorkspaceId, workspaces },
+    startNewConversation
   } = useAppWorkspace();
+  const hasActiveWorkspace = workspaces.some(
+    (workspace) => workspace.id === activeWorkspaceId
+  );
 
   return (
     <nav
@@ -21,7 +26,12 @@ export function WorkspaceNav() {
       <Button
         aria-label="开启新任务"
         block
+        disabled={!hasActiveWorkspace}
         icon={<PlusOutlined />}
+        onClick={() => {
+          startNewConversation();
+          openChatWorkspace();
+        }}
         style={{
           borderColor: "var(--app-color-border-secondary)",
           borderRadius: 6,

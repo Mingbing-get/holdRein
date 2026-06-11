@@ -24,7 +24,12 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
     }
   } = useAppUi();
   const {
-    state: { activeTaskId, activeWorkspaceId, workspaces },
+    state: {
+      activeTaskId,
+      activeWorkspaceId,
+      newConversationWorkspaceId,
+      workspaces
+    },
     setActiveTaskId,
     setActiveWorkspaceId,
     setWorkspaces
@@ -55,7 +60,9 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
     workspaces[0];
   const activeTask =
     activeWorkspace?.tasks.find((task) => task.id === activeTaskId) ??
-    activeWorkspace?.tasks[0];
+    (activeWorkspace?.id === newConversationWorkspaceId
+      ? undefined
+      : activeWorkspace?.tasks[0]);
 
   useEffect(() => {
     if (!activeWorkspace) {
@@ -78,6 +85,7 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
     activeTask,
     activeWorkspace,
     activeWorkspaceId,
+    newConversationWorkspaceId,
     setActiveTaskId,
     setActiveWorkspaceId
   ]);
