@@ -23,9 +23,8 @@ export type {
   AgentEventSubscription,
   ApprovalDecisionInput,
   ApprovalDecisionResult,
-  ShellCommandApprovalRequest,
-  ShellCommandRisk,
   StartAgentInput,
   StartAgentResult,
-  SubscribeAgentEventsInput
+  SubscribeAgentEventsInput,
+  ToolApprovalRequest
 } from "./agent-types";

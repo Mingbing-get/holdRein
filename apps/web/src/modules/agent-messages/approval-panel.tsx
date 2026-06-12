@@ -12,6 +12,8 @@ export function ApprovalPanel({ approval, onDecide }: ApprovalPanelProps) {
   const { message } = App.useApp();
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const title =
+    approval.title?.trim() || `是否允许执行 ${approval.tool.name} tool？`;
 
   const submit = async (approved: boolean) => {
     if (submitting) return;
@@ -49,8 +51,7 @@ export function ApprovalPanel({ approval, onDecide }: ApprovalPanelProps) {
         zIndex: 1
       }}
     >
-      <Typography.Text strong>待审批命令</Typography.Text>
-      <Typography.Text code>{approval.command}</Typography.Text>
+      <Typography.Text strong>{title}</Typography.Text>
       <Button
         block
         disabled={submitting}

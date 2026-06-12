@@ -194,17 +194,29 @@ function getPendingApproval(
   if (
     typeof value?.agentId !== "string" ||
     typeof value.approvalId !== "string" ||
-    typeof value.command !== "string" ||
-    typeof value.cwd !== "string" ||
-    !["safe", "writes", "dangerous"].includes(String(value.risk))
+    (value.title !== undefined && typeof value.title !== "string")
+  ) {
+    return undefined;
+  }
+  const tool = getRecord(value.tool);
+  if (
+    typeof tool?.name !== "string" ||
+    typeof tool.toolCallId !== "string" ||
+    (tool.description !== undefined && typeof tool.description !== "string") ||
+    (tool.label !== undefined && typeof tool.label !== "string")
   ) {
     return undefined;
   }
   return {
     agentId: value.agentId,
     approvalId: value.approvalId,
-    command: value.command,
-    cwd: value.cwd,
-    risk: value.risk as PendingApproval["risk"]
+    ...(value.title === undefined ? {} : { title: value.title }),
+    tool: {
+      ...(tool.description === undefined ? {} : { description: tool.description }),
+      input: tool.input,
+      ...(tool.label === undefined ? {} : { label: tool.label }),
+      name: tool.name,
+      toolCallId: tool.toolCallId
+    }
   };
 }

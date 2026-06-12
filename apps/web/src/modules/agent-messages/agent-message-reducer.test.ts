@@ -97,9 +97,13 @@ describe("agent task message reducer", () => {
     const approval = {
       agentId: "agent-1",
       approvalId: "approval-1",
-      command: "rm -rf dist",
-      cwd: "/workspace",
-      risk: "dangerous" as const
+      title: "允许插件修改工作区？",
+      tool: {
+        description: "Apply the requested workspace change",
+        input: { file: "src/index.ts" },
+        name: "workspace_patch",
+        toolCallId: "tool-call-1"
+      }
     };
     const state = [
       event(1, "approval_requested", approval),
@@ -119,9 +123,11 @@ describe("agent task message reducer", () => {
       event: event(1, "approval_requested", {
         agentId: "agent-1",
         approvalId: "approval-1",
-        command: "rm -rf dist",
-        cwd: "/workspace",
-        risk: "dangerous"
+        tool: {
+          input: {},
+          name: "workspace_patch",
+          toolCallId: "tool-call-1"
+        }
       }),
       type: "event_received"
     });

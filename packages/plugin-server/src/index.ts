@@ -51,7 +51,7 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
         if (!plugin.registerRoutes) continue
 
         const route = await plugin.registerRoutes(context)
-        prefixRouter.use(route)
+        prefixRouter.use(plugin.id, route)
       }
     },
 

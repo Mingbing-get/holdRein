@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { join } from "node:path";
 
 import {
   AgentHarness,
@@ -10,6 +10,7 @@ import {
   loadSkills,
   type JsonlSessionRepoApi
 } from "@earendil-works/pi-agent-core/node";
+import type { ServerPlugin } from '@hold-rein/plugin-server'
 import { SESSIONS_DIR } from "../../config/const";
 import type { AgentApprovalStore } from "./agent-approval-store";
 import type { AgentEventBus } from "./agent-event-bus";
@@ -22,11 +23,10 @@ import {
   type AgentRunResult,
   type AgentSessionMetadata,
   type StoredAgentMessage,
-  type ShellCommandApprovalRequest,
+  type ToolApprovalRequest,
   type RunAgentInput
 } from "./agent-types";
-import { createShellExecTool } from "./shell-exec-tool";
-import { classifyShellCommandRisk } from "./shell-command-risk";
+import { pluginRegistry } from '../../plugin'
 
 export interface AgentRuntime {
   listMessages: (input: {
@@ -72,13 +72,6 @@ export function createAgentRuntime(
         ? await sessionRepo.open({ ...input.session, cwd: input.workspacePath })
         : await sessionRepo.create({ cwd: input.workspacePath });
       const sessionMetadata = await session.getMetadata();
-      const skillDirs = getSkillDirs(input.workspacePath, options.skillDirs);
-      const { skills } = await loadSkills(env, skillDirs);
-      const shellExecTool = createShellExecTool(env);
-      const allowedCommandRoots = [
-        input.workspacePath,
-        ...skills.map((skill) => dirname(skill.filePath))
-      ];
       const model = await resolveAgentModel(
         input.provider,
         input.modelId,
@@ -89,8 +82,21 @@ export function createAgentRuntime(
         throw new Error("Unknown model");
       }
 
+      const pluginContext: ServerPlugin.RuntimeContext = {
+        env,
+        session,
+        prompt: input.prompt,
+        thinkingLevel: 'medium',
+        model
+      }
+      const contribution = await pluginRegistry.resolveContributions(pluginContext)
+
+      const skillDirs = getSkillDirs(input.workspacePath, [...(options.skillDirs || []), ...(contribution.skillDirs || [])]);
+      const { skills: loadedSkills } = await loadSkills(env, skillDirs);
+      const skills = [...loadedSkills, ...(contribution.skills || [])];
+
       const harness = new AgentHarness({
-        activeToolNames: [shellExecTool.name],
+        activeToolNames: contribution.tools?.map(tool => tool.name) || [],
         env,
         getApiKeyAndHeaders: async () => {
           const apiKey =
@@ -99,23 +105,29 @@ export function createAgentRuntime(
 
           return apiKey ? { apiKey } : undefined;
         },
-        model,
+        model: contribution.model || model,
         resources: { skills },
         session,
         systemPrompt: ({ resources }) =>
           [
-            "You are a careful coding assistant running inside HoldRein.",
+            ...(contribution.systemPrompts || []),
             "Use shell_exec for workspace commands and skill scripts.",
             "Resolve skill-relative references from each skill file directory.",
             formatSkillsForSystemPrompt(resources.skills ?? [])
           ]
             .filter(Boolean)
             .join("\n\n"),
-        tools: [shellExecTool]
+        tools: contribution.tools || []
       });
 
       let activeMessageId: string | undefined;
       harness.subscribe((event) => {
+        try {
+          contribution.subscribe?.(event)
+        } catch {
+          // Keep plugin subscriber failures from breaking agent event delivery.
+        }
+
         if (event.type === "message_start") {
           activeMessageId = `message_${randomUUID()}`;
           options.eventBus.emit({
@@ -153,51 +165,47 @@ export function createAgentRuntime(
       });
 
       harness.on("tool_call", async (event) => {
-        if (event.toolName !== shellExecTool.name) {
-          return undefined;
-        }
+        const tool = contribution.tools?.find(tool => tool.name === event.toolName)
+        if (!tool?.beforeExecute) return
 
-        const command = getStringValue(event.input.command);
-        const cwd = getStringValue(event.input.cwd) ?? input.workspacePath;
-
-        if (!command) {
-          return { block: true, reason: "shell_exec command must be a string" };
-        }
-
-        if (!isPathInsideAny(cwd, allowedCommandRoots)) {
-          return { block: true, reason: `cwd is outside allowed roots: ${cwd}` };
-        }
-
-        const risk = classifyShellCommandRisk(command);
-
-        if (risk === "safe") {
-          return undefined;
-        }
-
-        const approvalId = `approval_${randomUUID()}`;
-        const approvalRequest: ShellCommandApprovalRequest = {
-          agentId,
-          approvalId,
-          command,
-          cwd,
-          risk
-        };
-        const approval = options.approvalStore.request(approvalRequest);
-        options.eventBus.emit({
-          agentId,
-          payload: approvalRequest,
-          type: "approval_requested"
-        });
-
-        const decision = await approval;
-        return decision.approved
-          ? undefined
-          : {
-              block: true,
-              reason:
-                decision.reason?.trim() ||
-                `User denied shell command: ${command}`
+        const beforeExecuteoptions: ServerPlugin.ToolBeforeExecuteOptions = {
+          workspacePath: input.workspacePath,
+          event,
+          requestApproval: async (title) => {
+            const approvalId = `approval_${randomUUID()}`;
+            const approvalRequest: ToolApprovalRequest = {
+              agentId,
+              approvalId,
+              ...(title === undefined ? {} : { title }),
+              tool: {
+                name: tool.name,
+                input: event.input,
+                ...(tool.description === undefined ? {} : { description: tool.description }),
+                ...(tool.label === undefined ? {} : { label: tool.label }),
+                toolCallId: event.toolCallId
+              }
             };
+            const approval = options.approvalStore.request(approvalRequest);
+            options.eventBus.emit({
+              agentId,
+              payload: approvalRequest,
+              type: "approval_requested"
+            });
+
+            const decision = await approval;
+
+            return decision.approved
+              ? undefined
+              : {
+                  block: true,
+                  reason:
+                    decision.reason?.trim() ||
+                    `User denied execute tool: ${tool.name}`
+                };
+          }
+        }
+
+        return await tool.beforeExecute(beforeExecuteoptions)
       });
 
       runningAgents.set(agentId, { harness, sessionId: sessionMetadata.id });
@@ -242,27 +250,4 @@ function getSkillDirs(workspacePath: string, configuredSkillDirs?: string[]): st
 
 function getEnvApiKey(provider: string): string | undefined {
   return process.env[`${provider.toUpperCase()}_API_KEY`];
-}
-
-
-function getStringValue(value: unknown): string | undefined {
-  return typeof value === "string" ? value : undefined;
-}
-
-function dirname(path: string): string {
-  return path.slice(0, path.lastIndexOf("/"));
-}
-
-function isPathInsideAny(path: string, roots: string[]): boolean {
-  const resolvedPath = resolve(path);
-
-  return roots.some((root) => {
-    const resolvedRoot = resolve(root);
-    const relativePath = relative(resolvedRoot, resolvedPath);
-
-    return (
-      relativePath === "" ||
-      (!relativePath.startsWith("..") && !isAbsolute(relativePath))
-    );
-  });
 }

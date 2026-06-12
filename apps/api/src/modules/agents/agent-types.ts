@@ -69,15 +69,18 @@ export interface ApprovalDecision {
   reason?: string;
 }
 
-export interface ShellCommandApprovalRequest {
+export interface ToolApprovalRequest {
   agentId: string;
   approvalId: string;
-  command: string;
-  cwd: string;
-  risk: ShellCommandRisk;
+  title?: string;
+  tool: {
+    description?: string;
+    input: unknown;
+    label?: string;
+    name: string;
+    toolCallId: string;
+  };
 }
-
-export type ShellCommandRisk = "safe" | "writes" | "dangerous";
 
 export type HarnessEvent = AgentHarnessEvent;
 

@@ -16,6 +16,7 @@ import {
   AppWorkspaceProvider,
   useAppWorkspace
 } from "../../app/app-workspace-context";
+import type { PendingApproval } from "../agent-messages";
 import { ChatWorkspace } from "./chat-workspace";
 import type { SelectedModel } from "./model-selector";
 
@@ -25,15 +26,7 @@ const agentTasksMock = vi.hoisted(() => ({
   messages: [
     { content: "Real message", id: "message-1", kind: "assistant" }
   ] as { content: string; id: string; kind: string }[],
-  pendingApproval: undefined as
-    | {
-        agentId: string;
-        approvalId: string;
-        command: string;
-        cwd: string;
-        risk: "dangerous";
-      }
-    | undefined,
+  pendingApproval: undefined as PendingApproval | undefined,
   startTask: vi.fn()
 }));
 
@@ -197,9 +190,11 @@ describe("ChatWorkspace", () => {
     agentTasksMock.pendingApproval = {
       agentId: "agent-1",
       approvalId: "approval-1",
-      command: "rm -rf dist",
-      cwd: "/workspace",
-      risk: "dangerous"
+      tool: {
+        input: {},
+        name: "workspace_patch",
+        toolCallId: "tool-call-1"
+      }
     };
     renderChatWorkspace({ activeTaskId: "task-one" });
 
@@ -215,9 +210,11 @@ describe("ChatWorkspace", () => {
     agentTasksMock.pendingApproval = {
       agentId: "agent-1",
       approvalId: "approval-1",
-      command: "rm -rf dist",
-      cwd: "/workspace",
-      risk: "dangerous"
+      tool: {
+        input: {},
+        name: "workspace_patch",
+        toolCallId: "tool-call-1"
+      }
     };
     renderChatWorkspace({ activeTaskId: "task-one" });
 

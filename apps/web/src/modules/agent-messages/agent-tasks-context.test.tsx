@@ -357,7 +357,7 @@ function createApprovalFetcher(
         start(controller) {
           controller.enqueue(
             encoder.encode(
-              '{"agentId":"agent-approval","payload":{"agentId":"agent-approval","approvalId":"approval-1","command":"rm -rf dist","cwd":"/workspace","risk":"dangerous"},"sequence":1,"timestamp":"now","type":"approval_requested"}\n'
+              '{"agentId":"agent-approval","payload":{"agentId":"agent-approval","approvalId":"approval-1","tool":{"input":{},"name":"workspace_patch","toolCallId":"tool-call-1"}},"sequence":1,"timestamp":"now","type":"approval_requested"}\n'
             )
           );
           controller.close();

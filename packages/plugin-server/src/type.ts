@@ -42,7 +42,7 @@ export namespace ServerPlugin {
 
   export interface Contribution
     extends Partial<Pick<RuntimeContext, "model" | "thinkingLevel">> {
-    readonly tools?: readonly PluginTool[];
+    readonly tools?: PluginTool[];
     /**
      * 会自动加载skillDirs下所有的skill，会合并skills
      */

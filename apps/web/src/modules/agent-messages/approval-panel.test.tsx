@@ -5,14 +5,19 @@ import { App } from "antd";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+import type { PendingApproval } from "./agent-message-types";
 import { ApprovalPanel } from "./approval-panel";
 
-const approval = {
+const approval: PendingApproval = {
   agentId: "agent-1",
   approvalId: "approval-1",
-  command: "rm -rf dist",
-  cwd: "/workspace",
-  risk: "dangerous" as const
+  title: "允许插件修改工作区？",
+  tool: {
+    description: "Apply the requested workspace change",
+    input: { file: "src/index.ts" },
+    name: "workspace_patch",
+    toolCallId: "tool-call-1"
+  }
 };
 
 describe("ApprovalPanel", () => {
@@ -74,6 +79,25 @@ describe("ApprovalPanel", () => {
     expect(acceptButton.style.borderColor).toBe("var(--app-color-success)");
   });
 
+  it("renders a custom title or falls back to the tool name", () => {
+    const onDecide = vi.fn().mockResolvedValue(undefined);
+    renderPanel(onDecide);
+
+    expect(screen.getByText("允许插件修改工作区？")).toBeInTheDocument();
+
+    cleanup();
+    const approvalWithoutTitle: PendingApproval = {
+      agentId: approval.agentId,
+      approvalId: approval.approvalId,
+      tool: approval.tool
+    };
+    renderPanel(onDecide, approvalWithoutTitle);
+
+    expect(
+      screen.getByText("是否允许执行 workspace_patch tool？")
+    ).toBeInTheDocument();
+  });
+
   it("rejects on Enter and allows Shift+Enter to add a newline", async () => {
     const onDecide = vi.fn().mockResolvedValue(undefined);
     renderPanel(onDecide);
@@ -90,10 +114,13 @@ describe("ApprovalPanel", () => {
   });
 });
 
-function renderPanel(onDecide: (approved: boolean, reason?: string) => Promise<void>) {
+function renderPanel(
+  onDecide: (approved: boolean, reason?: string) => Promise<void>,
+  approvalInput: PendingApproval = approval
+) {
   render(
     <App>
-      <ApprovalPanel approval={approval} onDecide={onDecide} />
+      <ApprovalPanel approval={approvalInput} onDecide={onDecide} />
     </App>
   );
 }

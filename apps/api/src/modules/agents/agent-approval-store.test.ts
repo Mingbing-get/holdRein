@@ -9,9 +9,11 @@ describe("agent approval store", () => {
     const approval = store.request({
       agentId: "agent-1",
       approvalId: "approval-1",
-      command: "rm -rf dist",
-      cwd: "/tmp/project",
-      risk: "dangerous"
+      tool: {
+        input: { file: "src/index.ts" },
+        name: "workspace_patch",
+        toolCallId: "tool-call-1"
+      }
     });
 
     expect(

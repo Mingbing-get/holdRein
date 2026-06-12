@@ -1,12 +1,12 @@
 import type {
   ApprovalDecision,
   ApprovalDecisionInput,
-  ShellCommandApprovalRequest
+  ToolApprovalRequest
 } from "./agent-types";
 
 export interface AgentApprovalStore {
   decide: (input: ApprovalDecisionInput) => boolean;
-  request: (request: ShellCommandApprovalRequest) => Promise<ApprovalDecision>;
+  request: (request: ToolApprovalRequest) => Promise<ApprovalDecision>;
 }
 
 interface PendingApproval {

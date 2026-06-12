@@ -4,6 +4,7 @@ import type {
   Session
 } from "@earendil-works/pi-agent-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ServerPlugin } from "@hold-rein/plugin-server";
 
 import { SESSIONS_DIR } from "../../config/const";
 import { createAgentApprovalStore } from "./agent-approval-store";
@@ -14,6 +15,14 @@ const prompt = vi.fn().mockResolvedValue(undefined);
 const sessionRepoConstructor = vi.fn();
 const executionEnvConstructor = vi.fn();
 const harnessOn = vi.fn();
+const resolveContributions = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({
+    skillDirs: [],
+    skills: [],
+    systemPrompts: [],
+    tools: []
+  })
+);
 
 vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
   const original = await importOriginal<Record<string, unknown>>();
@@ -45,11 +54,23 @@ vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
   };
 });
 
+vi.mock("../../plugin", () => ({
+  pluginRegistry: {
+    resolveContributions
+  }
+}));
+
 describe("agent runtime sessions", () => {
   beforeEach(() => {
     executionEnvConstructor.mockClear();
     harnessOn.mockClear();
     prompt.mockClear();
+    resolveContributions.mockResolvedValue({
+      skillDirs: [],
+      skills: [],
+      systemPrompts: [],
+      tools: []
+    });
     sessionRepoConstructor.mockClear();
   });
 
@@ -122,10 +143,24 @@ describe("agent runtime sessions", () => {
     ]);
   });
 
-  it("uses the submitted rejection reason when blocking a shell command", async () => {
+  it("requests a generic plugin tool approval with optional title", async () => {
     const approvalStore = createAgentApprovalStore();
     const { repo } = createSessionRepo();
     const eventBus = createAgentEventBus();
+    resolveContributions.mockResolvedValue({
+      skillDirs: [],
+      skills: [],
+      systemPrompts: [],
+      tools: [
+        {
+          description: "Apply the requested workspace change",
+          execute: vi.fn(),
+          name: "workspace_patch",
+          beforeExecute: ({ requestApproval }: ServerPlugin.ToolBeforeExecuteOptions) =>
+            requestApproval("允许插件修改工作区？")
+        }
+      ]
+    });
     const runtime = createAgentRuntime({
       approvalStore,
       eventBus,
@@ -143,9 +178,12 @@ describe("agent runtime sessions", () => {
       ([eventName]) => eventName === "tool_call"
     )?.[1] as ((event: unknown) => Promise<unknown>) | undefined;
     const decision = toolCallHandler?.({
-      input: { command: "rm -rf dist", cwd: "/tmp/workspace" },
-      toolName: "shell_exec"
+      input: { file: "src/index.ts" },
+      toolCallId: "tool-call-1",
+      toolName: "workspace_patch"
     });
+
+    expect(approvalId).not.toBe("");
 
     expect(
       approvalStore.decide({

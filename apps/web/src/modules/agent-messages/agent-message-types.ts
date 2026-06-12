@@ -99,9 +99,14 @@ export interface AgentRun {
 export interface PendingApproval {
   agentId: string;
   approvalId: string;
-  command: string;
-  cwd: string;
-  risk: "safe" | "writes" | "dangerous";
+  title?: string;
+  tool: {
+    description?: string;
+    input: unknown;
+    label?: string;
+    name: string;
+    toolCallId: string;
+  };
 }
 
 export interface ApprovalDecisionInput {
