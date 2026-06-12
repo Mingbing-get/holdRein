@@ -5,6 +5,8 @@ export {
 } from "./cursor";
 export {
   shouldHandleSpaceKeydown,
+  shouldHandleSuggestionEnterKeydown,
+  type SuggestionEnterKeydownSource,
   type SpaceKeydownSource
 } from "./keyboard";
 export {

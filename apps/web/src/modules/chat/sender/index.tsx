@@ -14,7 +14,8 @@ import {
 } from "./hooks";
 import {
   getCurrentCursorCharacterIndex,
-  shouldHandleSpaceKeydown
+  shouldHandleSpaceKeydown,
+  shouldHandleSuggestionEnterKeydown
 } from "./utils";
 
 export {
@@ -23,6 +24,7 @@ export {
   insertTextAtCursor,
   replaceTriggerAtCursor,
   shouldHandleSpaceKeydown,
+  shouldHandleSuggestionEnterKeydown,
   type CursorSource
 } from "./utils";
 
@@ -184,6 +186,11 @@ export default function Sender({
                     e.preventDefault();
                     insertText(" ");
                     return;
+                  }
+                  if (shouldHandleSuggestionEnterKeydown(e, suggestionOpen)) {
+                    onKeyDown(e);
+                    e.preventDefault();
+                    return false;
                   }
                   onKeyDown(e)
                 }}

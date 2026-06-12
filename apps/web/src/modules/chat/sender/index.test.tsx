@@ -12,7 +12,8 @@ import {
   getCurrentCursorCharacterIndex,
   insertTextAtCursor,
   replaceTriggerAtCursor,
-  shouldHandleSpaceKeydown
+  shouldHandleSpaceKeydown,
+  shouldHandleSuggestionEnterKeydown
 } from "./utils";
 
 function getWebSourcePath(pathFromWebSrc: string): string {
@@ -81,6 +82,53 @@ describe("shouldHandleSpaceKeydown", () => {
           isComposing: true
         }
       })
+    ).toBe(false);
+  });
+});
+
+describe("shouldHandleSuggestionEnterKeydown", () => {
+  it("returns true for a normal enter keydown while suggestions are open", () => {
+    expect(
+      shouldHandleSuggestionEnterKeydown(
+        {
+          code: "Enter",
+          isComposing: false,
+          nativeEvent: {
+            isComposing: false
+          }
+        },
+        true
+      )
+    ).toBe(true);
+  });
+
+  it("returns false when suggestions are closed", () => {
+    expect(
+      shouldHandleSuggestionEnterKeydown(
+        {
+          code: "Enter",
+          isComposing: false,
+          nativeEvent: {
+            isComposing: false
+          }
+        },
+        false
+      )
+    ).toBe(false);
+  });
+
+  it("returns false while an input method composition is active", () => {
+    expect(
+      shouldHandleSuggestionEnterKeydown(
+        {
+          code: "Enter",
+          isComposing: true,
+          nativeEvent: {
+            isComposing: true
+          }
+        },
+        true
+      )
     ).toBe(false);
   });
 });
