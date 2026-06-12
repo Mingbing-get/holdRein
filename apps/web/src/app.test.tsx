@@ -189,6 +189,31 @@ describe("App", () => {
     expect(await screen.findByText("设置")).toBeInTheDocument();
   });
 
+  it("toggles an empty right sidebar from the chat top bar action", async () => {
+    render(<App />);
+
+    expect(screen.queryByLabelText("Chat right sidebar")).not.toBeInTheDocument();
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "隐藏/显示右侧边栏" }));
+    expect(await screen.findByText("隐藏/显示右侧边栏")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "隐藏/显示右侧边栏" }));
+
+    const rightSidebar = screen.getByLabelText("Chat right sidebar");
+
+    expect(rightSidebar).toBeInTheDocument();
+    expect(rightSidebar).toHaveStyle({ width: "320px" });
+  });
+
+  it("lets the chat right sidebar border span the content height", () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "隐藏/显示右侧边栏" }));
+
+    expect(screen.getByRole("main")).toHaveStyle({ padding: "0px" });
+    expect(screen.getByLabelText("Chat right sidebar")).toHaveStyle({
+      padding: "10px 14px 14px 12px"
+    });
+  });
+
   it("opens settings navigation with model providers selected and restores workspace navigation", async () => {
     fetchMock.mockImplementation(async (input) => {
       const url = String(input);
@@ -222,6 +247,9 @@ describe("App", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Open settings" }));
 
+    expect(
+      screen.queryByRole("button", { name: "隐藏/显示右侧边栏" })
+    ).not.toBeInTheDocument();
     expect(
       screen.queryByLabelText("Workspace navigation")
     ).not.toBeInTheDocument();
@@ -435,5 +463,37 @@ describe("App", () => {
     fireEvent.mouseUp(document);
 
     expect(sidebar).toHaveStyle({ width: "120px" });
+  });
+
+  it("resizes the chat right sidebar from its left border within bounds", () => {
+    render(<App />);
+
+    fireEvent.click(screen.getByRole("button", { name: "隐藏/显示右侧边栏" }));
+
+    const rightSidebar = screen.getByLabelText("Chat right sidebar");
+    const resizeHandle = screen.getByRole("separator", {
+      name: "Resize chat right sidebar"
+    });
+
+    expect(rightSidebar).toHaveStyle({ width: "320px" });
+    expect(resizeHandle).toHaveStyle({ cursor: "col-resize" });
+
+    fireEvent.mouseEnter(resizeHandle);
+
+    expect(rightSidebar.style.borderLeft).toBe(
+      "1px solid var(--app-color-primary)"
+    );
+
+    fireEvent.mouseDown(resizeHandle, { clientX: 700 });
+    fireEvent.mouseMove(document, { clientX: 200 });
+    fireEvent.mouseUp(document);
+
+    expect(rightSidebar).toHaveStyle({ width: "640px" });
+
+    fireEvent.mouseDown(resizeHandle, { clientX: 200 });
+    fireEvent.mouseMove(document, { clientX: 900 });
+    fireEvent.mouseUp(document);
+
+    expect(rightSidebar).toHaveStyle({ width: "220px" });
   });
 });

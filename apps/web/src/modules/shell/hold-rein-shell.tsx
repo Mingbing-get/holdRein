@@ -9,6 +9,7 @@ import { SettingsNav } from "../leftSide/settings-nav";
 import { fetchWorkspaceNavigation } from "../leftSide/workspace-nav-api";
 import { WorkspaceNav } from "../leftSide/workspace-nav";
 import { ModelProvidersView } from "../model-providers";
+import { RightSideAside } from "../rightSide/aside";
 import { WorkspaceTopBar } from "../top-bar/workspace-top-bar";
 
 interface HoldReinShellProps {
@@ -115,14 +116,40 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
         }}
       >
         <WorkspaceTopBar />
-        <Layout.Content style={{ padding: "10px 14px 14px", display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 41px)' }}>
+        <Layout.Content
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            maxHeight: "calc(100vh - 41px)",
+            padding: activeMainView === "chat" ? 0 : "10px 14px 14px"
+          }}
+        >
           {activeMainView === "modelProviders" ? (
             <ModelProvidersView apiBaseUrl={apiBaseUrl} />
           ) : (
-            <ChatWorkspace
-              activeTaskName={activeTask?.title ?? ""}
-              apiBaseUrl={apiBaseUrl}
-            />
+            <div
+              style={{
+                display: "flex",
+                flex: 1,
+                minHeight: 0,
+                overflow: "hidden"
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  flex: 1,
+                  minWidth: 0,
+                  padding: "10px"
+                }}
+              >
+                <ChatWorkspace
+                  activeTaskName={activeTask?.title ?? ""}
+                  apiBaseUrl={apiBaseUrl}
+                />
+              </div>
+              <RightSideAside />
+            </div>
           )}
         </Layout.Content>
       </Layout>

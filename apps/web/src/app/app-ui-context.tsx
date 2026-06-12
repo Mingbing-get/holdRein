@@ -18,6 +18,9 @@ export type SidebarView = "workspace" | "settings";
 export interface AppUiState {
   activeMainView: MainContentView;
   activeSidebarView: SidebarView;
+  rightSidebarCollapsed: boolean;
+  rightSidebarResizing: boolean;
+  rightSidebarWidth: number;
   sidebarCollapsed: boolean;
   sidebarResizing: boolean;
   sidebarWidth: number;
@@ -32,8 +35,11 @@ export interface AppUiContextValue {
   state: AppUiState;
   setActiveMainView: (view: MainContentView) => void;
   setActiveSidebarView: (view: SidebarView) => void;
+  setRightSidebarResizing: (rightSidebarResizing: boolean) => void;
+  setRightSidebarWidth: (rightSidebarWidth: number) => void;
   setSidebarResizing: (sidebarResizing: boolean) => void;
   setSidebarWidth: (sidebarWidth: number) => void;
+  toggleRightSidebar: () => void;
   toggleSidebar: () => void;
   toggleThemeMode: () => void;
 }
@@ -41,6 +47,9 @@ export interface AppUiContextValue {
 const DEFAULT_APP_UI_STATE: AppUiState = {
   activeMainView: "chat",
   activeSidebarView: "workspace",
+  rightSidebarCollapsed: true,
+  rightSidebarResizing: false,
+  rightSidebarWidth: 320,
   sidebarCollapsed: false,
   sidebarResizing: false,
   sidebarWidth: 240,
@@ -132,6 +141,23 @@ export function AppUiProvider({ children }: PropsWithChildren) {
     }));
   }, []);
 
+  const setRightSidebarResizing = useCallback(
+    (rightSidebarResizing: boolean) => {
+      setState((currentState) => ({
+        ...currentState,
+        rightSidebarResizing
+      }));
+    },
+    []
+  );
+
+  const setRightSidebarWidth = useCallback((rightSidebarWidth: number) => {
+    setState((currentState) => ({
+      ...currentState,
+      rightSidebarWidth
+    }));
+  }, []);
+
   const setSidebarResizing = useCallback((sidebarResizing: boolean) => {
     setState((currentState) => ({
       ...currentState,
@@ -143,6 +169,13 @@ export function AppUiProvider({ children }: PropsWithChildren) {
     setState((currentState) => ({
       ...currentState,
       sidebarWidth
+    }));
+  }, []);
+
+  const toggleRightSidebar = useCallback(() => {
+    setState((currentState) => ({
+      ...currentState,
+      rightSidebarCollapsed: !currentState.rightSidebarCollapsed
     }));
   }, []);
 
@@ -169,8 +202,11 @@ export function AppUiProvider({ children }: PropsWithChildren) {
       state,
       setActiveMainView,
       setActiveSidebarView,
+      setRightSidebarResizing,
+      setRightSidebarWidth,
       setSidebarResizing,
       setSidebarWidth,
+      toggleRightSidebar,
       toggleSidebar,
       toggleThemeMode
     }),
@@ -181,9 +217,12 @@ export function AppUiProvider({ children }: PropsWithChildren) {
       openWorkspaceNavigation,
       setActiveMainView,
       setActiveSidebarView,
+      setRightSidebarResizing,
+      setRightSidebarWidth,
       setSidebarResizing,
       setSidebarWidth,
       state,
+      toggleRightSidebar,
       toggleSidebar,
       toggleThemeMode
     ]

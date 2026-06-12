@@ -2,6 +2,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MoonOutlined,
+  PicRightOutlined,
   SettingOutlined,
   SunOutlined
 } from "@ant-design/icons";
@@ -11,8 +12,9 @@ import { useAppUi } from "../../app/app-ui-context";
 
 export function WorkspaceTopBar() {
   const {
-    state: { sidebarCollapsed, themeMode },
+    state: { activeMainView, sidebarCollapsed, themeMode },
     openSettingsNavigation,
+    toggleRightSidebar,
     toggleSidebar,
     toggleThemeMode
   } = useAppUi();
@@ -59,6 +61,18 @@ export function WorkspaceTopBar() {
               type="text"
             />
           </Tooltip>
+          {activeMainView === "chat" ? (
+            <Tooltip title="隐藏/显示右侧边栏">
+              <Button
+                aria-label="隐藏/显示右侧边栏"
+                icon={<PicRightOutlined />}
+                onClick={toggleRightSidebar}
+                shape="circle"
+                size="small"
+                type="text"
+              />
+            </Tooltip>
+          ) : null}
           <Switch
             aria-label="Toggle theme"
             checked={themeMode === "dark"}
