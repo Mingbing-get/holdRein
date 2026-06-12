@@ -11,6 +11,11 @@ function createService(overrides: Partial<AgentsService> = {}): AgentsService {
       approvalId: "approval-1",
       approved: true
     }),
+    interruptTask: vi.fn().mockResolvedValue({
+      agentId: "agent-1",
+      status: "interrupted",
+      taskId: "task-1"
+    }),
     getTaskTitle: vi.fn().mockResolvedValue({
       id: "task-1",
       title: "Inspect project"
@@ -173,6 +178,34 @@ describe("agent routes", () => {
       prompt: "Continue",
       taskId: "task-1"
     });
+  });
+
+  it("interrupts a running task", async () => {
+    const service = createService();
+    const response = await request(await createApp({ agentsService: service }))
+      .post("/api/v1/agents/tasks/task-1/interrupt");
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({
+      agentId: "agent-1",
+      status: "interrupted",
+      taskId: "task-1"
+    });
+    expect(service.interruptTask).toHaveBeenCalledWith({ taskId: "task-1" });
+  });
+
+  it("returns conflict when interrupting a task with no active run", async () => {
+    const service = createService({
+      interruptTask: vi.fn().mockResolvedValue({
+        status: "not_running",
+        taskId: "task-1"
+      })
+    });
+    const response = await request(await createApp({ agentsService: service }))
+      .post("/api/v1/agents/tasks/task-1/interrupt");
+
+    expect(response.status).toBe(409);
+    expect(response.body.msg).toBe("Task is not running");
   });
 
   it("rejects continue requests with only one model field", async () => {

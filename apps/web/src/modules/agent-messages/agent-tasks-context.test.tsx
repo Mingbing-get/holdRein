@@ -130,6 +130,35 @@ describe("AgentTasksProvider", () => {
       "approval-1"
     );
   });
+
+  it("cancels a running task and updates workspace task status", async () => {
+    const fetcher = createCancelFetcher();
+
+    render(
+      <AppWorkspaceProvider>
+        <AgentTasksProvider apiBaseUrl="" fetcher={fetcher}>
+          <CancelProbe />
+        </AgentTasksProvider>
+      </AppWorkspaceProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cancel-task-status")).toHaveTextContent(
+        "running"
+      );
+    });
+    fireEvent.click(screen.getByRole("button", { name: "中断任务" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("cancel-task-status")).toHaveTextContent(
+        "error"
+      );
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/agents/tasks/task-cancel/interrupt",
+      expect.objectContaining({ method: "POST" })
+    );
+  });
 });
 
 function StartTaskProbe() {
@@ -256,6 +285,47 @@ function ApprovalProbe() {
   );
 }
 
+function CancelProbe() {
+  const {
+    state: { workspaces },
+    setWorkspaces
+  } = useAppWorkspace();
+  const { cancelTask } = useAgentTasks();
+
+  useEffect(() => {
+    setWorkspaces([
+      {
+        hasMore: false,
+        id: "workspace-1",
+        name: "workspace",
+        path: "/workspace",
+        tasks: [
+          {
+            activeAgentId: "agent-cancel",
+            id: "task-cancel",
+            initialUserMessage: "Inspect",
+            lastContinuedAt: "2026-06-11T00:00:00.000Z",
+            lastModelName: "gpt-4.1",
+            lastModelProvider: "openai",
+            lastModelProviderSource: "built_in",
+            status: "running",
+            title: "Inspect"
+          }
+        ]
+      }
+    ]);
+  }, [setWorkspaces]);
+
+  return (
+    <>
+      <span data-testid="cancel-task-status">
+        {workspaces[0]?.tasks[0]?.status}
+      </span>
+      <button onClick={() => void cancelTask("task-cancel")}>中断任务</button>
+    </>
+  );
+}
+
 function createAgentFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
   const encoder = new TextEncoder();
 
@@ -361,6 +431,32 @@ function createApprovalFetcher(
             )
           );
           controller.close();
+        }
+      }),
+      { status: 200 }
+    );
+  }) as AgentMessageFetcher & ReturnType<typeof vi.fn>;
+}
+
+function createCancelFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+
+    if (url.endsWith("/messages")) {
+      return jsonResponse([]);
+    }
+    if (url.endsWith("/interrupt")) {
+      return jsonResponse({
+        agentId: "agent-cancel",
+        status: "interrupted",
+        taskId: "task-cancel"
+      });
+    }
+
+    return new Response(
+      new ReadableStream({
+        start() {
+          // Keep the resumed subscription open until the provider aborts it.
         }
       }),
       { status: 200 }

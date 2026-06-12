@@ -11,6 +11,7 @@ import type { PropsWithChildren } from "react";
 
 import { useAppWorkspace } from "../../app/app-workspace-context";
 import {
+  cancelAgentTask,
   continueAgentTask,
   decideAgentApproval,
   fetchTaskMessages,
@@ -32,6 +33,7 @@ import type {
 } from "./agent-message-types";
 
 export interface AgentTasksContextValue {
+  cancelTask: (taskId: string) => Promise<void>;
   continueTask: (taskId: string, input: ContinueTaskInput) => Promise<void>;
   decideApproval: (
     taskId: string,
@@ -219,6 +221,29 @@ export function AgentTasksProvider({
     [apiBaseUrl, fetcher, handleTaskStatus, updateTaskStatus]
   );
 
+  const cancelTask = useCallback(
+    async (taskId: string) => {
+      const activeAgentId = getActiveAgentId(workspaces, taskId);
+
+      await cancelAgentTask(apiBaseUrl, taskId, fetcher);
+
+      if (activeAgentId) {
+        subscriptions.current.get(activeAgentId)?.abort();
+        subscriptions.current.delete(activeAgentId);
+      }
+
+      updateTaskStatus(taskId, "error");
+      setTaskStates((current) => ({
+        ...current,
+        [taskId]: {
+          ...(current[taskId] ?? createInitialAgentTaskState(taskId)),
+          status: "error"
+        }
+      }));
+    },
+    [apiBaseUrl, fetcher, updateTaskStatus, workspaces]
+  );
+
   const decideApproval = useCallback(
     async (
       taskId: string,
@@ -255,6 +280,7 @@ export function AgentTasksProvider({
 
   const contextValue = useMemo<AgentTasksContextValue>(
     () => ({
+      cancelTask,
       continueTask,
       decideApproval,
       getPendingApproval: (taskId) => taskStates[taskId]?.pendingApprovals[0],
@@ -265,6 +291,7 @@ export function AgentTasksProvider({
       startTask
     }),
     [
+      cancelTask,
       continueTask,
       decideApproval,
       startTask,
@@ -303,6 +330,15 @@ function addRun(state: AgentTaskState, result: StartTaskResult): AgentTaskState 
     ],
     status: "running"
   };
+}
+
+function getActiveAgentId(
+  workspaces: ReturnType<typeof useAppWorkspace>["state"]["workspaces"],
+  taskId: string
+): string | undefined {
+  return workspaces
+    .flatMap((workspace) => workspace.tasks)
+    .find((task) => task.id === taskId)?.activeAgentId;
 }
 
 function startSubscription(input: {

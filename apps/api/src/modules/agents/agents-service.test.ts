@@ -87,6 +87,7 @@ describe("agents service", () => {
       eventBus: createAgentEventBus(),
       repository,
       runtime: {
+        interrupt: vi.fn(),
         listMessages: vi.fn(),
         start: vi.fn().mockResolvedValue({
           agentId: "agent-1",
@@ -126,6 +127,7 @@ describe("agents service", () => {
       now: () => new Date("2026-06-08T00:00:00.000Z"),
       repository,
       runtime: {
+        interrupt: vi.fn(),
         listMessages: vi.fn(),
         start: vi.fn().mockResolvedValue({
           agentId: "agent-1",
@@ -212,6 +214,7 @@ describe("agents service", () => {
       ]
     });
     const runtime = {
+      interrupt: vi.fn(),
       listMessages: vi.fn(),
       start: vi.fn().mockResolvedValue({
         agentId: "agent-2",
@@ -285,6 +288,7 @@ describe("agents service", () => {
       ]
     });
     const runtime = {
+      interrupt: vi.fn(),
       listMessages: vi.fn(),
       start: vi.fn().mockResolvedValue({
         agentId: "agent-2",
@@ -366,6 +370,7 @@ describe("agents service", () => {
       ]
     });
     const runtime = {
+      interrupt: vi.fn(),
       listMessages: vi.fn(),
       start: vi.fn().mockResolvedValue({
         agentId: "agent-2",
@@ -434,6 +439,7 @@ describe("agents service", () => {
       ]
     });
     const runtime = {
+      interrupt: vi.fn(),
       listMessages: vi.fn().mockResolvedValue([
         { content: "Initial", id: "message-1", role: "user", timestamp: 1 }
       ]),
@@ -498,6 +504,7 @@ describe("agents service", () => {
       now: () => new Date("2026-06-08T00:01:00.000Z"),
       repository,
       runtime: {
+        interrupt: vi.fn(),
         listMessages: vi.fn(),
         start: vi.fn()
       },
@@ -558,7 +565,7 @@ function createTaskService(input: {
     eventBus: createAgentEventBus(),
     now: () => new Date("2026-06-11T01:00:00.000Z"),
     repository,
-    runtime: { listMessages: vi.fn(), start: vi.fn() },
+    runtime: { interrupt: vi.fn(), listMessages: vi.fn(), start: vi.fn() },
     titleGenerator: { generateTitle: vi.fn() }
   });
 

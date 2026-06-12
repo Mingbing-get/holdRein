@@ -29,6 +29,7 @@ import {
 import { pluginRegistry } from '../../plugin'
 
 export interface AgentRuntime {
+  interrupt: (agentId: string) => Promise<boolean>;
   listMessages: (input: {
     session: AgentSessionMetadata;
     workspacePath: string;
@@ -50,6 +51,11 @@ interface RunningAgent {
   sessionId: string;
 }
 
+interface InterruptibleHarness {
+  abort?: () => Promise<unknown> | unknown;
+  interrupt?: () => Promise<unknown> | unknown;
+}
+
 export function createAgentRuntime(
   options: CreateAgentRuntimeOptions
 ): AgentRuntime {
@@ -57,6 +63,17 @@ export function createAgentRuntime(
   const sessionRepo = options.sessionRepo ?? createSessionRepo();
 
   return {
+    interrupt: async (agentId) => {
+      const runningAgent = runningAgents.get(agentId);
+
+      if (!runningAgent) {
+        return false;
+      }
+
+      runningAgents.delete(agentId);
+      await interruptHarness(runningAgent.harness);
+      return true;
+    },
     listMessages: async ({ session: metadata, workspacePath }) => {
       const session = await sessionRepo.open({ ...metadata, cwd: workspacePath });
       const context = await session.buildContext();
@@ -210,16 +227,20 @@ export function createAgentRuntime(
 
       runningAgents.set(agentId, { harness, sessionId: sessionMetadata.id });
 
-      void harness.prompt(input.prompt).catch((error) => {
-        options.eventBus.emit({
-          agentId,
-          payload: {
-            message:
-              error instanceof Error ? error.message : "Agent run failed"
-          },
-          type: "agent_error"
+      void harness.prompt(input.prompt)
+        .catch((error) => {
+          options.eventBus.emit({
+            agentId,
+            payload: {
+              message:
+                error instanceof Error ? error.message : "Agent run failed"
+            },
+            type: "agent_error"
+          });
+        })
+        .finally(() => {
+          runningAgents.delete(agentId);
         });
-      });
 
       return {
         agentId,
@@ -232,6 +253,22 @@ export function createAgentRuntime(
       };
     }
   };
+}
+
+async function interruptHarness(harness: AgentHarness): Promise<void> {
+  const interruptibleHarness = harness as unknown as InterruptibleHarness;
+
+  if (interruptibleHarness.interrupt) {
+    await interruptibleHarness.interrupt();
+    return;
+  }
+
+  if (interruptibleHarness.abort) {
+    await interruptibleHarness.abort();
+    return;
+  }
+
+  throw new Error("Agent runtime does not support interruption");
 }
 
 function createSessionRepo(): JsonlSessionRepoApi {

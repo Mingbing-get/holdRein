@@ -25,6 +25,17 @@ export interface AgentRunResult {
   status: "running";
 }
 
+export type InterruptTaskResult =
+  | {
+      agentId: string;
+      status: "interrupted";
+      taskId: string;
+    }
+  | {
+      status: "not_found" | "not_running";
+      taskId: string;
+    };
+
 export interface StartAgentResult {
   agentId: string;
   sessionId: string;

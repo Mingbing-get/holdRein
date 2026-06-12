@@ -45,6 +45,7 @@ export function ChatWorkspace({
     setActiveAgent
   } = useAppWorkspace();
   const {
+    cancelTask,
     continueTask,
     decideApproval,
     getPendingApproval,
@@ -125,9 +126,17 @@ export function ChatWorkspace({
         activeAgent={activeAgent}
         apiBaseUrl={apiBaseUrl}
         disabled={senderDisabled}
+        running={taskState?.status === "running"}
         suggestionGroups={groups}
         autoSize={{ minRows: 1, maxRows: 4 }}
         onActiveAgentChange={setActiveAgent}
+        onCancel={async () => {
+          if (!activeTaskId) {
+            return;
+          }
+
+          await cancelTask(activeTaskId);
+        }}
         onSubmit={async (message) => {
           if (!activeAgent || !activeWorkspace || !message.trim()) {
             return;

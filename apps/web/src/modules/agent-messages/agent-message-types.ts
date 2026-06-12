@@ -167,3 +167,14 @@ export interface TaskTitleResult {
   id: string;
   title: string;
 }
+
+export type InterruptTaskResult =
+  | {
+      agentId: string;
+      status: "interrupted";
+      taskId: string;
+    }
+  | {
+      status: "not_found" | "not_running";
+      taskId: string;
+    };

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  cancelAgentTask,
   continueAgentTask,
   decideAgentApproval,
   fetchTaskMessages,
@@ -107,6 +108,31 @@ describe("agent message API", () => {
         }),
         method: "POST"
       })
+    );
+  });
+
+  it("interrupts an active task", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      json: async () => ({
+        code: 0,
+        data: {
+          agentId: "agent-1",
+          status: "interrupted",
+          taskId: "task-1"
+        },
+        msg: "ok"
+      }),
+      ok: true
+    });
+
+    await expect(cancelAgentTask("", "task-1", fetcher)).resolves.toEqual({
+      agentId: "agent-1",
+      status: "interrupted",
+      taskId: "task-1"
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/agents/tasks/task-1/interrupt",
+      expect.objectContaining({ method: "POST" })
     );
   });
 

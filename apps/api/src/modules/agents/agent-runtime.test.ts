@@ -15,6 +15,7 @@ const prompt = vi.fn().mockResolvedValue(undefined);
 const sessionRepoConstructor = vi.fn();
 const executionEnvConstructor = vi.fn();
 const harnessOn = vi.fn();
+const harnessInterrupt = vi.fn();
 const resolveContributions = vi.hoisted(() =>
   vi.fn().mockResolvedValue({
     skillDirs: [],
@@ -30,6 +31,7 @@ vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
   return {
     ...original,
     AgentHarness: class {
+      interrupt = harnessInterrupt;
       on = harnessOn;
       prompt = prompt;
       subscribe = vi.fn();
@@ -64,6 +66,7 @@ describe("agent runtime sessions", () => {
   beforeEach(() => {
     executionEnvConstructor.mockClear();
     harnessOn.mockClear();
+    harnessInterrupt.mockClear();
     prompt.mockClear();
     resolveContributions.mockResolvedValue({
       skillDirs: [],
@@ -141,6 +144,17 @@ describe("agent runtime sessions", () => {
     expect(messages).toEqual([
       expect.objectContaining({ content: "Saved prompt", role: "user" })
     ]);
+  });
+
+  it("interrupts a running harness by agent id", async () => {
+    const { repo } = createSessionRepo();
+    const runtime = createRuntime(repo);
+    const result = await runtime.start(createRunInput());
+
+    await expect(runtime.interrupt(result.agentId)).resolves.toBe(true);
+
+    expect(harnessInterrupt).toHaveBeenCalledOnce();
+    await expect(runtime.interrupt(result.agentId)).resolves.toBe(false);
   });
 
   it("requests a generic plugin tool approval with optional title", async () => {

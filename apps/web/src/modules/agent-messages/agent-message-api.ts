@@ -3,6 +3,7 @@ import type {
   AgentEventEnvelope,
   ApprovalDecisionInput,
   ContinueTaskInput,
+  InterruptTaskResult,
   StartTaskInput,
   StartTaskResult,
   TaskTitleResult
@@ -71,6 +72,18 @@ export async function continueAgentTask(
       headers: { "Content-Type": "application/json" },
       method: "POST"
     }
+  );
+}
+
+export async function cancelAgentTask(
+  apiBaseUrl: string,
+  taskId: string,
+  fetcher: AgentMessageFetcher = fetch
+): Promise<InterruptTaskResult> {
+  return requestData<InterruptTaskResult>(
+    fetcher,
+    `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/agents/tasks/${encodeURIComponent(taskId)}/interrupt`,
+    { method: "POST" }
   );
 }
 

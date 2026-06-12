@@ -20,6 +20,7 @@ import type {
   ApprovalDecisionInput,
   ApprovalDecisionResult,
   StoredAgentMessage,
+  InterruptTaskResult,
   StartAgentInput,
   StartAgentResult,
   SubscribeAgentEventsInput,
@@ -32,6 +33,7 @@ export interface AgentsService {
   ) => Promise<ApprovalDecisionResult>;
   deleteTask: (input: GetTaskTitleInput) => Promise<DeleteTaskResult>;
   getTaskTitle: (input: GetTaskTitleInput) => Promise<TaskTitleResult | null>;
+  interruptTask: (input: GetTaskTitleInput) => Promise<InterruptTaskResult>;
   continueTask: (input: ContinueTaskInput) => Promise<StartAgentResult | null>;
   listTaskMessages: (input: GetTaskTitleInput) => Promise<StoredAgentMessage[]>;
   renameTask: (input: RenameTaskInput) => Promise<TaskTitleResult | null>;
@@ -119,6 +121,35 @@ export function createAgentsService(
       });
 
       return titleJobs.get(task.id) ?? { id: task.id, title: task.title };
+    },
+    interruptTask: async ({ taskId }) => {
+      const task = options.repository.findTaskById(taskId);
+
+      if (!task) {
+        return { status: "not_found", taskId };
+      }
+
+      const agentId = options.activeTaskRuns?.getAgentId(taskId);
+
+      if (task.status !== "running" || !agentId) {
+        return { status: "not_running", taskId };
+      }
+
+      const interrupted = await options.runtime.interrupt(agentId);
+
+      if (!interrupted) {
+        options.activeTaskRuns?.remove(taskId);
+        return { status: "not_running", taskId };
+      }
+
+      options.repository.updateTaskStatus(
+        taskId,
+        "error",
+        now().toISOString()
+      );
+      options.activeTaskRuns?.remove(taskId);
+
+      return { agentId, status: "interrupted", taskId };
     },
     continueTask: async (input) => {
       const { prompt, taskId } = input;

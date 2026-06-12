@@ -27,6 +27,8 @@ const agentTasksMock = vi.hoisted(() => ({
     { content: "Real message", id: "message-1", kind: "assistant" }
   ] as { content: string; id: string; kind: string }[],
   pendingApproval: undefined as PendingApproval | undefined,
+  taskStatus: "completed" as "running" | "completed" | "error",
+  cancelTask: vi.fn(),
   startTask: vi.fn()
 }));
 
@@ -39,12 +41,14 @@ vi.mock("../agent-messages", () => ({
   ),
   useAgentTasks: () => ({
     continueTask: agentTasksMock.continueTask,
+    cancelTask: agentTasksMock.cancelTask,
     decideApproval: agentTasksMock.decideApproval,
     getPendingApproval: () => agentTasksMock.pendingApproval,
     getTaskState: (taskId: string) =>
       taskId === "task-one"
         ? {
-            messages: agentTasksMock.messages
+            messages: agentTasksMock.messages,
+            status: agentTasksMock.taskStatus
           }
         : undefined,
     startTask: agentTasksMock.startTask
@@ -57,15 +61,24 @@ vi.mock("./sender", () => ({
     apiBaseUrl,
     disabled,
     onActiveAgentChange,
+    onCancel,
     onSubmit
   }: {
     activeAgent?: SelectedModel;
     apiBaseUrl: string;
     disabled?: boolean;
+    running?: boolean;
+    onCancel?: () => Promise<void>;
     onActiveAgentChange?: (value: SelectedModel) => void;
     onSubmit?: (message: string) => Promise<void>;
   }) => (
     <div>
+      <button
+        data-testid="sender-cancel"
+        onClick={() => void onCancel?.()}
+      >
+        Cancel
+      </button>
       <button
         data-testid="sender"
         disabled={disabled}
@@ -105,8 +118,10 @@ describe("ChatWorkspace", () => {
     cleanup();
     agentTasksMock.startTask.mockReset();
     agentTasksMock.continueTask.mockReset();
+    agentTasksMock.cancelTask.mockReset();
     agentTasksMock.decideApproval.mockReset();
     agentTasksMock.pendingApproval = undefined;
+    agentTasksMock.taskStatus = "completed";
     agentTasksMock.messages = [
       { content: "Real message", id: "message-1", kind: "assistant" }
     ];
@@ -231,6 +246,23 @@ describe("ChatWorkspace", () => {
       workspacePath: "/Users/mingbing/apps/workspace-one"
     });
     expect(agentTasksMock.continueTask).not.toHaveBeenCalled();
+  });
+
+  it("passes running task state and cancels the active task", () => {
+    agentTasksMock.taskStatus = "running";
+    agentTasksMock.cancelTask.mockResolvedValue(undefined);
+    renderChatWorkspace({
+      activeAgent: {
+        modelId: "claude-3-5-sonnet",
+        providerId: "anthropic"
+      },
+      activeTaskId: "task-one",
+      activeWorkspaceId: "workspace-one"
+    });
+
+    fireEvent.click(screen.getByTestId("sender-cancel"));
+
+    expect(agentTasksMock.cancelTask).toHaveBeenCalledWith("task-one");
   });
 
   it("scrolls to the bottom when entering a task", async () => {

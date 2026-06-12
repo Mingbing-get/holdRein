@@ -186,6 +186,36 @@ export function createAgentsRouter(
     }
   );
 
+  router.post(
+    "/agents/tasks/:taskId/interrupt",
+    (request: Request<{ taskId: string }>, response: Response): void => {
+      void getService()
+        .interruptTask({ taskId: request.params.taskId })
+        .then((result) => {
+          if (result.status === "not_found") {
+            sendError(response, RESPONSE_CODE_DEFINITIONS.notFound, "Unknown task");
+            return;
+          }
+          if (result.status === "not_running") {
+            sendError(
+              response,
+              RESPONSE_CODE_DEFINITIONS.conflict,
+              "Task is not running"
+            );
+            return;
+          }
+          sendSuccess(response, result);
+        })
+        .catch((error) => {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.badRequest,
+            error instanceof Error ? error.message : "Failed to interrupt task"
+          );
+        });
+    }
+  );
+
   router.get(
     "/agents/tasks/:taskId/title",
     (request: Request<{ taskId: string }>, response: Response): void => {

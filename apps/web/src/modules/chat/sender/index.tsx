@@ -17,6 +17,7 @@ import {
   shouldHandleSpaceKeydown,
   shouldHandleSuggestionEnterKeydown
 } from "./utils";
+import { useMemo } from "react";
 
 export {
   clampCursorIndex,
@@ -47,8 +48,10 @@ export const CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS =
 interface Props extends Pick<SenderProps, 'autoSize' | 'className' | 'classNames' | 'disabled' | 'placeholder'> {
   activeAgent?: SelectedModel | null
   apiBaseUrl: string
+  running?: boolean
   suggestionGroups?: SuggestionGroup[]
   onActiveAgentChange?: (activeAgent: SelectedModel) => void
+  onCancel?: () => Promise<void> | void
   onSubmit?: (...args: Parameters<Required<SenderProps>['onSubmit']>) => Promise<void> | void
   onMessageChange?: (message: string) => void
 }
@@ -56,6 +59,8 @@ interface Props extends Pick<SenderProps, 'autoSize' | 'className' | 'classNames
 export default function Sender({
   activeAgent,
   apiBaseUrl,
+  running = false,
+  onCancel,
   onActiveAgentChange,
   suggestionGroups,
   onMessageChange,
@@ -85,6 +90,8 @@ export default function Sender({
   } = useSenderSuggestions({
     suggestionGroups
   });
+
+  const disabled = useMemo(() => senderProps.disabled || !draftMessage?.length, [senderProps.disabled, draftMessage])
 
   return (
     <Flex vertical>
@@ -161,25 +168,49 @@ export default function Sender({
                       "0 14px 32px color-mix(in srgb, var(--app-color-shadow) 20%, transparent)"
                   }
                 }}
-                footer={
-                  <Flex align="center">
-                    <WorkspaceSelector apiBaseUrl={apiBaseUrl} />
-                    <Divider
-                      orientation="vertical"
-                      style={{
-                        borderColor: "var(--app-color-border-secondary)"
-                      }}
-                    />
-                    <ModelSelector
-                      apiBaseUrl={apiBaseUrl}
-                      value={activeAgent ?? undefined}
-                      {...(onActiveAgentChange
-                        ? { onChange: onActiveAgentChange }
-                        : {})}
-                    />
-                  </Flex>
-                }
+                footer={(_, { components: { SendButton, LoadingButton } }) => {
+                  let action: React.ReactNode = null
+                  if (running) {
+                    action = (
+                      <LoadingButton
+                        aria-label="中断执行"
+                        disabled={loading || !onCancel}
+                        size="small"
+                        onClick={() => {
+                          void onCancel?.();
+                        }}
+                      />
+                    )
+                  } else if (loading) {
+                    action = <LoadingButton size="small" />
+                  } else {
+                    action = <SendButton size="small" disabled={disabled} />
+                  }
+
+                  return (
+                    <Flex align="center" justify="space-between" gap={8}>
+                      <Flex align="center">
+                        <WorkspaceSelector apiBaseUrl={apiBaseUrl} />
+                        <Divider
+                          orientation="vertical"
+                          style={{
+                            borderColor: "var(--app-color-border-secondary)"
+                          }}
+                        />
+                        <ModelSelector
+                          apiBaseUrl={apiBaseUrl}
+                          value={activeAgent ?? undefined}
+                          {...(onActiveAgentChange
+                            ? { onChange: onActiveAgentChange }
+                            : {})}
+                        />
+                      </Flex>
+                      {action}
+                    </Flex>
+                  );
+                }}
                 ref={senderRef}
+                suffix={false}
                 value={draftMessage}
                 onKeyDown={e => {
                   if (shouldHandleSpaceKeydown(e)) {
