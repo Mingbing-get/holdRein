@@ -46,7 +46,7 @@ export function ApprovalPanel({ approval, onDecide }: ApprovalPanelProps) {
         boxShadow: "0 0px 10px var(--app-color-shadow)",
         left: 12,
         padding: 12,
-        position: "absolute",
+        position: "sticky",
         right: 12,
         zIndex: 1
       }}

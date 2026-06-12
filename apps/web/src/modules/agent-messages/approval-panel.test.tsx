@@ -58,14 +58,14 @@ describe("ApprovalPanel", () => {
     });
   });
 
-  it("renders as a soft bottom overlay without a dark accept button", () => {
+  it("renders as a sticky bottom overlay without a dark accept button", () => {
     const onDecide = vi.fn().mockResolvedValue(undefined);
     renderPanel(onDecide);
 
     const panel = screen.getByTestId("approval-panel");
     expect(panel).toHaveStyle({
       bottom: "0px",
-      position: "absolute"
+      position: "sticky"
     });
     expect(panel.style.borderStyle).toBe("none");
     expect(panel.style.boxShadow).toBe("0 0px 10px var(--app-color-shadow)");
