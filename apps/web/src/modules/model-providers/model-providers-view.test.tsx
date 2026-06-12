@@ -747,7 +747,12 @@ describe("ModelProvidersView", () => {
     expect(await screen.findByText("Acme Chat Pro")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "删除模型 acme-vision" }));
-    fireEvent.click((await screen.findAllByRole("button", { name: /删\s*除模型/ })).at(-1)!);
+    const deleteButtons = await screen.findAllByRole("button", {
+      name: /删\s*除模型/
+    });
+    const confirmDeleteButton = deleteButtons.at(-1);
+    expect(confirmDeleteButton).toBeDefined();
+    fireEvent.click(confirmDeleteButton as HTMLElement);
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenNthCalledWith(

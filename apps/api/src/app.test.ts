@@ -1,4 +1,4 @@
-import express, { type Express, type Request, type Response } from "express";
+import express, { type Express } from "express";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 
@@ -8,7 +8,7 @@ import { notFoundMiddleware } from "./middleware/not-found-middleware";
 function createErrorApp(): Express {
   const app = express();
 
-  app.get("/boom", (_request: Request, _response: Response) => {
+  app.get("/boom", () => {
     throw new Error("Boom");
   });
   app.use(notFoundMiddleware);

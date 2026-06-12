@@ -82,7 +82,7 @@ describe("agent routes", () => {
   it("starts an agent run for a workspace path", async () => {
     const service = createService();
 
-    const response = await request(createApp({ agentsService: service }))
+    const response = await request(await createApp({ agentsService: service }))
       .post("/api/v1/agents/start")
       .send({
         modelId: "gpt-4.1",
@@ -119,7 +119,7 @@ describe("agent routes", () => {
   });
 
   it("rejects invalid start requests", async () => {
-    const response = await request(createApp({ agentsService: createService() }))
+    const response = await request(await createApp({ agentsService: createService() }))
       .post("/api/v1/agents/start")
       .send({ prompt: "Missing required fields" });
 
@@ -133,7 +133,7 @@ describe("agent routes", () => {
 
   it("returns stored task messages", async () => {
     const service = createService();
-    const response = await request(createApp({ agentsService: service }))
+    const response = await request(await createApp({ agentsService: service }))
       .get("/api/v1/agents/tasks/task-1/messages");
 
     expect(response.status).toBe(200);
@@ -145,7 +145,7 @@ describe("agent routes", () => {
 
   it("continues an existing task", async () => {
     const service = createService();
-    const response = await request(createApp({ agentsService: service }))
+    const response = await request(await createApp({ agentsService: service }))
       .post("/api/v1/agents/tasks/task-1/continue")
       .send({
         modelId: "claude-3-5-sonnet",
@@ -164,7 +164,7 @@ describe("agent routes", () => {
 
   it("continues with the previous model when model fields are omitted", async () => {
     const service = createService();
-    const response = await request(createApp({ agentsService: service }))
+    const response = await request(await createApp({ agentsService: service }))
       .post("/api/v1/agents/tasks/task-1/continue")
       .send({ prompt: "Continue" });
 
@@ -177,7 +177,7 @@ describe("agent routes", () => {
 
   it("rejects continue requests with only one model field", async () => {
     const service = createService();
-    const response = await request(createApp({ agentsService: service }))
+    const response = await request(await createApp({ agentsService: service }))
       .post("/api/v1/agents/tasks/task-1/continue")
       .send({ prompt: "Continue", provider: "anthropic" });
 
@@ -190,7 +190,7 @@ describe("agent routes", () => {
 
   it("streams agent events as NDJSON after the requested sequence", async () => {
     const service = createService();
-    const response = await request(createApp({ agentsService: service }))
+    const response = await request(await createApp({ agentsService: service }))
       .get("/api/v1/agents/agent-1/events?afterSequence=7")
       .buffer(true)
       .parse((res, callback) => {
@@ -214,7 +214,7 @@ describe("agent routes", () => {
   });
 
   it("rejects invalid event sequence cursors", async () => {
-    const response = await request(createApp({ agentsService: createService() }))
+    const response = await request(await createApp({ agentsService: createService() }))
       .get("/api/v1/agents/agent-1/events?afterSequence=-1");
 
     expect(response.status).toBe(400);
@@ -226,7 +226,7 @@ describe("agent routes", () => {
   it("waits for a generated task title", async () => {
     const service = createService();
 
-    const response = await request(createApp({ agentsService: service }))
+    const response = await request(await createApp({ agentsService: service }))
       .get("/api/v1/agents/tasks/task-1/title");
 
     expect(response.status).toBe(200);
@@ -246,7 +246,7 @@ describe("agent routes", () => {
       getTaskTitle: vi.fn().mockResolvedValue(null)
     });
 
-    const response = await request(createApp({ agentsService: service }))
+    const response = await request(await createApp({ agentsService: service }))
       .get("/api/v1/agents/tasks/missing-task/title");
 
     expect(response.status).toBe(404);
@@ -259,7 +259,7 @@ describe("agent routes", () => {
 
   it("renames a task", async () => {
     const service = createService();
-    const response = await request(createApp({ agentsService: service }))
+    const response = await request(await createApp({ agentsService: service }))
       .patch("/api/v1/agents/tasks/task-1")
       .send({ title: " Renamed task " });
 
@@ -276,7 +276,7 @@ describe("agent routes", () => {
 
   it("rejects an empty task title", async () => {
     const service = createService();
-    const response = await request(createApp({ agentsService: service }))
+    const response = await request(await createApp({ agentsService: service }))
       .patch("/api/v1/agents/tasks/task-1")
       .send({ title: "   " });
 
@@ -286,7 +286,7 @@ describe("agent routes", () => {
 
   it("deletes a task", async () => {
     const service = createService();
-    const response = await request(createApp({ agentsService: service })).delete(
+    const response = await request(await createApp({ agentsService: service })).delete(
       "/api/v1/agents/tasks/task-1"
     );
 
@@ -302,7 +302,7 @@ describe("agent routes", () => {
         taskId: "task-1"
       })
     });
-    const response = await request(createApp({ agentsService: service })).delete(
+    const response = await request(await createApp({ agentsService: service })).delete(
       "/api/v1/agents/tasks/task-1"
     );
 
@@ -313,7 +313,7 @@ describe("agent routes", () => {
   it("submits an approval decision", async () => {
     const service = createService();
 
-    const response = await request(createApp({ agentsService: service }))
+    const response = await request(await createApp({ agentsService: service }))
       .post("/api/v1/agents/agent-1/approvals/approval-1")
       .send({ approved: false, reason: "Use a safer command" });
 
@@ -336,7 +336,7 @@ describe("agent routes", () => {
   });
 
   it("rejects non-string approval reasons", async () => {
-    const response = await request(createApp({ agentsService: createService() }))
+    const response = await request(await createApp({ agentsService: createService() }))
       .post("/api/v1/agents/agent-1/approvals/approval-1")
       .send({ approved: false, reason: 42 });
 

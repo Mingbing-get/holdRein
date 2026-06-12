@@ -29,25 +29,27 @@ describe("createServerPluginRegistry", () => {
 
   it("registers each plugin route below the plugin id prefix", async () => {
     const registry = createServerPluginRegistry();
-    const calls: string[] = [];
-    const router = {
-      get(path: string) {
-        calls.push(path);
+    const mountedRoutes: { path: string; route: unknown }[] = [];
+    const prefixRouter = {
+      use(path: string, route: unknown) {
+        mountedRoutes.push({ path, route });
       }
-    } as unknown as ServerPlugin.RouteContext["router"];
+    };
+    const pluginRoute = { route: "plugin-route" };
+    const context = {} as ServerPlugin.RouteContext;
 
     registry.register({
       id: "routes",
-      registerRoutes({ router: pluginRouter }) {
-        pluginRouter.get("/health", (_request, response) => {
-          response.status(200).json({ ok: true });
-        });
+      registerRoutes(routeContext) {
+        expect(routeContext).toBe(context);
+
+        return pluginRoute as never;
       }
     });
 
-    await registry.registerRoutes({ router });
+    await registry.registerRoutes(prefixRouter as never, context);
 
-    expect(calls).toEqual(["/plugin/routes/health"]);
+    expect(mountedRoutes).toEqual([{ path: "routes", route: pluginRoute }]);
   });
 
   it("resolves and merges plugin contributions in registration order", async () => {

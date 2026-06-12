@@ -23,7 +23,9 @@ function createTestApp() {
 
 describe("model provider routes", () => {
   it("lists all available pi-ai providers", async () => {
-    const response = await request(createTestApp().app).get("/api/v1/model-providers");
+    const response = await request(await createTestApp().app).get(
+      "/api/v1/model-providers"
+    );
 
     expect(response.status).toBe(200);
     expect(response.body.code).toBe(0);
@@ -43,7 +45,8 @@ describe("model provider routes", () => {
   });
 
   it("creates a custom provider and returns it as custom", async () => {
-    const { app } = createTestApp();
+    const { app: appPromise } = createTestApp();
+    const app = await appPromise;
 
     const createResponse = await request(app)
       .post("/api/v1/model-providers/custom")
@@ -78,7 +81,8 @@ describe("model provider routes", () => {
   });
 
   it("creates and updates a custom provider model", async () => {
-    const { app } = createTestApp();
+    const { app: appPromise } = createTestApp();
+    const app = await appPromise;
 
     await request(app).post("/api/v1/model-providers/custom").send({
       baseUrl: "https://example.com/v1",
@@ -154,7 +158,8 @@ describe("model provider routes", () => {
   });
 
   it("deletes a custom provider model", async () => {
-    const { app } = createTestApp();
+    const { app: appPromise } = createTestApp();
+    const app = await appPromise;
 
     await request(app).post("/api/v1/model-providers/custom").send({
       baseUrl: "https://example.com/v1",
@@ -193,7 +198,8 @@ describe("model provider routes", () => {
   });
 
   it("updates a custom provider", async () => {
-    const { app } = createTestApp();
+    const { app: appPromise } = createTestApp();
+    const app = await appPromise;
 
     await request(app).post("/api/v1/model-providers/custom").send({
       baseUrl: "https://example.com/v1",
@@ -231,7 +237,8 @@ describe("model provider routes", () => {
   });
 
   it("deletes a custom provider and its related data", async () => {
-    const { app, repository } = createTestApp();
+    const { app: appPromise, repository } = createTestApp();
+    const app = await appPromise;
 
     await request(app).post("/api/v1/model-providers/custom").send({
       baseUrl: "https://example.com/v1",
@@ -276,7 +283,7 @@ describe("model provider routes", () => {
   });
 
   it("lists models for a selected provider", async () => {
-    const response = await request(createTestApp().app).get(
+    const response = await request(await createTestApp().app).get(
       "/api/v1/model-providers/openai/models"
     );
 
@@ -293,7 +300,8 @@ describe("model provider routes", () => {
   });
 
   it("stores an encrypted api key for a provider", async () => {
-    const { app, repository, service } = createTestApp();
+    const { app: appPromise, repository, service } = createTestApp();
+    const app = await appPromise;
 
     const setResponse = await request(app)
       .put("/api/v1/model-providers/openai/api-key")

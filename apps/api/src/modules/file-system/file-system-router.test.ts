@@ -23,7 +23,7 @@ describe("GET /api/v1/file-system/entries", () => {
   });
 
   it("returns folders and files for the configured root when parentPath is omitted", async () => {
-    const response = await request(createApp({ fileSystemRootPath: rootPath }))
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
       .get("/api/v1/file-system/entries");
 
     expect(response.status).toBe(200);
@@ -65,7 +65,7 @@ describe("GET /api/v1/file-system/entries", () => {
   it("returns entries for a provided parentPath inside the root", async () => {
     await writeFile(join(rootPath, "src", "main.ts"), "export {};");
 
-    const response = await request(createApp({ fileSystemRootPath: rootPath }))
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
       .get("/api/v1/file-system/entries")
       .query({ parentPath: join(rootPath, "src") });
 
@@ -84,7 +84,7 @@ describe("GET /api/v1/file-system/entries", () => {
   });
 
   it("rejects parentPath values outside the configured root", async () => {
-    const response = await request(createApp({ fileSystemRootPath: rootPath }))
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
       .get("/api/v1/file-system/entries")
       .query({ parentPath: tmpdir() });
 

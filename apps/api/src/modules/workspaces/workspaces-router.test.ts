@@ -9,7 +9,7 @@ import {
 
 const NOW = new Date("2026-06-08T12:00:00.000Z");
 
-function createTestApp() {
+async function createTestApp() {
   const repository = createInMemoryWorkspaceRepository({
     tasks: [
       createTask({
@@ -69,7 +69,7 @@ function createTestApp() {
 
 describe("workspace routes", () => {
   it("deletes a workspace and all of its tasks", async () => {
-    const app = createTestApp();
+    const app = await createTestApp();
     const deleteResponse = await request(app).delete(
       "/api/v1/workspaces/workspace-beta"
     );
@@ -92,7 +92,7 @@ describe("workspace routes", () => {
   });
 
   it("returns not found when deleting an unknown workspace", async () => {
-    const response = await request(createTestApp()).delete(
+    const response = await request(await createTestApp()).delete(
       "/api/v1/workspaces/missing"
     );
 
@@ -105,7 +105,7 @@ describe("workspace routes", () => {
   });
 
   it("returns conflict when deleting a workspace with a running task", async () => {
-    const response = await request(createTestApp()).delete(
+    const response = await request(await createTestApp()).delete(
       "/api/v1/workspaces/workspace-alpha"
     );
 
@@ -118,7 +118,7 @@ describe("workspace routes", () => {
   });
 
   it("lists every workspace with tasks continued in the last seven days", async () => {
-    const response = await request(createTestApp()).get(
+    const response = await request(await createTestApp()).get(
       "/api/v1/workspaces/recent-tasks"
     );
 
@@ -168,7 +168,7 @@ describe("workspace routes", () => {
   });
 
   it("lists the next page for one workspace after a lastContinuedAt cursor", async () => {
-    const response = await request(createTestApp()).get(
+    const response = await request(await createTestApp()).get(
       "/api/v1/workspaces/workspace-alpha/tasks?afterLastContinuedAt=2026-06-08T08%3A00%3A00.000Z&limit=1"
     );
 
@@ -191,7 +191,7 @@ describe("workspace routes", () => {
   });
 
   it("rejects invalid workspace task pagination query values", async () => {
-    const response = await request(createTestApp()).get(
+    const response = await request(await createTestApp()).get(
       "/api/v1/workspaces/workspace-alpha/tasks?afterLastContinuedAt=not-a-date&limit=0"
     );
 
