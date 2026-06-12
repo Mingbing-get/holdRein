@@ -24,6 +24,7 @@ export default [
       ...tsPlugin.configs.stylistic.rules,
       "@typescript-eslint/consistent-type-imports": "error",
       "@typescript-eslint/no-empty-object-type": "off",
+      "@typescript-eslint/no-namespace": "off",
       "no-redeclare": "off",
       "no-undef": "off",
       "max-lines": ["error", { "max": 400, "skipBlankLines": true, "skipComments": true }]

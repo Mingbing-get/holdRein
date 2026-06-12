@@ -9,7 +9,7 @@ import type {
   ToolCallResult
 } from "@earendil-works/pi-agent-core";
 
-import type { Model } from "@earendil-works/pi-ai";
+import type { Model, Api } from "@earendil-works/pi-ai";
 
 import type { Router } from "express";
 
@@ -19,7 +19,7 @@ export namespace ServerPlugin {
   export interface RuntimeContext {
     readonly env: ExecutionEnv;
     readonly session: Session;
-    readonly model: Model<any>;
+    readonly model: Model<Api>;
     readonly thinkingLevel: ThinkingLevel;
     readonly prompt: string;
   }
