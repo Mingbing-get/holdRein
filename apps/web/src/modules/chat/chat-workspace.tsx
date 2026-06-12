@@ -1,4 +1,4 @@
-import { Divider, Flex } from "antd";
+import { Flex } from "antd";
 import { useLayoutEffect, useRef } from "react";
 
 import { useAppWorkspace } from "../../app/app-workspace-context";
@@ -7,9 +7,7 @@ import {
   ApprovalPanel,
   useAgentTasks
 } from "../agent-messages";
-import { ModelSelector } from "./model-selector";
 import Sender, { type SuggestionGroup } from "./sender";
-import { WorkspaceSelector } from "./workspace-selector";
 
 interface ChatWorkspaceProps {
   activeTaskName: string;
@@ -124,25 +122,12 @@ export function ChatWorkspace({
       </Flex>
 
       <Sender
+        activeAgent={activeAgent}
+        apiBaseUrl={apiBaseUrl}
         disabled={senderDisabled}
         suggestionGroups={groups}
         autoSize={{ minRows: 1, maxRows: 4 }}
-        footer={
-          <Flex align="center">
-            <WorkspaceSelector apiBaseUrl={apiBaseUrl} />
-            <Divider
-              orientation="vertical"
-              style={{
-                borderColor: "var(--app-color-border-secondary)"
-              }}
-            />
-            <ModelSelector
-              apiBaseUrl={apiBaseUrl}
-              value={activeAgent ?? undefined}
-              onChange={setActiveAgent}
-            />
-          </Flex>
-        }
+        onActiveAgentChange={setActiveAgent}
         onSubmit={async (message) => {
           if (!activeAgent || !activeWorkspace || !message.trim()) {
             return;

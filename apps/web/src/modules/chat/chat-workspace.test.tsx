@@ -53,12 +53,16 @@ vi.mock("../agent-messages", () => ({
 
 vi.mock("./sender", () => ({
   default: ({
+    activeAgent,
+    apiBaseUrl,
     disabled,
-    footer,
+    onActiveAgentChange,
     onSubmit
   }: {
+    activeAgent?: SelectedModel;
+    apiBaseUrl: string;
     disabled?: boolean;
-    footer?: React.ReactNode;
+    onActiveAgentChange?: (value: SelectedModel) => void;
     onSubmit?: (message: string) => Promise<void>;
   }) => (
     <div>
@@ -69,36 +73,21 @@ vi.mock("./sender", () => ({
       >
         Sender
       </button>
-      {footer}
+      <div data-api-base-url={apiBaseUrl} data-testid="workspace-selector" />
+      <button
+        data-testid="model-selector"
+        data-model-id={activeAgent?.modelId ?? ""}
+        data-provider-id={activeAgent?.providerId ?? ""}
+        onClick={() => {
+          onActiveAgentChange?.({
+            modelId: "claude-3-5-sonnet",
+            providerId: "anthropic"
+          });
+        }}
+      >
+        Model selector
+      </button>
     </div>
-  )
-}));
-
-vi.mock("./workspace-selector", () => ({
-  WorkspaceSelector: () => <div data-testid="workspace-selector" />
-}));
-
-vi.mock("./model-selector", () => ({
-  ModelSelector: ({
-    onChange,
-    value
-  }: {
-    onChange?: (value: SelectedModel) => void;
-    value?: SelectedModel;
-  }) => (
-    <button
-      data-testid="model-selector"
-      data-model-id={value?.modelId ?? ""}
-      data-provider-id={value?.providerId ?? ""}
-      onClick={() => {
-        onChange?.({
-          modelId: "claude-3-5-sonnet",
-          providerId: "anthropic"
-        });
-      }}
-    >
-      Model selector
-    </button>
   )
 }));
 

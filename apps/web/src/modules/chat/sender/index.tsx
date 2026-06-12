@@ -1,10 +1,13 @@
 import { useCallback, useRef, useState } from "react";
-import { Flex } from "antd";
+import { Divider, Flex } from "antd";
 import {
   Sender as ASender,
   Suggestion,
   type SenderProps
 } from "@ant-design/x";
+
+import { ModelSelector, type SelectedModel } from "../model-selector";
+import { WorkspaceSelector } from "../workspace-selector";
 
 export interface SuggestionItem {
   label: string;
@@ -101,13 +104,24 @@ export function replaceTriggerAtCursor(
   return insertTextAtCursor(value, safeCursorIndex, replacementText);
 }
 
-interface Props extends Pick<SenderProps, 'autoSize' | 'className' | 'classNames' | 'disabled' | 'placeholder' | 'footer'> {
+interface Props extends Pick<SenderProps, 'autoSize' | 'className' | 'classNames' | 'disabled' | 'placeholder'> {
+  activeAgent?: SelectedModel | null
+  apiBaseUrl: string
   suggestionGroups?: SuggestionGroup[]
+  onActiveAgentChange?: (activeAgent: SelectedModel) => void
   onSubmit?: (...args: Parameters<Required<SenderProps>['onSubmit']>) => Promise<void> | void
   onMessageChange?: (message: string) => void
 }
 
-export default function Sender({ suggestionGroups, onMessageChange, onSubmit, ...senderProps }: Props) {
+export default function Sender({
+  activeAgent,
+  apiBaseUrl,
+  onActiveAgentChange,
+  suggestionGroups,
+  onMessageChange,
+  onSubmit,
+  ...senderProps
+}: Props) {
   const [draftMessage, setDraftMessage] = useState("");
   const [suggestionOpen, setSuggestionOpen] = useState(false);
   const [loading, setLoading] = useState(false)
@@ -296,6 +310,24 @@ export default function Sender({ suggestionGroups, onMessageChange, onSubmit, ..
                       "0 14px 32px color-mix(in srgb, var(--app-color-shadow) 20%, transparent)"
                   }
                 }}
+                footer={
+                  <Flex align="center">
+                    <WorkspaceSelector apiBaseUrl={apiBaseUrl} />
+                    <Divider
+                      orientation="vertical"
+                      style={{
+                        borderColor: "var(--app-color-border-secondary)"
+                      }}
+                    />
+                    <ModelSelector
+                      apiBaseUrl={apiBaseUrl}
+                      value={activeAgent ?? undefined}
+                      {...(onActiveAgentChange
+                        ? { onChange: onActiveAgentChange }
+                        : {})}
+                    />
+                  </Flex>
+                }
                 ref={senderRef}
                 value={draftMessage}
                 onKeyDown={e => {
