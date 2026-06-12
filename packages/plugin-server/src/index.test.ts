@@ -49,7 +49,7 @@ describe("createServerPluginRegistry", () => {
 
     await registry.registerRoutes(prefixRouter as never, context);
 
-    expect(mountedRoutes).toEqual([{ path: "routes", route: pluginRoute }]);
+    expect(mountedRoutes).toEqual([{ path: "/routes", route: pluginRoute }]);
   });
 
   it("resolves and merges plugin contributions in registration order", async () => {

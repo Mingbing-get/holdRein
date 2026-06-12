@@ -1,3 +1,5 @@
+import baseServerPlugin from '@hold-rein/plugins-base-server'
+
 import { createApp } from "./app";
 import { loadApiEnv } from "./config/env";
 import { pluginRegistry } from './plugin'
@@ -8,8 +10,7 @@ const DEFAULT_PORT = 3001;
 const port = Number(process.env.PORT ?? DEFAULT_PORT);
 
 async function main() {
-  // todo: 注册插件
-  pluginRegistry.register({ id: '' })
+  pluginRegistry.register(baseServerPlugin)
 
   const app = await createApp()
   app.listen(port, () => {

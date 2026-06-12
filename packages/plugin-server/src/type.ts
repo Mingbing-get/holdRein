@@ -11,10 +11,28 @@ import type {
 
 import type { Model, Api } from "@earendil-works/pi-ai";
 
-import type { Router } from "express";
+import type { Router, Response } from "express";
 
 export namespace ServerPlugin {
-  export interface RouteContext {}
+  // 接口相关
+  interface ResponseCodeDefinition {
+    code: number;
+    defaultMessage: string;
+    description: string;
+    httpStatus: number;
+  }
+  
+  type RseponseType = "success" | "badRequest" | "unauthorized" | "forbidden" | "notFound" | "conflict" | "internalError"
+
+  export interface RouteContext {
+    RESPONSE_CODE_DEFINITIONS: {
+      [K in RseponseType]: ResponseCodeDefinition
+    }
+    sendSuccess: <T>(response: Response, data: T, message?: string) => void
+    sendError(response: Response, definition: ResponseCodeDefinition, message?: string): void
+  }
+
+  // 模型相关
 
   export interface RuntimeContext {
     readonly env: ExecutionEnv;

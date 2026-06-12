@@ -18,7 +18,8 @@
     "better-sqlite3": "12.10.0",
     "drizzle-orm": "0.45.2",
     "express": "5.2.1",
-    "@hold-rein/plugin-server": "workspace:^"
+    "@hold-rein/plugin-server": "workspace:^",
+    "@hold-rein/plugins-base-server": "workspace:^"
   },
   "devDependencies": {
     "@types/better-sqlite3": "7.6.13",

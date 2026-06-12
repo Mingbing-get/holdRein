@@ -71,6 +71,9 @@ importers:
       '@hold-rein/plugin-server':
         specifier: workspace:^
         version: link:../../packages/plugin-server
+      '@hold-rein/plugins-base-server':
+        specifier: workspace:^
+        version: link:../../packages/plugins/base-server
       better-sqlite3:
         specifier: 12.10.0
         version: 12.10.0
@@ -150,6 +153,19 @@ importers:
       '@types/react':
         specifier: 19.2.15
         version: 19.2.15
+      vite:
+        specifier: 6.3.5
+        version: 6.3.5(@types/node@22.15.29)(tsx@4.22.3)(yaml@2.9.0)
+
+  packages/plugins/base-server:
+    dependencies:
+      '@hold-rein/plugin-server':
+        specifier: workspace:^
+        version: link:../../plugin-server
+      express:
+        specifier: 5.2.1
+        version: 5.2.1
+    devDependencies:
       vite:
         specifier: 6.3.5
         version: 6.3.5(@types/node@22.15.29)(tsx@4.22.3)(yaml@2.9.0)
