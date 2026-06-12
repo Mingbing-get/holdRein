@@ -116,6 +116,38 @@ importers:
         specifier: 19.2.3
         version: 19.2.3(@types/react@19.2.15)
 
+  packages/plugin-server:
+    dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: 0.75.4
+        version: 0.75.4(ws@8.21.0)(zod@4.3.6)
+      '@earendil-works/pi-ai':
+        specifier: 0.76.0
+        version: 0.76.0(ws@8.21.0)(zod@4.3.6)
+    devDependencies:
+      vite:
+        specifier: 6.3.5
+        version: 6.3.5(@types/node@22.15.29)(tsx@4.22.3)(yaml@2.9.0)
+
+  packages/plugin-web:
+    dependencies:
+      '@ant-design/icons':
+        specifier: 6.2.5
+        version: 6.2.5(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      antd:
+        specifier: 6.4.3
+        version: 6.4.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react:
+        specifier: 19.2.6
+        version: 19.2.6
+    devDependencies:
+      '@types/react':
+        specifier: 19.2.15
+        version: 19.2.15
+      vite:
+        specifier: 6.3.5
+        version: 6.3.5(@types/node@22.15.29)(tsx@4.22.3)(yaml@2.9.0)
+
 packages:
 
   '@adobe/css-tools@4.5.0':
