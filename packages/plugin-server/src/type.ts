@@ -14,9 +14,7 @@ import type { Model } from "@earendil-works/pi-ai";
 import type { Router } from "express";
 
 export namespace ServerPlugin {
-  export interface RouteContext {
-    router: Router
-  }
+  export interface RouteContext {}
 
   export interface RuntimeContext {
     readonly env: ExecutionEnv;
@@ -60,7 +58,7 @@ export namespace ServerPlugin {
 
   export interface Plugin {
     readonly id: string
-    readonly contributionResolver: ContributionResolver
-    readonly registerRoutes?: (context: RouteContext) => void | Promise<void>;
+    readonly contributionResolver?: ContributionResolver
+    readonly registerRoutes?: (context: RouteContext) => Router | Promise<Router>;
   }
 }
