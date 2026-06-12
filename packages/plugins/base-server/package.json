@@ -34,6 +34,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@earendil-works/pi-agent-core": "0.75.4",
+    "@earendil-works/pi-ai": "0.76.0",
     "@hold-rein/plugin-server": "workspace:^",
     "express": "5.2.1"
   },

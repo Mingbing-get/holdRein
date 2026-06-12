@@ -1,7 +1,8 @@
 import type { ExecutionEnv } from "@earendil-works/pi-agent-core";
 import { Type, type Static } from "@earendil-works/pi-ai";
+import type { ServerPlugin } from "@hold-rein/plugin-server";
 
-import type { AgentTool } from "@earendil-works/pi-agent-core";
+import { classifyShellCommandRisk } from "./shell-command-risk";
 
 const MAX_OUTPUT_LENGTH = 20_000;
 
@@ -17,12 +18,23 @@ const shellExecParameters = Type.Object({
 
 type ShellExecParameters = Static<typeof shellExecParameters>;
 
-export function createShellExecTool(env: ExecutionEnv): AgentTool {
+export function createShellExecTool(env: ExecutionEnv): ServerPlugin.PluginTool {
   return {
     name: "shell_exec",
     label: "Shell Exec",
     description: "Run a shell command in the configured workspace.",
     parameters: shellExecParameters,
+    beforeExecute({ event, requestApproval }) {
+      const params = event.input as Partial<ShellExecParameters>;
+      const command = typeof params.command === "string" ? params.command : "";
+      const risk = classifyShellCommandRisk(command);
+
+      if (risk === "safe") {
+        return undefined;
+      }
+
+      return requestApproval(`Allowed to execute the command: ${params.command}`);
+    },
     async execute(_toolCallId, rawParams, signal) {
       const params = rawParams as ShellExecParameters;
       const cwd = params.cwd ?? env.cwd;

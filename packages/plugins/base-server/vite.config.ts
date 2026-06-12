@@ -8,7 +8,12 @@ export default defineConfig({
       formats: ["es", "cjs"]
     },
     rollupOptions: {
-      external: ["@hold-rein/plugin-server", "express"]
+      external: [
+        "@earendil-works/pi-agent-core",
+        "@earendil-works/pi-ai",
+        "@hold-rein/plugin-server",
+        "express"
+      ]
     },
     sourcemap: true
   }

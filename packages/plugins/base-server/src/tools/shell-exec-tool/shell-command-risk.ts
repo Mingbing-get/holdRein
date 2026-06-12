@@ -1,4 +1,4 @@
-type ShellCommandRisk = "safe" | "writes" | "dangerous";
+export type ShellCommandRisk = "safe" | "writes" | "dangerous";
 
 const DANGEROUS_PATTERNS = [
   /\brm\s+(-[^\s]*r[^\s]*f|-{1,2}recursive\b.*-{1,2}force\b)/u,

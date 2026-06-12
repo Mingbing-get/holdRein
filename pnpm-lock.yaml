@@ -159,6 +159,12 @@ importers:
 
   packages/plugins/base-server:
     dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: 0.75.4
+        version: 0.75.4(ws@8.21.0)(zod@4.3.6)
+      '@earendil-works/pi-ai':
+        specifier: 0.76.0
+        version: 0.76.0(ws@8.21.0)(zod@4.3.6)
       '@hold-rein/plugin-server':
         specifier: workspace:^
         version: link:../../plugin-server
