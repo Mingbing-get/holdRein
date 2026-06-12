@@ -1,3 +1,5 @@
+import type { ServerPlugin } from "./type";
+
 export interface ServerPluginContext {
   readonly agentCore?: unknown;
   readonly ai?: unknown;
@@ -6,6 +8,8 @@ export interface ServerPluginContext {
 export interface ServerPlugin {
   readonly id: string;
   readonly name?: string;
+  readonly version?: string;
+  readonly description?: string;
   setup?: (context: ServerPluginContext) => void | Promise<void>;
 }
 
