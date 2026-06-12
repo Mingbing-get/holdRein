@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { createServerPluginRegistry } from "./index";
+import {
+  createServerPluginRegistry,
+  mountServerPluginRoutes
+} from "./index";
 import type { ServerPlugin } from "./index";
 
 describe("createServerPluginRegistry", () => {
@@ -27,5 +30,24 @@ describe("createServerPluginRegistry", () => {
     expect(() => registry.register(plugin)).toThrow(
       'Server plugin "logger" is already registered.'
     );
+  });
+
+  it("mounts routes contributed by a server plugin", () => {
+    const calls: string[] = [];
+    const router = {
+      get(path: string) {
+        calls.push(path);
+      }
+    };
+    const plugin: ServerPlugin = {
+      id: "routes",
+      registerRoutes(pluginRouter) {
+        pluginRouter.get("/health", () => undefined);
+      }
+    };
+
+    mountServerPluginRoutes(router, plugin, {});
+
+    expect(calls).toEqual(["/health"]);
   });
 });

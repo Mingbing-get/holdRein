@@ -11,7 +11,13 @@ import type {
 
 import type { Model } from "@earendil-works/pi-ai";
 
+import type { Router } from "express";
+
 export namespace ServerPlugin {
+  export interface RouteContext {
+    router: Router
+  }
+
   export interface RuntimeContext {
     readonly env: ExecutionEnv;
     readonly session: Session;
@@ -45,10 +51,16 @@ export namespace ServerPlugin {
     readonly skills?: readonly Skill[];
     readonly skillDirs?: readonly string[];
     readonly systemPrompts?: readonly string[];
-    readonly subscribe?: (event: AgentHarnessEvent) => void | (() => void);
+    readonly subscribe?: (event: AgentHarnessEvent) => void;
   }
 
   export type ContributionResolver =
     | Contribution
     | ((context: RuntimeContext) => Contribution | Promise<Contribution>);
+
+  export interface Plugin {
+    readonly id: string
+    readonly contributionResolver: ContributionResolver
+    readonly registerRoutes?: (context: RouteContext) => void | Promise<void>;
+  }
 }

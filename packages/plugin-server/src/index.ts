@@ -1,27 +1,18 @@
-import type { ServerPlugin } from "./type";
+import type { ServerPlugin } from './type'
 
-export interface ServerPluginContext {
-  readonly agentCore?: unknown;
-  readonly ai?: unknown;
-}
-
-export interface ServerPlugin {
-  readonly id: string;
-  readonly name?: string;
-  readonly version?: string;
-  readonly description?: string;
-  setup?: (context: ServerPluginContext) => void | Promise<void>;
-}
+export * from "./type";
 
 export interface ServerPluginRegistry {
-  register: (plugin: ServerPlugin) => void;
-  list: () => readonly ServerPlugin[];
-  get: (id: string) => ServerPlugin | undefined;
+  register: (plugin: ServerPlugin.Plugin) => void;
+  list: () => ServerPlugin.Plugin[];
+  get: (id: string) => ServerPlugin.Plugin | undefined;
   has: (id: string) => boolean;
+  registerRoutes: (context: ServerPlugin.RouteContext) => Promise<void>;
+  resolveContributions: (context: ServerPlugin.RuntimeContext) => Promise<void>;
 }
 
 export function createServerPluginRegistry(): ServerPluginRegistry {
-  const plugins = new Map<string, ServerPlugin>();
+  const plugins = new Map<string, ServerPlugin.Plugin>();
 
   return {
     register(plugin) {
@@ -39,6 +30,12 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
     },
     has(id) {
       return plugins.has(id);
-    }
+    },
+
+    async registerRoutes(context: ServerPlugin.RouteContext) {
+      
+    },
+
+    async resolveContributions(context: ServerPlugin.RuntimeContext) {}
   };
 }
