@@ -38,10 +38,15 @@ export function ApprovalPanel({ approval, onDecide }: ApprovalPanelProps) {
       vertical
       style={{
         background: "var(--app-color-bg-elevated)",
-        border: "1px solid var(--app-color-border)",
+        border: "none",
         borderRadius: 8,
-        boxShadow: "0 8px 24px var(--app-color-shadow)",
-        padding: 12
+        bottom: 0,
+        boxShadow: "0 0px 10px var(--app-color-shadow)",
+        left: 12,
+        padding: 12,
+        position: "absolute",
+        right: 12,
+        zIndex: 1
       }}
     >
       <Typography.Text strong>待审批命令</Typography.Text>
@@ -51,7 +56,11 @@ export function ApprovalPanel({ approval, onDecide }: ApprovalPanelProps) {
         disabled={submitting}
         loading={submitting}
         onClick={() => void submit(true)}
-        type="primary"
+        style={{
+          background: "transparent",
+          borderColor: "var(--app-color-success)",
+          color: "var(--app-color-success)"
+        }}
       >
         同意
       </Button>

@@ -103,6 +103,7 @@ export function ChatWorkspace({
         style={{
           flex: 1,
           overflow: "auto",
+          position: "relative"
         }}
       >
         <AgentMessageList messages={taskState?.messages ?? []} />

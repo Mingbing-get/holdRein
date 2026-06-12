@@ -2,7 +2,8 @@ import { useState } from "react";
 import {
   DeleteOutlined,
   EditOutlined,
-  EllipsisOutlined
+  EllipsisOutlined,
+  LoadingOutlined
 } from "@ant-design/icons";
 import { Button, Dropdown, Spin, Tag, Typography } from "antd";
 
@@ -79,10 +80,8 @@ export function WorkspaceTask({
       {hasPendingApproval ? (
         <Tag
           data-testid={`task-pending-approval-${task.id}`}
+          color='green'
           style={{
-            background: "var(--app-color-fill-secondary)",
-            borderColor: "var(--app-color-border)",
-            color: "var(--app-color-text-secondary)",
             flexShrink: 0,
             fontSize: 11,
             lineHeight: "18px",
@@ -93,7 +92,12 @@ export function WorkspaceTask({
         </Tag>
       ) : null}
       {task.status === "running" ? (
-        <Spin data-testid={`task-running-${task.id}`} size="small" />
+        <Spin
+          data-testid={`task-running-${task.id}`}
+          size="small"
+          style={{ color: 'var(--app-color-text)' }}
+          indicator={<LoadingOutlined spin />}
+        />
       ) : null}
       {hasUnreadCompletion ? (
         <span

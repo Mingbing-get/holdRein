@@ -211,6 +211,21 @@ describe("ChatWorkspace", () => {
     ).toBeTruthy();
   });
 
+  it("uses the message scroll area as the approval overlay container", () => {
+    agentTasksMock.pendingApproval = {
+      agentId: "agent-1",
+      approvalId: "approval-1",
+      command: "rm -rf dist",
+      cwd: "/workspace",
+      risk: "dangerous"
+    };
+    renderChatWorkspace({ activeTaskId: "task-one" });
+
+    expect(screen.getByTestId("chat-message-scroll")).toHaveStyle({
+      position: "relative"
+    });
+  });
+
   it("starts a new task when no task is active", () => {
     agentTasksMock.startTask.mockResolvedValue(undefined);
     renderChatWorkspace({
