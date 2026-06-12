@@ -115,6 +115,7 @@ describe("App", () => {
   });
 
   beforeEach(() => {
+    window.localStorage.clear();
     fetchMock.mockReset();
     fetchMock.mockResolvedValue({
       json: async () => modelProvidersResponse,
@@ -139,6 +140,7 @@ describe("App", () => {
 
   afterEach(() => {
     cleanup();
+    window.localStorage.clear();
   });
 
   it("renders the workspace shell with top bar actions", async () => {
@@ -152,11 +154,11 @@ describe("App", () => {
       within(topBar).getByRole("button", { name: "Collapse sidebar" })
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Model configuration" })
-    ).toBeInTheDocument();
-    expect(
       screen.getByRole("button", { name: "Open settings" })
     ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Model configuration" })
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole("switch", { name: "Toggle theme" })
     ).toBeInTheDocument();
@@ -180,16 +182,65 @@ describe("App", () => {
     );
   });
 
-  it("shows tooltips for model configuration and settings actions", async () => {
+  it("shows a tooltip for the settings action", async () => {
     render(<App />);
-
-    fireEvent.mouseEnter(
-      screen.getByRole("button", { name: "Model configuration" })
-    );
-    expect(await screen.findByText("模型配置")).toBeInTheDocument();
 
     fireEvent.mouseEnter(screen.getByRole("button", { name: "Open settings" }));
     expect(await screen.findByText("设置")).toBeInTheDocument();
+  });
+
+  it("opens settings navigation with model providers selected and restores workspace navigation", async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input);
+
+      if (url.endsWith("/api/v1/workspaces/recent-tasks")) {
+        return {
+          json: async () => workspaceNavigationResponse,
+          ok: true
+        } as Response;
+      }
+
+      return {
+        json: async () => modelProvidersResponse,
+        ok: true
+      } as Response;
+    });
+
+    render(<App />);
+
+    expect(await screen.findByTestId("workspace-task-task-one")).toHaveTextContent(
+      "First task"
+    );
+    fireEvent.click(screen.getByTestId("workspace-task-task-two"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("chat-workspace")).toHaveAttribute(
+        "data-task-name",
+        "Second task"
+      );
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Open settings" }));
+
+    expect(
+      screen.queryByLabelText("Workspace navigation")
+    ).not.toBeInTheDocument();
+    const settingsNav = screen.getByLabelText("Settings navigation");
+    expect(
+      within(settingsNav).getByRole("button", { name: "返回工作区导航" })
+    ).toBeInTheDocument();
+    expect(await screen.findByTestId("model-providers-view")).toBeInTheDocument();
+
+    fireEvent.click(
+      within(settingsNav).getByRole("button", { name: "返回工作区导航" })
+    );
+
+    expect(screen.getByLabelText("Workspace navigation")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Settings navigation")).not.toBeInTheDocument();
+    expect(screen.getByTestId("chat-workspace")).toHaveAttribute(
+      "data-task-name",
+      "Second task"
+    );
   });
 
   it("shows the sidebar workspaces in the chat workspace selector", async () => {

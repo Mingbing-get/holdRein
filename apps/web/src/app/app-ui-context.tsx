@@ -13,9 +13,11 @@ import "./theme.css";
 
 export type ThemeMode = "light" | "dark";
 export type MainContentView = "chat" | "modelProviders";
+export type SidebarView = "workspace" | "settings";
 
 export interface AppUiState {
   activeMainView: MainContentView;
+  activeSidebarView: SidebarView;
   sidebarCollapsed: boolean;
   sidebarResizing: boolean;
   sidebarWidth: number;
@@ -25,8 +27,11 @@ export interface AppUiState {
 export interface AppUiContextValue {
   openChatWorkspace: () => void;
   openModelProviders: () => void;
+  openSettingsNavigation: () => void;
+  openWorkspaceNavigation: () => void;
   state: AppUiState;
   setActiveMainView: (view: MainContentView) => void;
+  setActiveSidebarView: (view: SidebarView) => void;
   setSidebarResizing: (sidebarResizing: boolean) => void;
   setSidebarWidth: (sidebarWidth: number) => void;
   toggleSidebar: () => void;
@@ -35,6 +40,7 @@ export interface AppUiContextValue {
 
 const DEFAULT_APP_UI_STATE: AppUiState = {
   activeMainView: "chat",
+  activeSidebarView: "workspace",
   sidebarCollapsed: false,
   sidebarResizing: false,
   sidebarWidth: 240,
@@ -84,7 +90,8 @@ export function AppUiProvider({ children }: PropsWithChildren) {
   const openChatWorkspace = useCallback(() => {
     setState((currentState) => ({
       ...currentState,
-      activeMainView: "chat"
+      activeMainView: "chat",
+      activeSidebarView: "workspace"
     }));
   }, []);
 
@@ -95,10 +102,33 @@ export function AppUiProvider({ children }: PropsWithChildren) {
     }));
   }, []);
 
+  const openSettingsNavigation = useCallback(() => {
+    setState((currentState) => ({
+      ...currentState,
+      activeMainView: "modelProviders",
+      activeSidebarView: "settings"
+    }));
+  }, []);
+
+  const openWorkspaceNavigation = useCallback(() => {
+    setState((currentState) => ({
+      ...currentState,
+      activeMainView: "chat",
+      activeSidebarView: "workspace"
+    }));
+  }, []);
+
   const setActiveMainView = useCallback((activeMainView: MainContentView) => {
     setState((currentState) => ({
       ...currentState,
       activeMainView
+    }));
+  }, []);
+
+  const setActiveSidebarView = useCallback((activeSidebarView: SidebarView) => {
+    setState((currentState) => ({
+      ...currentState,
+      activeSidebarView
     }));
   }, []);
 
@@ -134,8 +164,11 @@ export function AppUiProvider({ children }: PropsWithChildren) {
     () => ({
       openChatWorkspace,
       openModelProviders,
+      openSettingsNavigation,
+      openWorkspaceNavigation,
       state,
       setActiveMainView,
+      setActiveSidebarView,
       setSidebarResizing,
       setSidebarWidth,
       toggleSidebar,
@@ -144,7 +177,10 @@ export function AppUiProvider({ children }: PropsWithChildren) {
     [
       openChatWorkspace,
       openModelProviders,
+      openSettingsNavigation,
+      openWorkspaceNavigation,
       setActiveMainView,
+      setActiveSidebarView,
       setSidebarResizing,
       setSidebarWidth,
       state,

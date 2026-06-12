@@ -5,6 +5,7 @@ import { useAppUi } from "../../app/app-ui-context";
 import { useAppWorkspace } from "../../app/app-workspace-context";
 import { ChatWorkspace } from "../chat/chat-workspace";
 import { LeftSideAside } from "../leftSide/aside";
+import { SettingsNav } from "../leftSide/settings-nav";
 import { fetchWorkspaceNavigation } from "../leftSide/workspace-nav-api";
 import { WorkspaceNav } from "../leftSide/workspace-nav";
 import { ModelProvidersView } from "../model-providers";
@@ -18,6 +19,7 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
   const {
     state: {
       activeMainView,
+      activeSidebarView,
       sidebarCollapsed,
       sidebarResizing,
       sidebarWidth
@@ -98,7 +100,11 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
       }}
     >
       <LeftSideAside>
-        <WorkspaceNav apiBaseUrl={apiBaseUrl} />
+        {activeSidebarView === "settings" ? (
+          <SettingsNav />
+        ) : (
+          <WorkspaceNav apiBaseUrl={apiBaseUrl} />
+        )}
       </LeftSideAside>
       <Layout
         data-testid="workspace-main-layout"

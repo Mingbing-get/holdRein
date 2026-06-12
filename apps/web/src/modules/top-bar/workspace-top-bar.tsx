@@ -1,5 +1,4 @@
 import {
-  ExperimentOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MoonOutlined,
@@ -12,8 +11,8 @@ import { useAppUi } from "../../app/app-ui-context";
 
 export function WorkspaceTopBar() {
   const {
-    state: { activeMainView, sidebarCollapsed, themeMode },
-    openModelProviders,
+    state: { sidebarCollapsed, themeMode },
+    openSettingsNavigation,
     toggleSidebar,
     toggleThemeMode
   } = useAppUi();
@@ -50,20 +49,11 @@ export function WorkspaceTopBar() {
           <span />
         </Space>
         <Space align="center" size={10}>
-          <Tooltip title="模型配置">
-            <Button
-              aria-label="Model configuration"
-              icon={<ExperimentOutlined />}
-              onClick={openModelProviders}
-              shape="circle"
-              size="small"
-              type={activeMainView === "modelProviders" ? "default" : "text"}
-            />
-          </Tooltip>
           <Tooltip title="设置">
             <Button
               aria-label="Open settings"
               icon={<SettingOutlined />}
+              onClick={openSettingsNavigation}
               shape="circle"
               size="small"
               type="text"
