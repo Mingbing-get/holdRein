@@ -7,11 +7,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS,
+} from ".";
+import {
   getCurrentCursorCharacterIndex,
   insertTextAtCursor,
   replaceTriggerAtCursor,
   shouldHandleSpaceKeydown
-} from ".";
+} from "./utils";
 
 function getWebSourcePath(pathFromWebSrc: string): string {
   const pathFromWebPackage = join(process.cwd(), "src", pathFromWebSrc);

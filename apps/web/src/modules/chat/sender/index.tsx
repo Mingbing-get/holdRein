@@ -1,4 +1,3 @@
-import { useCallback, useRef, useState } from "react";
 import { Divider, Flex } from "antd";
 import {
   Sender as ASender,
@@ -8,6 +7,24 @@ import {
 
 import { ModelSelector, type SelectedModel } from "../model-selector";
 import { WorkspaceSelector } from "../workspace-selector";
+import {
+  useSenderInputState,
+  useSenderSuggestions,
+  type SuggestionTrigger
+} from "./hooks";
+import {
+  getCurrentCursorCharacterIndex,
+  shouldHandleSpaceKeydown
+} from "./utils";
+
+export {
+  clampCursorIndex,
+  getCurrentCursorCharacterIndex,
+  insertTextAtCursor,
+  replaceTriggerAtCursor,
+  shouldHandleSpaceKeydown,
+  type CursorSource
+} from "./utils";
 
 export interface SuggestionItem {
   label: string;
@@ -24,85 +41,6 @@ export interface SuggestionGroup {
 
 export const CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS =
   "chat-workspace-suggestion-popup";
-
-interface SuggestionTrigger {
-  trigger: SuggestionGroup['trigger']
-  query: string
-}
-
-type SenderInstance = React.ElementRef<typeof ASender>;
-type CursorSource = {
-  selectionStart?: number | null;
-} | null | undefined;
-type InputElement = HTMLTextAreaElement | null;
-interface SpaceKeydownSource {
-  code?: string;
-  isComposing?: boolean;
-  nativeEvent?: {
-    isComposing?: boolean;
-  };
-}
-
-export function getCurrentCursorCharacterIndex(
-  source: CursorSource
-): number | null {
-  return source?.selectionStart ?? null;
-}
-
-export function shouldHandleSpaceKeydown(
-  event: SpaceKeydownSource
-): boolean {
-  if (event.code !== "Space") {
-    return false;
-  }
-
-  return !(event.isComposing || event.nativeEvent?.isComposing);
-}
-
-function clampCursorIndex(value: string, cursorIndex: number | null): number {
-  if (cursorIndex == null) {
-    return value.length;
-  }
-
-  return Math.min(Math.max(cursorIndex, 0), value.length);
-}
-
-export function insertTextAtCursor(
-  value: string,
-  cursorIndex: number | null,
-  insertedText: string
-): string {
-  const safeCursorIndex = clampCursorIndex(value, cursorIndex);
-
-  return (
-    value.slice(0, safeCursorIndex) +
-    insertedText +
-    value.slice(safeCursorIndex)
-  );
-}
-
-export function replaceTriggerAtCursor(
-  value: string,
-  cursorIndex: number | null,
-  currentTriggerText: string,
-  replacementText: string
-): string {
-  const safeCursorIndex = clampCursorIndex(value, cursorIndex);
-  const triggerStartIndex = safeCursorIndex - currentTriggerText.length;
-
-  if (
-    triggerStartIndex >= 0 &&
-    value.slice(triggerStartIndex, safeCursorIndex) === currentTriggerText
-  ) {
-    return (
-      value.slice(0, triggerStartIndex) +
-      replacementText +
-      value.slice(safeCursorIndex)
-    );
-  }
-
-  return insertTextAtCursor(value, safeCursorIndex, replacementText);
-}
 
 interface Props extends Pick<SenderProps, 'autoSize' | 'className' | 'classNames' | 'disabled' | 'placeholder'> {
   activeAgent?: SelectedModel | null
@@ -122,106 +60,29 @@ export default function Sender({
   onSubmit,
   ...senderProps
 }: Props) {
-  const [draftMessage, setDraftMessage] = useState("");
-  const [suggestionOpen, setSuggestionOpen] = useState(false);
-  const [loading, setLoading] = useState(false)
-  const currentTrigger = useRef<SuggestionTrigger>(null)
-  const senderRef = useRef<SenderInstance>(null);
-
-  const getCurrentCursorIndex = useCallback(
-    () =>
-      getCurrentCursorCharacterIndex(
-        (senderRef.current?.inputElement as CursorSource) ?? null
-      ),
-    []
-  );
-
-  const focusCursorAt = useCallback((cursorIndex: number) => {
-    requestAnimationFrame(() => {
-      const inputElement = senderRef.current?.inputElement as InputElement;
-      inputElement?.focus();
-      inputElement?.setSelectionRange(cursorIndex, cursorIndex);
-    });
-  }, []);
-
-  const handleChangeMessage = useCallback((v: string) => {
-    setDraftMessage(v)
-    onMessageChange?.(v)
-  }, [onMessageChange])
-
-  const handleAppendSpace = useCallback((e: React.KeyboardEvent) => {
-    e.preventDefault();
-
-    const cursorIndex =
-      getCurrentCursorCharacterIndex(e.currentTarget as CursorSource) ??
-      getCurrentCursorIndex();
-    const nextMessage = insertTextAtCursor(draftMessage, cursorIndex, " ");
-    const nextCursorIndex = clampCursorIndex(draftMessage, cursorIndex) + 1;
-
-    handleChangeMessage(nextMessage);
-    focusCursorAt(nextCursorIndex);
-  }, [draftMessage, focusCursorAt, getCurrentCursorIndex, handleChangeMessage])
-
-  const getItemsByQuery = useCallback((trigger?: SuggestionTrigger): SuggestionItem[] => {
-    if (!trigger || !suggestionGroups?.length) return []
-
-    for (const group of suggestionGroups) {
-      if (group.trigger === trigger.trigger) {
-        return group.suggestions.filter(item => item.label.includes(trigger.query))
-      }
-    }
-
-    return []
-  }, [suggestionGroups])
-
-  const getTriggerQuery = useCallback((value: string, cursorIndex?: number | null): SuggestionTrigger | undefined => {
-    if (!value || !suggestionGroups?.length) return
-
-    const textBeforeCursor =
-      cursorIndex == null ? value : value.slice(0, cursorIndex);
-
-    if (textBeforeCursor.length === 1) {
-      for (const group of suggestionGroups) {
-        if (group.trigger === textBeforeCursor) {
-          return {
-            trigger: group.trigger,
-            query: ''
-          }
-        }
-      }
-      return
-    }
-
-    const splitValues = textBeforeCursor.split(' ')
-    const matchValue = splitValues[splitValues.length - 1]
-    if (!matchValue) return
-
-    for (const group of suggestionGroups) {
-      if (matchValue.startsWith(`${group.trigger}`)) {
-        const trigger: SuggestionTrigger = {
-          trigger: group.trigger,
-          query: matchValue.substring(1)
-        }
-
-        const items = getItemsByQuery(trigger)
-        if (!items?.length) return
-
-        return trigger
-      }
-    }
-  }, [suggestionGroups, getItemsByQuery])
-
-  const handleSubmit = useCallback(async (...args: Parameters<Required<SenderProps>['onSubmit']>) => {
-    setLoading(true)
-
-    try {
-      await onSubmit?.(...args)
-
-      setDraftMessage('')
-    } finally {
-      setLoading(false)
-    }
-  }, [onSubmit])
+  const {
+    draftMessage,
+    handleChangeMessage,
+    handleSubmit,
+    insertText,
+    loading,
+    senderRef
+  } = useSenderInputState({
+    onMessageChange,
+    onSubmit
+  });
+  
+  const {
+    closeSuggestions,
+    currentTrigger,
+    getItemsByQuery,
+    getTriggerQuery,
+    openSuggestionForTrigger,
+    setSuggestionOpen,
+    suggestionOpen
+  } = useSenderSuggestions({
+    suggestionGroups
+  });
 
   return (
     <Flex vertical>
@@ -235,23 +96,13 @@ export default function Sender({
         items={(info) => getItemsByQuery(info)}
         onOpenChange={setSuggestionOpen}
         onSelect={(value) => {
-          const cursorIndex = getCurrentCursorIndex();
           const activeTrigger = currentTrigger.current;
-          const triggerText = activeTrigger
-            ? `${activeTrigger.trigger}${activeTrigger.query}`
-            : "";
-          const nextMessage = triggerText
-            ? replaceTriggerAtCursor(draftMessage, cursorIndex, triggerText, value)
-            : insertTextAtCursor(draftMessage, cursorIndex, value);
-          const nextCursorIndex =
-            triggerText && cursorIndex != null
-              ? cursorIndex - triggerText.length + value.length
-              : clampCursorIndex(draftMessage, cursorIndex) + value.length;
+          const overwriteLength = activeTrigger
+            ? `${activeTrigger.trigger}${activeTrigger.query}`.length
+            : 0;
 
-          handleChangeMessage(nextMessage);
-          focusCursorAt(nextCursorIndex);
-          setSuggestionOpen(false);
-          currentTrigger.current = null;
+          insertText(value, overwriteLength);
+          closeSuggestions();
         }}
         open={suggestionOpen}
         styles={{
@@ -277,15 +128,13 @@ export default function Sender({
                 }}
                 onChange={(nextValue, e) => {
                   const cursorIndex =
-                    getCurrentCursorCharacterIndex(e?.currentTarget ?? null) ??
-                    getCurrentCursorIndex();
+                    getCurrentCursorCharacterIndex(e?.currentTarget ?? null);
                   handleChangeMessage(nextValue);
 
                   const trigger = getTriggerQuery(nextValue, cursorIndex)
 
                   if (trigger) {
-                    currentTrigger.current = trigger
-                    setSuggestionOpen(true);
+                    openSuggestionForTrigger(trigger);
                     onTrigger(trigger);
 
                     return;
@@ -332,7 +181,8 @@ export default function Sender({
                 value={draftMessage}
                 onKeyDown={e => {
                   if (shouldHandleSpaceKeydown(e)) {
-                    handleAppendSpace(e)
+                    e.preventDefault();
+                    insertText(" ");
                     return;
                   }
                   onKeyDown(e)
