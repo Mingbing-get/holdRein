@@ -72,6 +72,64 @@ describe("AgentTasksProvider", () => {
       expect(screen.getByTestId("unread-completion")).toHaveTextContent("false");
     });
   });
+
+  it("submits and removes a pending approval", async () => {
+    const fetcher = createApprovalFetcher();
+
+    render(
+      <AppWorkspaceProvider>
+        <AgentTasksProvider apiBaseUrl="" fetcher={fetcher}>
+          <ApprovalProbe />
+        </AgentTasksProvider>
+      </AppWorkspaceProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pending-approval")).toHaveTextContent(
+        "approval-1"
+      );
+    });
+    fireEvent.click(screen.getByRole("button", { name: "拒绝审批" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pending-approval")).toHaveTextContent("none");
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/agents/agent-approval/approvals/approval-1",
+      expect.objectContaining({
+        body: JSON.stringify({ approved: false, reason: "Not now" })
+      })
+    );
+  });
+
+  it("keeps a pending approval when submission fails", async () => {
+    const fetcher = createApprovalFetcher(true);
+
+    render(
+      <AppWorkspaceProvider>
+        <AgentTasksProvider apiBaseUrl="" fetcher={fetcher}>
+          <ApprovalProbe />
+        </AgentTasksProvider>
+      </AppWorkspaceProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pending-approval")).toHaveTextContent(
+        "approval-1"
+      );
+    });
+    fireEvent.click(screen.getByRole("button", { name: "拒绝审批" }));
+
+    await waitFor(() => {
+      expect(fetcher).toHaveBeenCalledWith(
+        "/api/v1/agents/agent-approval/approvals/approval-1",
+        expect.anything()
+      );
+    });
+    expect(screen.getByTestId("pending-approval")).toHaveTextContent(
+      "approval-1"
+    );
+  });
 });
 
 function StartTaskProbe() {
@@ -150,6 +208,54 @@ function ResumedTaskProbe() {
   );
 }
 
+function ApprovalProbe() {
+  const { setWorkspaces } = useAppWorkspace();
+  const { decideApproval, getPendingApproval } = useAgentTasks();
+
+  useEffect(() => {
+    setWorkspaces([
+      {
+        hasMore: false,
+        id: "workspace-1",
+        name: "workspace",
+        path: "/workspace",
+        tasks: [
+          {
+            activeAgentId: "agent-approval",
+            id: "task-approval",
+            initialUserMessage: "Inspect",
+            lastContinuedAt: "2026-06-11T00:00:00.000Z",
+            lastModelName: "gpt-4.1",
+            lastModelProvider: "openai",
+            lastModelProviderSource: "built_in",
+            status: "running",
+            title: "Inspect"
+          }
+        ]
+      }
+    ]);
+  }, [setWorkspaces]);
+
+  const approval = getPendingApproval("task-approval");
+  return (
+    <>
+      <span data-testid="pending-approval">{approval?.approvalId ?? "none"}</span>
+      <button
+        onClick={() =>
+          void decideApproval(
+            "task-approval",
+            "approval-1",
+            false,
+            "Not now"
+          ).catch(() => undefined)
+        }
+      >
+        拒绝审批
+      </button>
+    </>
+  );
+}
+
 function createAgentFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
   const encoder = new TextEncoder();
 
@@ -216,6 +322,42 @@ function createResumedTaskFetcher(): AgentMessageFetcher & ReturnType<typeof vi.
           controller.enqueue(
             encoder.encode(
               '{"agentId":"agent-resumed","sequence":1,"timestamp":"now","type":"agent_end"}\n'
+            )
+          );
+          controller.close();
+        }
+      }),
+      { status: 200 }
+    );
+  }) as AgentMessageFetcher & ReturnType<typeof vi.fn>;
+}
+
+function createApprovalFetcher(
+  failDecision = false
+): AgentMessageFetcher & ReturnType<typeof vi.fn> {
+  const encoder = new TextEncoder();
+
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith("/approvals/approval-1")) {
+      if (failDecision) {
+        return new Response(null, { status: 500 });
+      }
+      return jsonResponse({
+        agentId: "agent-approval",
+        approvalId: "approval-1",
+        approved: false
+      });
+    }
+    if (url.endsWith("/messages")) {
+      return jsonResponse([]);
+    }
+    return new Response(
+      new ReadableStream({
+        start(controller) {
+          controller.enqueue(
+            encoder.encode(
+              '{"agentId":"agent-approval","payload":{"agentId":"agent-approval","approvalId":"approval-1","command":"rm -rf dist","cwd":"/workspace","risk":"dangerous"},"sequence":1,"timestamp":"now","type":"approval_requested"}\n'
             )
           );
           controller.close();

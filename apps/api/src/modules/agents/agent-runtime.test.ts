@@ -13,6 +13,7 @@ import { createAgentRuntime } from "./agent-runtime";
 const prompt = vi.fn().mockResolvedValue(undefined);
 const sessionRepoConstructor = vi.fn();
 const executionEnvConstructor = vi.fn();
+const harnessOn = vi.fn();
 
 vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
   const original = await importOriginal<Record<string, unknown>>();
@@ -20,7 +21,7 @@ vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
   return {
     ...original,
     AgentHarness: class {
-      on = vi.fn();
+      on = harnessOn;
       prompt = prompt;
       subscribe = vi.fn();
     },
@@ -47,6 +48,7 @@ vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
 describe("agent runtime sessions", () => {
   beforeEach(() => {
     executionEnvConstructor.mockClear();
+    harnessOn.mockClear();
     prompt.mockClear();
     sessionRepoConstructor.mockClear();
   });
@@ -118,6 +120,45 @@ describe("agent runtime sessions", () => {
     expect(messages).toEqual([
       expect.objectContaining({ content: "Saved prompt", role: "user" })
     ]);
+  });
+
+  it("uses the submitted rejection reason when blocking a shell command", async () => {
+    const approvalStore = createAgentApprovalStore();
+    const { repo } = createSessionRepo();
+    const eventBus = createAgentEventBus();
+    const runtime = createAgentRuntime({
+      approvalStore,
+      eventBus,
+      sessionRepo: repo
+    });
+
+    const result = await runtime.start(createRunInput());
+    let approvalId = "";
+    eventBus.subscribe({ agentId: result.agentId }, (event) => {
+      if (event.type === "approval_requested") {
+        approvalId = (event.payload as { approvalId: string }).approvalId;
+      }
+    });
+    const toolCallHandler = harnessOn.mock.calls.find(
+      ([eventName]) => eventName === "tool_call"
+    )?.[1] as ((event: unknown) => Promise<unknown>) | undefined;
+    const decision = toolCallHandler?.({
+      input: { command: "rm -rf dist", cwd: "/tmp/workspace" },
+      toolName: "shell_exec"
+    });
+
+    expect(
+      approvalStore.decide({
+        agentId: result.agentId,
+        approvalId,
+        approved: false,
+        reason: "Keep generated output for inspection"
+      })
+    ).toBe(true);
+    await expect(decision).resolves.toEqual({
+      block: true,
+      reason: "Keep generated output for inspection"
+    });
   });
 });
 

@@ -4,12 +4,13 @@ import {
   EditOutlined,
   EllipsisOutlined
 } from "@ant-design/icons";
-import { Button, Dropdown, Spin, Typography } from "antd";
+import { Button, Dropdown, Spin, Tag, Typography } from "antd";
 
 import type { WorkspaceTaskSummary } from "../workspace-nav-types";
 
 export interface WorkspaceTaskProps {
   collapsed: boolean;
+  hasPendingApproval: boolean;
   hasUnreadCompletion: boolean;
   isActive: boolean;
   onDelete: (task: WorkspaceTaskSummary) => void;
@@ -20,6 +21,7 @@ export interface WorkspaceTaskProps {
 
 export function WorkspaceTask({
   collapsed,
+  hasPendingApproval,
   hasUnreadCompletion,
   isActive,
   onDelete,
@@ -74,6 +76,22 @@ export function WorkspaceTask({
       >
         {collapsed ? getTaskShortLabel(task) : visibleTitle}
       </Typography.Text>
+      {hasPendingApproval ? (
+        <Tag
+          data-testid={`task-pending-approval-${task.id}`}
+          style={{
+            background: "var(--app-color-fill-secondary)",
+            borderColor: "var(--app-color-border)",
+            color: "var(--app-color-text-secondary)",
+            flexShrink: 0,
+            fontSize: 11,
+            lineHeight: "18px",
+            marginInlineEnd: 0
+          }}
+        >
+          待审批
+        </Tag>
+      ) : null}
       {task.status === "running" ? (
         <Spin data-testid={`task-running-${task.id}`} size="small" />
       ) : null}

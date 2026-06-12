@@ -19,6 +19,7 @@ interface StartAgentBody {
 
 interface ApprovalDecisionBody {
   approved?: boolean;
+  reason?: unknown;
 }
 
 interface ContinueTaskBody {
@@ -266,12 +267,26 @@ export function createAgentsRouter(
         );
         return;
       }
+      if (
+        request.body.reason !== undefined &&
+        typeof request.body.reason !== "string"
+      ) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "reason must be a string"
+        );
+        return;
+      }
 
       void getService()
         .approveAgentAction({
           agentId: request.params.agentId,
           approvalId: request.params.approvalId,
-          approved: request.body.approved
+          approved: request.body.approved,
+          ...(request.body.reason === undefined
+            ? {}
+            : { reason: request.body.reason })
         })
         .then((result) => {
           sendSuccess(response, result);

@@ -96,10 +96,26 @@ export interface AgentRun {
   status: "running";
 }
 
+export interface PendingApproval {
+  agentId: string;
+  approvalId: string;
+  command: string;
+  cwd: string;
+  risk: "safe" | "writes" | "dangerous";
+}
+
+export interface ApprovalDecisionInput {
+  agentId: string;
+  approvalId: string;
+  approved: boolean;
+  reason?: string;
+}
+
 export interface AgentTaskState {
   error: string | null;
   lastSequence: number;
   messages: AgentMessage[];
+  pendingApprovals: PendingApproval[];
   runs: AgentRun[];
   status: "idle" | "running" | "completed" | "error";
   taskId: string;

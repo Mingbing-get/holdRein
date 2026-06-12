@@ -46,18 +46,31 @@ describe("WorkspaceTask", () => {
 
     expect(screen.getByTestId("task-completed-unread-task-one")).toBeInTheDocument();
   });
+
+  it("shows a pending approval tag before the running spinner", () => {
+    renderTask({ hasPendingApproval: true, status: "running" });
+
+    const tag = screen.getByTestId("task-pending-approval-task-one");
+    const spinner = screen.getByTestId("task-running-task-one");
+    expect(
+      tag.compareDocumentPosition(spinner) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
 });
 
 function renderTask({
+  hasPendingApproval = false,
   hasUnreadCompletion = false,
   status
 }: {
+  hasPendingApproval?: boolean;
   hasUnreadCompletion?: boolean;
   status: WorkspaceTaskSummary["status"];
 }) {
   render(
     <WorkspaceTask
       collapsed={false}
+      hasPendingApproval={hasPendingApproval}
       hasUnreadCompletion={hasUnreadCompletion}
       isActive={false}
       onDelete={vi.fn()}

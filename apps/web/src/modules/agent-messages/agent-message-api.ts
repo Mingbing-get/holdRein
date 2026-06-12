@@ -1,6 +1,7 @@
 import type {
   AgentMessage,
   AgentEventEnvelope,
+  ApprovalDecisionInput,
   ContinueTaskInput,
   StartTaskInput,
   StartTaskResult,
@@ -67,6 +68,25 @@ export async function continueAgentTask(
     `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/agents/tasks/${encodeURIComponent(taskId)}/continue`,
     {
       body: JSON.stringify(input),
+      headers: { "Content-Type": "application/json" },
+      method: "POST"
+    }
+  );
+}
+
+export async function decideAgentApproval(
+  apiBaseUrl: string,
+  input: ApprovalDecisionInput,
+  fetcher: AgentMessageFetcher = fetch
+): Promise<ApprovalDecisionInput> {
+  return requestData<ApprovalDecisionInput>(
+    fetcher,
+    `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/agents/${encodeURIComponent(input.agentId)}/approvals/${encodeURIComponent(input.approvalId)}`,
+    {
+      body: JSON.stringify({
+        approved: input.approved,
+        ...(input.reason === undefined ? {} : { reason: input.reason })
+      }),
       headers: { "Content-Type": "application/json" },
       method: "POST"
     }

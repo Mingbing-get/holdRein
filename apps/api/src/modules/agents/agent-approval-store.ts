@@ -1,16 +1,17 @@
 import type {
+  ApprovalDecision,
   ApprovalDecisionInput,
   ShellCommandApprovalRequest
 } from "./agent-types";
 
 export interface AgentApprovalStore {
   decide: (input: ApprovalDecisionInput) => boolean;
-  request: (request: ShellCommandApprovalRequest) => Promise<boolean>;
+  request: (request: ShellCommandApprovalRequest) => Promise<ApprovalDecision>;
 }
 
 interface PendingApproval {
   agentId: string;
-  resolve: (approved: boolean) => void;
+  resolve: (decision: ApprovalDecision) => void;
 }
 
 export function createAgentApprovalStore(): AgentApprovalStore {
@@ -25,12 +26,15 @@ export function createAgentApprovalStore(): AgentApprovalStore {
       }
 
       pendingApprovals.delete(input.approvalId);
-      pending.resolve(input.approved);
+      pending.resolve({
+        approved: input.approved,
+        ...(input.reason === undefined ? {} : { reason: input.reason })
+      });
 
       return true;
     },
     request: (request) =>
-      new Promise<boolean>((resolve) => {
+      new Promise<ApprovalDecision>((resolve) => {
         pendingApprovals.set(request.approvalId, {
           agentId: request.agentId,
           resolve

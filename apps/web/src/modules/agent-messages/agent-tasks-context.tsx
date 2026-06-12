@@ -12,6 +12,7 @@ import type { PropsWithChildren } from "react";
 import { useAppWorkspace } from "../../app/app-workspace-context";
 import {
   continueAgentTask,
+  decideAgentApproval,
   fetchTaskMessages,
   fetchTaskTitle,
   startAgentTask,
@@ -25,13 +26,22 @@ import {
 import type {
   AgentTaskState,
   ContinueTaskInput,
+  PendingApproval,
   StartTaskInput,
   StartTaskResult
 } from "./agent-message-types";
 
 export interface AgentTasksContextValue {
   continueTask: (taskId: string, input: ContinueTaskInput) => Promise<void>;
+  decideApproval: (
+    taskId: string,
+    approvalId: string,
+    approved: boolean,
+    reason?: string
+  ) => Promise<void>;
+  getPendingApproval: (taskId: string) => PendingApproval | undefined;
   getTaskState: (taskId: string) => AgentTaskState | undefined;
+  hasPendingApproval: (taskId: string) => boolean;
   hasUnreadCompletion: (taskId: string) => boolean;
   startTask: (input: StartTaskInput) => Promise<void>;
 }
@@ -209,14 +219,58 @@ export function AgentTasksProvider({
     [apiBaseUrl, fetcher, handleTaskStatus, updateTaskStatus]
   );
 
+  const decideApproval = useCallback(
+    async (
+      taskId: string,
+      approvalId: string,
+      approved: boolean,
+      reason?: string
+    ) => {
+      const approval = taskStates[taskId]?.pendingApprovals.find(
+        (candidate) => candidate.approvalId === approvalId
+      );
+      if (!approval) {
+        throw new Error("Unknown approval request");
+      }
+      await decideAgentApproval(
+        apiBaseUrl,
+        {
+          agentId: approval.agentId,
+          approvalId,
+          approved,
+          ...(reason === undefined ? {} : { reason })
+        },
+        fetcher
+      );
+      setTaskStates((current) => ({
+        ...current,
+        [taskId]: reduceAgentTaskState(
+          current[taskId] ?? createInitialAgentTaskState(taskId),
+          { approvalId, type: "approval_decided" }
+        )
+      }));
+    },
+    [apiBaseUrl, fetcher, taskStates]
+  );
+
   const contextValue = useMemo<AgentTasksContextValue>(
     () => ({
       continueTask,
+      decideApproval,
+      getPendingApproval: (taskId) => taskStates[taskId]?.pendingApprovals[0],
       getTaskState: (taskId) => taskStates[taskId],
+      hasPendingApproval: (taskId) =>
+        Boolean(taskStates[taskId]?.pendingApprovals.length),
       hasUnreadCompletion: (taskId) => unreadCompletionTaskIds.has(taskId),
       startTask
     }),
-    [continueTask, startTask, taskStates, unreadCompletionTaskIds]
+    [
+      continueTask,
+      decideApproval,
+      startTask,
+      taskStates,
+      unreadCompletionTaskIds
+    ]
   );
 
   return (

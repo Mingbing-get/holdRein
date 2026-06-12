@@ -92,6 +92,47 @@ describe("agent task message reducer", () => {
 
     expect(state.messages).toEqual([persisted]);
   });
+
+  it("queues approval requests without adding them to messages", () => {
+    const approval = {
+      agentId: "agent-1",
+      approvalId: "approval-1",
+      command: "rm -rf dist",
+      cwd: "/workspace",
+      risk: "dangerous" as const
+    };
+    const state = [
+      event(1, "approval_requested", approval),
+      event(2, "approval_requested", approval)
+    ].reduce(
+      (current, item) =>
+        reduceAgentTaskState(current, { event: item, type: "event_received" }),
+      createInitialAgentTaskState("task-1")
+    );
+
+    expect(state.pendingApprovals).toEqual([approval]);
+    expect(state.messages).toEqual([]);
+  });
+
+  it("removes a decided approval", () => {
+    const queued = reduceAgentTaskState(createInitialAgentTaskState("task-1"), {
+      event: event(1, "approval_requested", {
+        agentId: "agent-1",
+        approvalId: "approval-1",
+        command: "rm -rf dist",
+        cwd: "/workspace",
+        risk: "dangerous"
+      }),
+      type: "event_received"
+    });
+
+    const state = reduceAgentTaskState(queued, {
+      approvalId: "approval-1",
+      type: "approval_decided"
+    });
+
+    expect(state.pendingApprovals).toEqual([]);
+  });
 });
 
 function event(sequence: number, type: string, payload: unknown) {

@@ -3,12 +3,14 @@ import type {
   AgentMessage,
   AgentTaskState,
   AssistantMessage,
+  PendingApproval,
   ThinkingContent,
   TextContent
 } from "./agent-message-types";
 
 export type AgentTaskAction =
   | { prompt: string; type: "prompt_submitted" }
+  | { approvalId: string; type: "approval_decided" }
   | { event: AgentEventEnvelope; type: "event_received" }
   | { messages: AgentMessage[]; type: "history_loaded" }
   | { message: string; type: "subscription_failed" };
@@ -18,6 +20,7 @@ export function createInitialAgentTaskState(taskId: string): AgentTaskState {
     error: null,
     lastSequence: 0,
     messages: [],
+    pendingApprovals: [],
     runs: [],
     status: "idle",
     taskId
@@ -49,6 +52,14 @@ export function reduceAgentTaskState(
   if (action.type === "subscription_failed") {
     return { ...state, error: action.message, status: "error" };
   }
+  if (action.type === "approval_decided") {
+    return {
+      ...state,
+      pendingApprovals: state.pendingApprovals.filter(
+        (approval) => approval.approvalId !== action.approvalId
+      )
+    };
+  }
 
   const next = {
     ...state,
@@ -56,6 +67,21 @@ export function reduceAgentTaskState(
   };
   const payload = getRecord(action.event.payload);
 
+  if (action.event.type === "approval_requested") {
+    const approval = getPendingApproval(payload);
+    if (
+      !approval ||
+      next.pendingApprovals.some(
+        (candidate) => candidate.approvalId === approval.approvalId
+      )
+    ) {
+      return next;
+    }
+    return {
+      ...next,
+      pendingApprovals: [...next.pendingApprovals, approval]
+    };
+  }
   if (action.event.type === "message_start") {
     const message = payload?.message as AgentMessage | undefined;
     return message ? upsertMessage(next, message) : next;
@@ -160,4 +186,25 @@ function getRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object"
     ? (value as Record<string, unknown>)
     : undefined;
+}
+
+function getPendingApproval(
+  value: Record<string, unknown> | undefined
+): PendingApproval | undefined {
+  if (
+    typeof value?.agentId !== "string" ||
+    typeof value.approvalId !== "string" ||
+    typeof value.command !== "string" ||
+    typeof value.cwd !== "string" ||
+    !["safe", "writes", "dangerous"].includes(String(value.risk))
+  ) {
+    return undefined;
+  }
+  return {
+    agentId: value.agentId,
+    approvalId: value.approvalId,
+    command: value.command,
+    cwd: value.cwd,
+    risk: value.risk as PendingApproval["risk"]
+  };
 }

@@ -21,6 +21,7 @@ import { WorkspaceNav } from ".";
 
 vi.mock("../../agent-messages", () => ({
   useAgentTasks: () => ({
+    hasPendingApproval: () => false,
     hasUnreadCompletion: () => false
   })
 }));

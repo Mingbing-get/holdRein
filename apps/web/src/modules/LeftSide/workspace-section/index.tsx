@@ -24,7 +24,7 @@ export function WorkspaceSection({
   workspace
 }: WorkspaceSectionProps) {
   const { message, modal } = App.useApp();
-  const { hasUnreadCompletion } = useAgentTasks();
+  const { hasPendingApproval, hasUnreadCompletion } = useAgentTasks();
   const {
     openChatWorkspace
   } = useAppUi();
@@ -127,6 +127,7 @@ export function WorkspaceSection({
         workspace.tasks.map((task) => (
           <WorkspaceTask
             collapsed={collapsed}
+            hasPendingApproval={hasPendingApproval(task.id)}
             hasUnreadCompletion={hasUnreadCompletion(task.id)}
             isActive={isActiveWorkspace && task.id === activeTaskId}
             key={task.id}

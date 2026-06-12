@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   continueAgentTask,
+  decideAgentApproval,
   fetchTaskMessages,
   fetchTaskTitle,
   startAgentTask,
@@ -165,6 +166,39 @@ describe("agent message API", () => {
     expect(fetcher).toHaveBeenCalledWith(
       "/api/v1/agents/agent-1/events?afterSequence=0",
       {}
+    );
+  });
+
+  it("submits approval decisions with an optional rejection reason", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      json: async () => ({
+        code: 0,
+        data: { agentId: "agent-1", approvalId: "approval-1", approved: false },
+        msg: "ok"
+      }),
+      ok: true
+    });
+
+    await decideAgentApproval(
+      "",
+      {
+        agentId: "agent-1",
+        approvalId: "approval-1",
+        approved: false,
+        reason: "Use a safer command"
+      },
+      fetcher
+    );
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/agents/agent-1/approvals/approval-1",
+      expect.objectContaining({
+        body: JSON.stringify({
+          approved: false,
+          reason: "Use a safer command"
+        }),
+        method: "POST"
+      })
     );
   });
 });

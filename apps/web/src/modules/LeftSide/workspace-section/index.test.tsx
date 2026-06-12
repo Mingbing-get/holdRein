@@ -19,6 +19,7 @@ const renameTaskMock = vi.fn();
 
 vi.mock("../../agent-messages", () => ({
   useAgentTasks: () => ({
+    hasPendingApproval: () => false,
     hasUnreadCompletion: () => false
   })
 }));

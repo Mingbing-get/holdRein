@@ -2,7 +2,11 @@ import { Divider, Flex } from "antd";
 import { useLayoutEffect, useRef } from "react";
 
 import { useAppWorkspace } from "../../app/app-workspace-context";
-import { AgentMessageList, useAgentTasks } from "../agent-messages";
+import {
+  AgentMessageList,
+  ApprovalPanel,
+  useAgentTasks
+} from "../agent-messages";
 import { ModelSelector } from "./model-selector";
 import Sender, { type SuggestionGroup } from "./sender";
 import { WorkspaceSelector } from "./workspace-selector";
@@ -42,11 +46,18 @@ export function ChatWorkspace({
     state: { activeAgent, activeTaskId, activeWorkspaceId, workspaces },
     setActiveAgent
   } = useAppWorkspace();
-  const { continueTask, getTaskState, startTask } = useAgentTasks();
+  const {
+    continueTask,
+    decideApproval,
+    getPendingApproval,
+    getTaskState,
+    startTask
+  } = useAgentTasks();
   const activeWorkspace = workspaces.find(
     (workspace) => workspace.id === activeWorkspaceId
   );
   const taskState = getTaskState(activeTaskId);
+  const pendingApproval = getPendingApproval(activeTaskId);
   const senderDisabled = !activeWorkspaceId || !activeAgent;
   const bottomRef = useRef<HTMLDivElement>(null);
   const previousTaskIdRef = useRef(activeTaskId);
@@ -61,7 +72,7 @@ export function ChatWorkspace({
     if (shouldFollowMessagesRef.current) {
       bottomRef.current?.scrollIntoView?.({ block: "end" });
     }
-  }, [activeTaskId, taskState?.messages]);
+  }, [activeTaskId, pendingApproval, taskState?.messages]);
 
   return (
     <Flex
@@ -95,6 +106,19 @@ export function ChatWorkspace({
         }}
       >
         <AgentMessageList messages={taskState?.messages ?? []} />
+        {pendingApproval ? (
+          <ApprovalPanel
+            approval={pendingApproval}
+            onDecide={(approved, reason) =>
+              decideApproval(
+                activeTaskId,
+                pendingApproval.approvalId,
+                approved,
+                reason
+              )
+            }
+          />
+        ) : null}
         <div aria-hidden ref={bottomRef} />
       </Flex>
 

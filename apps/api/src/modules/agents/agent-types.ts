@@ -59,9 +59,15 @@ export interface ApprovalDecisionInput {
   agentId: string;
   approvalId: string;
   approved: boolean;
+  reason?: string;
 }
 
 export interface ApprovalDecisionResult extends ApprovalDecisionInput {}
+
+export interface ApprovalDecision {
+  approved: boolean;
+  reason?: string;
+}
 
 export interface ShellCommandApprovalRequest {
   agentId: string;

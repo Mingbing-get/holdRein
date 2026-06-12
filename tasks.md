@@ -1,7 +1,72 @@
-## 确定任务
-
-1.  web端渲染审批时不要将其堆叠在消息内，而是在消息这个框的底部弹出一个审批框，内部第一行是一个是的按钮占据一行，点击即表示同意，第二行是一个拒绝按钮占据一行，点击表示拒绝若后面输入框有值则带上这个值作为原因，若没有则就没有原因，第三行是一个多行文本输入框，可以输入拒绝原因，输入回车也就直接发送拒绝，并将其值设置为拒绝原因；无论是接受还是拒绝执行后这个弹出框就消失掉，这里可以直接抽离为一个审批组件需要审批时弹出即可；还有审批需要在左侧任务上标识出来，如果这个任务收到一个审批任务，那么就在任务的右侧显示一个待审批的tag，放在loading右侧即可
-
 ## 待考虑任务
 
 1. 文件长期记忆系统，提供search_memory、read_memory，默认嵌入记忆文件夹的结构，任务完成后重新启动一个agent来整理记忆提供write_memory、update_memory、search_memory、read_memory、list_memory_structure等工具
+
+## toolDefine
+
+```ts
+namespace ServerPlugin {
+  export interface Context {
+    env: ExecutionEnv;
+    session: Session;
+    model: Model<any>;
+    thinkingLevel: ThinkingLevel;
+    prompt: string;
+  }
+
+  type ToolExecuteBeforeResult = ToolCallResult | undefined
+
+  export interface ToolBeforeExecuteOption {
+    workspacePath: string
+    event: ToolCallEvent
+    approval: (title?: string) => Promise<ToolExecuteBeforeResult>
+  }
+
+  export interface ToolDefine extends AgentTool {
+    beforeExecute: (options: ToolBeforeExecuteOption) => ToolExecuteBeforeResult | Promise<ToolExecuteBeforeResult>
+  }
+
+  export interface Define extends Partal<Pick<Context, 'model' | 'thinkingLevel'>> {
+    tools?: ToolDefine[]
+    /**
+     * 会自动加载skillDirs下所有的skill，会合并skills
+     */
+    skills?: Skill[]
+    skillDirs?: string[]
+    systemPrompt?: string[]
+    subscribe?: (event: AgentHarnessEvent) => void
+  }
+
+  export type WithDynamicDefine = Define | ((context: Context) => Define | Promise<Define>)
+}
+
+namespace WebPlugin {
+  export interface Context {
+    useAppUi: () => AppUiContextValue
+  }
+
+  export interface ToolRender {
+    name: string
+    Render: (props: { toolCall: ToolCall, result: ToolResultMessage }) => React.ReactNode
+  }
+
+  export interface Define {
+    toolRenders?: ToolRender[]
+    settings?: {
+      title: string
+      icon: React.ReactNode
+      Panel: () => React.ReactNode
+    }[]
+    lefts?: {
+      title: string
+      icon: React.ReactNode
+      Panel: () => React.ReactNode
+    }[]
+    senderActions?: {
+      Render: () => React.ReactNode
+    }[]
+  }
+
+  export type WithDynamicDefine = Define | ((context: Context) => Define | Promise<Define>)
+}
+```

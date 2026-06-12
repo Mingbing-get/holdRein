@@ -189,9 +189,15 @@ export function createAgentRuntime(
           type: "approval_requested"
         });
 
-        return (await approval)
+        const decision = await approval;
+        return decision.approved
           ? undefined
-          : { block: true, reason: `User denied shell command: ${command}` };
+          : {
+              block: true,
+              reason:
+                decision.reason?.trim() ||
+                `User denied shell command: ${command}`
+            };
       });
 
       runningAgents.set(agentId, { harness, sessionId: sessionMetadata.id });

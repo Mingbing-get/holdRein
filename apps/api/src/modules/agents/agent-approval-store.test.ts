@@ -18,10 +18,14 @@ describe("agent approval store", () => {
       store.decide({
         agentId: "agent-1",
         approvalId: "approval-1",
-        approved: false
+        approved: false,
+        reason: "Not during deployment"
       })
     ).toBe(true);
-    await expect(approval).resolves.toBe(false);
+    await expect(approval).resolves.toEqual({
+      approved: false,
+      reason: "Not during deployment"
+    });
   });
 
   it("rejects decisions for unknown approvals", () => {

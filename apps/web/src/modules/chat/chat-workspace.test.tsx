@@ -21,13 +21,24 @@ import type { SelectedModel } from "./model-selector";
 
 const agentTasksMock = vi.hoisted(() => ({
   continueTask: vi.fn(),
+  decideApproval: vi.fn(),
   messages: [
     { content: "Real message", id: "message-1", kind: "assistant" }
   ] as { content: string; id: string; kind: string }[],
+  pendingApproval: undefined as
+    | {
+        agentId: string;
+        approvalId: string;
+        command: string;
+        cwd: string;
+        risk: "dangerous";
+      }
+    | undefined,
   startTask: vi.fn()
 }));
 
 vi.mock("../agent-messages", () => ({
+  ApprovalPanel: () => <div data-testid="approval-panel">Approval</div>,
   AgentMessageList: ({ messages }: { messages: { content: string }[] }) => (
     <div data-testid="agent-message-list">
       {messages.map((message) => message.content).join(",")}
@@ -35,6 +46,8 @@ vi.mock("../agent-messages", () => ({
   ),
   useAgentTasks: () => ({
     continueTask: agentTasksMock.continueTask,
+    decideApproval: agentTasksMock.decideApproval,
+    getPendingApproval: () => agentTasksMock.pendingApproval,
     getTaskState: (taskId: string) =>
       taskId === "task-one"
         ? {
@@ -110,6 +123,8 @@ describe("ChatWorkspace", () => {
     cleanup();
     agentTasksMock.startTask.mockReset();
     agentTasksMock.continueTask.mockReset();
+    agentTasksMock.decideApproval.mockReset();
+    agentTasksMock.pendingApproval = undefined;
     agentTasksMock.messages = [
       { content: "Real message", id: "message-1", kind: "assistant" }
     ];
@@ -176,6 +191,24 @@ describe("ChatWorkspace", () => {
         provider: "anthropic"
       }
     );
+  });
+
+  it("renders a pending approval after the message list", () => {
+    agentTasksMock.pendingApproval = {
+      agentId: "agent-1",
+      approvalId: "approval-1",
+      command: "rm -rf dist",
+      cwd: "/workspace",
+      risk: "dangerous"
+    };
+    renderChatWorkspace({ activeTaskId: "task-one" });
+
+    const messageList = screen.getByTestId("agent-message-list");
+    const approvalPanel = screen.getByTestId("approval-panel");
+    expect(
+      messageList.compareDocumentPosition(approvalPanel) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
   it("starts a new task when no task is active", () => {

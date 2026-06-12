@@ -315,7 +315,7 @@ describe("agent routes", () => {
 
     const response = await request(createApp({ agentsService: service }))
       .post("/api/v1/agents/agent-1/approvals/approval-1")
-      .send({ approved: false });
+      .send({ approved: false, reason: "Use a safer command" });
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({
@@ -330,7 +330,17 @@ describe("agent routes", () => {
     expect(service.approveAgentAction).toHaveBeenCalledWith({
       agentId: "agent-1",
       approvalId: "approval-1",
-      approved: false
+      approved: false,
+      reason: "Use a safer command"
     });
+  });
+
+  it("rejects non-string approval reasons", async () => {
+    const response = await request(createApp({ agentsService: createService() }))
+      .post("/api/v1/agents/agent-1/approvals/approval-1")
+      .send({ approved: false, reason: 42 });
+
+    expect(response.status).toBe(400);
+    expect(response.body.msg).toBe("reason must be a string");
   });
 });
