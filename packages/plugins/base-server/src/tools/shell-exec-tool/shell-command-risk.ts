@@ -1,6 +1,7 @@
 export type ShellCommandRisk = "safe" | "writes" | "dangerous";
 
 const DANGEROUS_PATTERNS = [
+  /\brm\b/u,
   /\brm\s+(-[^\s]*r[^\s]*f|-{1,2}recursive\b.*-{1,2}force\b)/u,
   /\bgit\s+reset\s+--hard\b/u,
   /\bsudo\b/u,
