@@ -1,31 +1,18 @@
-import type { ButtonProps, MenuProps } from "antd";
-import type { ComponentType, ReactNode } from "react";
+import type { WebPlugin } from "./type";
 
-export interface WebPluginAction {
-  readonly id: string;
-  readonly label: ReactNode;
-  readonly icon?: ComponentType;
-  readonly buttonProps?: ButtonProps;
-  onClick?: () => void;
-}
-
-export interface WebPlugin {
-  readonly id: string;
-  readonly name?: string;
-  readonly icon?: ComponentType;
-  readonly actions?: readonly WebPluginAction[];
-  readonly menuItems?: MenuProps["items"];
-}
+export type {
+  WebPlugin
+};
 
 export interface WebPluginRegistry {
-  register: (plugin: WebPlugin) => void;
-  list: () => readonly WebPlugin[];
-  get: (id: string) => WebPlugin | undefined;
+  register: (plugin: WebPlugin.Plugin) => void;
+  list: () => readonly WebPlugin.Plugin[];
+  get: (id: string) => WebPlugin.Plugin | undefined;
   has: (id: string) => boolean;
 }
 
 export function createWebPluginRegistry(): WebPluginRegistry {
-  const plugins = new Map<string, WebPlugin>();
+  const plugins = new Map<string, WebPlugin.Plugin>();
 
   return {
     register(plugin) {
