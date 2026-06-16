@@ -12,7 +12,8 @@ import {
 } from "react";
 
 import { useAppUi } from './app-ui-context';
-import { request } from '../api/request'
+import { request } from '../api/request';
+import baseWebPlugin from '@hold-rein/plugins-base-web';
 
 export interface AppPluginContextValue {
   pluginRegistry: WebPluginRegistry;
@@ -87,6 +88,10 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
   }, [appUi])
 
   useEffect(() => {
+    if (!pluginRegistry.current.has(baseWebPlugin.id)) {
+      pluginRegistry.current.register(baseWebPlugin)
+    }
+
     const plugins = pluginRegistry.current.list()
 
     clear()
@@ -103,7 +108,12 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
     settings,
     senderActions,
     toolRenders
-  }), [])
+  }), [
+    rightPanels,
+    senderActions,
+    settings,
+    toolRenders
+  ])
 
   return (
     <AppPluginContext.Provider value={contextValue}>

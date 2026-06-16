@@ -1,9 +1,15 @@
-import { ArrowLeftOutlined, ExperimentOutlined } from "@ant-design/icons";
+import {
+  ArrowLeftOutlined,
+  ExperimentOutlined,
+  SettingOutlined
+} from "@ant-design/icons";
 import { Button, Typography } from "antd";
 
+import { useAppPlugins } from "../../../app/app-plugin";
 import { useAppUi } from "../../../app/app-ui-context";
 
 export function SettingsNav() {
+  const { settings } = useAppPlugins();
   const {
     setActiveMainView,
     openWorkspaceNavigation,
@@ -82,6 +88,28 @@ export function SettingsNav() {
         >
           {sidebarCollapsed ? null : "模型配置"}
         </Button>
+        {settings.map((setting) => (
+          <Button
+            aria-label={setting.title}
+            block
+            icon={setting.icon}
+            key={setting.id}
+            onClick={() => setActiveMainView(setting.id)}
+            style={{
+              background:
+                activeMainView === setting.id
+                  ? "var(--app-color-fill-secondary)"
+                  : undefined,
+              borderRadius: 6,
+              color: "var(--app-color-text)",
+              fontSize: 12,
+              justifyContent: sidebarCollapsed ? "center" : "flex-start"
+            }}
+            type="text"
+          >
+            {sidebarCollapsed ? null : setting.title}
+          </Button>
+        ))}
       </div>
     </nav>
   );

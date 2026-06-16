@@ -1,6 +1,7 @@
 import { Layout } from "antd";
 import { useEffect } from "react";
 
+import { useAppPlugins } from "../../app/app-plugin";
 import { useAppUi } from "../../app/app-ui-context";
 import { useAppWorkspace } from "../../app/app-workspace-context";
 import { ChatWorkspace } from "../chat/chat-workspace";
@@ -17,6 +18,7 @@ interface HoldReinShellProps {
 }
 
 export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
+  const { settings } = useAppPlugins();
   const {
     state: {
       activeMainView,
@@ -66,6 +68,10 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
     (activeWorkspace?.id === newConversationWorkspaceId
       ? undefined
       : activeWorkspace?.tasks[0]);
+  const activePluginSetting = settings.find(
+    (setting) => setting.id === activeMainView
+  );
+  const ActivePluginSettingRender = activePluginSetting?.Render;
 
   useEffect(() => {
     if (!activeWorkspace) {
@@ -124,7 +130,9 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
             padding: activeMainView === "chat" ? 0 : "10px 14px 14px"
           }}
         >
-          {activeMainView === "modelProviders" ? (
+          {ActivePluginSettingRender ? (
+            <ActivePluginSettingRender />
+          ) : activeMainView === "modelProviders" ? (
             <ModelProvidersView apiBaseUrl={apiBaseUrl} />
           ) : (
             <div
