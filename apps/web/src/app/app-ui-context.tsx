@@ -64,21 +64,6 @@ export function AppUiProvider({ children }: PropsWithChildren) {
     document.body.style.background = "var(--app-color-bg-base)";
   }, [state.themeMode]);
 
-  const openChatWorkspace = useCallback(() => {
-    setState((currentState) => ({
-      ...currentState,
-      activeMainView: "chat",
-      activeSidebarView: "workspace"
-    }));
-  }, []);
-
-  const openModelProviders = useCallback(() => {
-    setState((currentState) => ({
-      ...currentState,
-      activeMainView: "modelProviders"
-    }));
-  }, []);
-
   const openSettingsNavigation = useCallback(() => {
     setState((currentState) => ({
       ...currentState,
@@ -163,8 +148,6 @@ export function AppUiProvider({ children }: PropsWithChildren) {
 
   const contextValue = useMemo<WebPlugin.AppUiContextValue>(
     () => ({
-      openChatWorkspace,
-      openModelProviders,
       openSettingsNavigation,
       openWorkspaceNavigation,
       state,
@@ -179,8 +162,6 @@ export function AppUiProvider({ children }: PropsWithChildren) {
       toggleThemeMode
     }),
     [
-      openChatWorkspace,
-      openModelProviders,
       openSettingsNavigation,
       openWorkspaceNavigation,
       setActiveMainView,

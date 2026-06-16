@@ -26,7 +26,7 @@ export function WorkspaceSection({
   const { message, modal } = App.useApp();
   const { hasPendingApproval, hasUnreadCompletion } = useAgentTasks();
   const {
-    openChatWorkspace
+    openWorkspaceNavigation
   } = useAppUi();
   const {
     state: { activeTaskId, activeWorkspaceId },
@@ -114,7 +114,7 @@ export function WorkspaceSection({
           onDelete={confirmDeleteWorkspace}
           onStartNewConversation={() => {
             startNewConversation(workspace.id);
-            openChatWorkspace();
+            openWorkspaceNavigation();
           }}
           onToggleCollapsed={() => {
             setWorkspaceCollapsed((currentValue) => !currentValue);
@@ -135,7 +135,7 @@ export function WorkspaceSection({
             onOpen={() => {
               setActiveWorkspaceId(workspace.id);
               setActiveTaskId(task.id);
-              openChatWorkspace();
+              openWorkspaceNavigation();
             }}
             onRename={(selectedTask, visibleTitle) => {
               setEditingTask(selectedTask);

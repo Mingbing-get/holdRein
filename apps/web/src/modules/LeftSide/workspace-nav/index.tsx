@@ -7,7 +7,7 @@ import { WorkspaceSection } from "../workspace-section";
 
 export function WorkspaceNav({ apiBaseUrl }: { apiBaseUrl: string }) {
   const {
-    openChatWorkspace,
+    openWorkspaceNavigation,
     state: { sidebarCollapsed }
   } = useAppUi();
   const {
@@ -37,7 +37,7 @@ export function WorkspaceNav({ apiBaseUrl }: { apiBaseUrl: string }) {
         icon={<PlusOutlined />}
         onClick={() => {
           startNewConversation(activeWorkspaceId);
-          openChatWorkspace();
+          openWorkspaceNavigation();
         }}
         style={{
           borderColor: "var(--app-color-border-secondary)",

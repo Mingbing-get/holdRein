@@ -5,7 +5,7 @@ import { useAppUi } from "../../../app/app-ui-context";
 
 export function SettingsNav() {
   const {
-    openModelProviders,
+    setActiveMainView,
     openWorkspaceNavigation,
     state: { activeMainView, sidebarCollapsed }
   } = useAppUi();
@@ -67,7 +67,7 @@ export function SettingsNav() {
           aria-label="模型配置"
           block
           icon={<ExperimentOutlined />}
-          onClick={openModelProviders}
+          onClick={() => setActiveMainView('modelProviders')}
           style={{
             background:
               activeMainView === "modelProviders"

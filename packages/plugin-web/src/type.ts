@@ -29,7 +29,7 @@ export namespace WebPlugin {
   }
 
   export type ThemeMode = "light" | "dark";
-  export type MainContentView = "chat" | "modelProviders";
+  export type MainContentView = "chat" | "modelProviders" | (string & {});
   export type SidebarView = "workspace" | "settings";
 
   export interface AppUiState {
@@ -45,11 +45,9 @@ export namespace WebPlugin {
   }
 
   export interface AppUiContextValue {
-    openChatWorkspace: () => void;
-    openModelProviders: () => void;
     openSettingsNavigation: () => void;
     openWorkspaceNavigation: () => void;
-    state: AppUiState;
+    state: AppUiState; 
     setActiveMainView: (view: MainContentView) => void;
     setActiveSidebarView: (view: SidebarView) => void;
     setRightSidebarResizing: (rightSidebarResizing: boolean) => void;
