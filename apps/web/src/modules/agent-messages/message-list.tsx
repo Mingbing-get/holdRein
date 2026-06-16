@@ -5,18 +5,12 @@ import "./message-list.css";
 
 import { useAppWorkspace } from "../../app/app-workspace-context";
 import { useAppPlugins } from '../../app/app-plugin';
-import type {
-  AgentMessage,
-  AssistantMessage,
-  ToolCall,
-  ToolResultMessage
-} from "./agent-message-types";
 import { useAgentTasks } from "./agent-tasks-context";
 import { MarkdownContent } from "./markdown-content";
 import { useCallback, useMemo } from "react";
 import type { WebPlugin } from '@hold-rein/plugin-web'
 
-export function AgentMessageList({ messages }: { messages: AgentMessage[] }) {
+export function AgentMessageList({ messages }: { messages: WebPlugin.AgentMessage[] }) {
   return (
     <Flex data-testid="agent-message-list" gap={12} vertical>
       {messages
@@ -28,7 +22,7 @@ export function AgentMessageList({ messages }: { messages: AgentMessage[] }) {
   );
 }
 
-function AgentMessageItem({ message }: { message: AgentMessage }) {
+function AgentMessageItem({ message }: { message: WebPlugin.AgentMessage }) {
   if (message.role === "user") {
     return <Bubble content={getText(message.content)} placement="end" />;
   }
@@ -47,7 +41,7 @@ function AgentMessageItem({ message }: { message: AgentMessage }) {
   return <Alert title={message.role} description={message.summary} />;
 }
 
-function AssistantMessageItem({ message }: { message: AssistantMessage }) {
+function AssistantMessageItem({ message }: { message: WebPlugin.AssistantMessage }) {
   return (
     <Flex gap={8} vertical>
       {message.content.map((block, index) => {
@@ -70,7 +64,7 @@ function AssistantMessageItem({ message }: { message: AssistantMessage }) {
   );
 }
 
-function ToolCallMessageItem({ toolCall }: { toolCall: ToolCall }) {
+function ToolCallMessageItem({ toolCall }: { toolCall: WebPlugin.ToolCall }) {
   const {
     state: { activeTaskId }
   } = useAppWorkspace();
@@ -79,7 +73,7 @@ function ToolCallMessageItem({ toolCall }: { toolCall: ToolCall }) {
 
   const toolResult = useMemo(() => {
     return getTaskState(activeTaskId)?.messages.find(
-      (message): message is ToolResultMessage =>
+      (message): message is WebPlugin.ToolResultMessage =>
         message.role === "toolResult" && message.toolCallId === toolCall.id
     )
   }, [activeTaskId, getTaskState, toolCall.id]);
@@ -107,7 +101,7 @@ function ToolCallMessageItem({ toolCall }: { toolCall: ToolCall }) {
         toolCall={toolCall}
         DefaultToolRender={DefaultToolRender}
         renderDefaultChildren={renderDefaultChildren}
-        result={toolResult!}
+        {...(toolResult ? { result: toolResult } : {})}
       />
     )
   }

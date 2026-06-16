@@ -6,11 +6,11 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AgentMessageList } from "./message-list";
-import type { AgentMessage } from "./agent-message-types";
+import type { WebPlugin } from "@hold-rein/plugin-web";
 
 const agentTasksMock = vi.hoisted(() => ({
   activeTaskId: "task-1",
-  taskMessages: [] as AgentMessage[]
+  taskMessages: [] as WebPlugin.AgentMessage[]
 }));
 
 vi.mock("../../app/app-workspace-context", () => ({
@@ -25,6 +25,12 @@ vi.mock("./agent-tasks-context", () => ({
       taskId === agentTasksMock.activeTaskId
         ? { messages: agentTasksMock.taskMessages }
         : undefined
+  })
+}));
+
+vi.mock("../../app/app-plugin", () => ({
+  useAppPlugins: () => ({
+    toolRenders: []
   })
 }));
 
@@ -88,7 +94,7 @@ describe("AgentMessageList", () => {
   });
 
   it("renders tool arguments and result through its tool call", () => {
-    const assistantMessage: AgentMessage = {
+    const assistantMessage: WebPlugin.AgentMessage = {
       api: "openai-responses",
       content: [
         {

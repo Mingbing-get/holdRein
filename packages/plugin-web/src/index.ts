@@ -4,9 +4,7 @@ export type {
   WebPlugin
 };
 
-export interface WebPluginListener {
-  (plugin: WebPlugin.Plugin): void
-}
+export type WebPluginListener = (plugin: WebPlugin.Plugin) => void;
 
 export interface WebPluginRegistry {
   register: (plugin: WebPlugin.Plugin) => void;
@@ -24,7 +22,9 @@ export function createWebPluginRegistry(): WebPluginRegistry {
     listeners.forEach(listener => {
       try {
         listener(plugin)
-      } catch (error) {}
+      } catch {
+        return;
+      }
     })
   }
 

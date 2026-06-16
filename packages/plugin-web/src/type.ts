@@ -78,6 +78,13 @@ export namespace WebPlugin {
     type: "image";
   }
 
+  export interface ThinkingContent {
+    redacted?: boolean;
+    thinking: string;
+    thinkingSignature?: string;
+    type: "thinking";
+  }
+
   export interface ToolCall {
     arguments: Record<string, unknown>;
     id: string;
@@ -91,6 +98,21 @@ export namespace WebPlugin {
     timestamp: number;
   }
 
+  export interface UserMessage extends AgentMessageBase {
+    content: string | (TextContent | ImageContent)[];
+    role: "user";
+  }
+
+  export interface AssistantMessage extends AgentMessageBase {
+    api: string;
+    content: (TextContent | ThinkingContent | ToolCall)[];
+    errorMessage?: string;
+    model: string;
+    provider: string;
+    role: "assistant";
+    stopReason: "stop" | "length" | "toolUse" | "error" | "aborted";
+  }
+
   export interface ToolResultMessage extends AgentMessageBase {
     content: (TextContent | ImageContent)[];
     isError: boolean;
@@ -98,6 +120,35 @@ export namespace WebPlugin {
     toolCallId: string;
     toolName: string;
   }
+
+  export interface CustomMessage extends AgentMessageBase {
+    content: string | (TextContent | ImageContent)[];
+    customType: string;
+    display: boolean;
+    role: "custom";
+  }
+
+  export interface BashExecutionMessage extends AgentMessageBase {
+    cancelled: boolean;
+    command: string;
+    exitCode?: number;
+    output: string;
+    role: "bashExecution";
+    truncated: boolean;
+  }
+
+  export interface SummaryMessage extends AgentMessageBase {
+    role: "branchSummary" | "compactionSummary";
+    summary: string;
+  }
+
+  export type AgentMessage =
+    | UserMessage
+    | AssistantMessage
+    | ToolResultMessage
+    | CustomMessage
+    | BashExecutionMessage
+    | SummaryMessage;
 
   export interface DefaultToolRenderProps {
     icon?: React.ReactNode,
@@ -126,7 +177,11 @@ export namespace WebPlugin {
     readonly title: string;
   }
 
-  export type RightPanelProps = Readonly<Record<string, never>>;
+  export interface RightPanelProps {
+    messages: AgentMessage[];
+    status: "idle" | "running" | "completed" | "error";
+    taskId?: string;
+  };
 
   export interface RightPanel {
     readonly Render: ComponentType<RightPanelProps>;

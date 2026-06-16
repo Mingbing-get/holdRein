@@ -1,3 +1,5 @@
+import type { WebPlugin } from "@hold-rein/plugin-web";
+
 export interface TextContent {
   text: string;
   textSignature?: string;
@@ -24,63 +26,6 @@ export interface ToolCall {
   thoughtSignature?: string;
   type: "toolCall";
 }
-
-interface AgentMessageBase {
-  id: string;
-  timestamp: number;
-}
-
-export interface UserMessage extends AgentMessageBase {
-  content: string | (TextContent | ImageContent)[];
-  role: "user";
-}
-
-export interface AssistantMessage extends AgentMessageBase {
-  api: string;
-  content: (TextContent | ThinkingContent | ToolCall)[];
-  errorMessage?: string;
-  model: string;
-  provider: string;
-  role: "assistant";
-  stopReason: "stop" | "length" | "toolUse" | "error" | "aborted";
-}
-
-export interface ToolResultMessage extends AgentMessageBase {
-  content: (TextContent | ImageContent)[];
-  isError: boolean;
-  role: "toolResult";
-  toolCallId: string;
-  toolName: string;
-}
-
-export interface CustomMessage extends AgentMessageBase {
-  content: string | (TextContent | ImageContent)[];
-  customType: string;
-  display: boolean;
-  role: "custom";
-}
-
-export interface BashExecutionMessage extends AgentMessageBase {
-  cancelled: boolean;
-  command: string;
-  exitCode?: number;
-  output: string;
-  role: "bashExecution";
-  truncated: boolean;
-}
-
-export interface SummaryMessage extends AgentMessageBase {
-  role: "branchSummary" | "compactionSummary";
-  summary: string;
-}
-
-export type AgentMessage =
-  | UserMessage
-  | AssistantMessage
-  | ToolResultMessage
-  | CustomMessage
-  | BashExecutionMessage
-  | SummaryMessage;
 
 export interface AgentEventEnvelope {
   agentId: string;
@@ -115,11 +60,11 @@ export interface ApprovalDecisionInput {
   approved: boolean;
   reason?: string;
 }
-
+ 
 export interface AgentTaskState {
   error: string | null;
   lastSequence: number;
-  messages: AgentMessage[];
+  messages: WebPlugin.AgentMessage[];
   pendingApprovals: PendingApproval[];
   runs: AgentRun[];
   status: "idle" | "running" | "completed" | "error";

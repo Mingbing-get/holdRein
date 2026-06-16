@@ -1,18 +1,17 @@
 import type {
   AgentEventEnvelope,
-  AgentMessage,
   AgentTaskState,
-  AssistantMessage,
   PendingApproval,
   ThinkingContent,
   TextContent
 } from "./agent-message-types";
+import type { WebPlugin } from "@hold-rein/plugin-web";
 
 export type AgentTaskAction =
   | { prompt: string; type: "prompt_submitted" }
   | { approvalId: string; type: "approval_decided" }
   | { event: AgentEventEnvelope; type: "event_received" }
-  | { messages: AgentMessage[]; type: "history_loaded" }
+  | { messages: WebPlugin.AgentMessage[]; type: "history_loaded" }
   | { message: string; type: "subscription_failed" };
 
 export function createInitialAgentTaskState(taskId: string): AgentTaskState {
@@ -83,7 +82,7 @@ export function reduceAgentTaskState(
     };
   }
   if (action.event.type === "message_start") {
-    const message = payload?.message as AgentMessage | undefined;
+    const message = payload?.message as WebPlugin.AgentMessage | undefined;
     return message ? upsertMessage(next, message) : next;
   }
   if (action.event.type === "message_delta") {
@@ -94,7 +93,7 @@ export function reduceAgentTaskState(
       : next;
   }
   if (action.event.type === "message_end") {
-    const message = payload?.message as AgentMessage | undefined;
+    const message = payload?.message as WebPlugin.AgentMessage | undefined;
     return message ? upsertMessage(next, message) : next;
   }
   if (action.event.type === "agent_error") {
@@ -107,7 +106,7 @@ export function reduceAgentTaskState(
   return next;
 }
 
-function upsertMessage(state: AgentTaskState, message: AgentMessage): AgentTaskState {
+function upsertMessage(state: AgentTaskState, message: WebPlugin.AgentMessage): AgentTaskState {
   const index = state.messages.findIndex((candidate) => candidate.id === message.id);
   if (index === -1) {
     const optimisticIndex =
@@ -131,7 +130,7 @@ function upsertMessage(state: AgentTaskState, message: AgentMessage): AgentTaskS
   return { ...state, messages };
 }
 
-function getMessageText(message: AgentMessage): string {
+function getMessageText(message: WebPlugin.AgentMessage): string {
   if (!("content" in message)) return "";
   if (typeof message.content === "string") return message.content;
   return message.content
@@ -168,12 +167,12 @@ function mergeAssistantDelta(
   return { ...state, messages };
 }
 
-function appendText(value: AssistantMessage["content"][number] | undefined, delta: string): TextContent {
+function appendText(value: WebPlugin.AssistantMessage["content"][number] | undefined, delta: string): TextContent {
   return { text: (value?.type === "text" ? value.text : "") + delta, type: "text" };
 }
 
 function appendThinking(
-  value: AssistantMessage["content"][number] | undefined,
+  value: WebPlugin.AssistantMessage["content"][number] | undefined,
   delta: string
 ): ThinkingContent {
   return {

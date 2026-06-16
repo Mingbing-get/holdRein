@@ -1,5 +1,4 @@
 import type {
-  AgentMessage,
   AgentEventEnvelope,
   ApprovalDecisionInput,
   ContinueTaskInput,
@@ -8,6 +7,7 @@ import type {
   StartTaskResult,
   TaskTitleResult
 } from "./agent-message-types";
+import type { WebPlugin } from "@hold-rein/plugin-web";
 
 interface ApiResponse<T> {
   code: number;
@@ -51,8 +51,8 @@ export async function fetchTaskMessages(
   apiBaseUrl: string,
   taskId: string,
   fetcher: AgentMessageFetcher = fetch
-): Promise<AgentMessage[]> {
-  return requestData<AgentMessage[]>(
+): Promise<WebPlugin.AgentMessage[]> {
+  return requestData<WebPlugin.AgentMessage[]>(
     fetcher,
     `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/agents/tasks/${encodeURIComponent(taskId)}/messages`
   );
