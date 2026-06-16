@@ -15,8 +15,8 @@ export namespace WebPlugin {
     | undefined;
 
   export interface RequestOptions {
-    readonly body?: unknown;
-    readonly headers?: Readonly<Record<string, string>>;
+    readonly body?: BodyInit | null;
+    readonly headers?: Record<string, string>;
     readonly method?: HttpMethod;
     readonly path: string;
     readonly query?: Readonly<Record<string, RequestQueryValue>>;

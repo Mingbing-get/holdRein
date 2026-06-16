@@ -4,8 +4,13 @@ export type {
   WebPlugin
 };
 
+export interface WebPluginListener {
+  (plugin: WebPlugin.Plugin): void
+}
+
 export interface WebPluginRegistry {
   register: (plugin: WebPlugin.Plugin) => void;
+  on: (listener: WebPluginListener) => (() => void)
   list: () => readonly WebPlugin.Plugin[];
   get: (id: string) => WebPlugin.Plugin | undefined;
   has: (id: string) => boolean;
@@ -13,6 +18,15 @@ export interface WebPluginRegistry {
 
 export function createWebPluginRegistry(): WebPluginRegistry {
   const plugins = new Map<string, WebPlugin.Plugin>();
+  const listeners = new Array<WebPluginListener>;
+
+  const triggerListener = (plugin: WebPlugin.Plugin) => {
+    listeners.forEach(listener => {
+      try {
+        listener(plugin)
+      } catch (error) {}
+    })
+  }
 
   return {
     register(plugin) {
@@ -21,6 +35,17 @@ export function createWebPluginRegistry(): WebPluginRegistry {
       }
 
       plugins.set(plugin.id, plugin);
+      triggerListener(plugin)
+    },
+    on(listener: WebPluginListener) {
+      listeners.push(listener)
+
+      return () => {
+        const index = listeners.findIndex(item => item === listener)
+        if (index === -1) return
+
+        listeners.splice(index, 1)
+      }
     },
     list() {
       return [...plugins.values()];
