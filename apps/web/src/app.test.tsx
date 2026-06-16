@@ -233,9 +233,10 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(await screen.findByTestId("workspace-task-task-one")).toHaveTextContent(
-      "First task"
-    );
+    await waitFor(() => {
+      expect(screen.getByTestId("workspace-task-task-one")).toHaveTextContent("First task");
+      expect(screen.getByTestId("chat-workspace")).toHaveAttribute("data-task-name", "First task");
+    });
     fireEvent.click(screen.getByTestId("workspace-task-task-two"));
 
     await waitFor(() => {
@@ -265,10 +266,7 @@ describe("App", () => {
 
     expect(screen.getByLabelText("Workspace navigation")).toBeInTheDocument();
     expect(screen.queryByLabelText("Settings navigation")).not.toBeInTheDocument();
-    expect(screen.getByTestId("chat-workspace")).toHaveAttribute(
-      "data-task-name",
-      "Second task"
-    );
+    expect(screen.getByTestId("chat-workspace")).toHaveAttribute("data-task-name", "Second task");
   });
 
   it("shows the sidebar workspaces in the chat workspace selector", async () => {
