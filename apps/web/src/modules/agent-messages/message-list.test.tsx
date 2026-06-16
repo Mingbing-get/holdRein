@@ -2,7 +2,7 @@
 
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AgentMessageList } from "./message-list";
@@ -119,6 +119,8 @@ describe("AgentMessageList", () => {
     ];
 
     render(<AgentMessageList messages={[assistantMessage]} />);
+
+    fireEvent.click(screen.getByText("run tool: bash"));
 
     expect(screen.getByText("参数")).toBeInTheDocument();
     expect(screen.getByText(/"command": "pnpm test"/)).toBeInTheDocument();
