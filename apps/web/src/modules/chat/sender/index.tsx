@@ -4,6 +4,7 @@ import {
   Suggestion,
   type SenderProps
 } from "@ant-design/x";
+import type { WebPlugin } from "@hold-rein/plugin-web";
 
 import { ModelSelector, type SelectedModel } from "../model-selector";
 import { WorkspaceSelector } from "../workspace-selector";
@@ -29,19 +30,6 @@ export {
   type CursorSource
 } from "./utils";
 
-export interface SuggestionItem {
-  label: string;
-  value: string;
-  icon?: React.ReactNode;
-  children?: SuggestionItem[];
-  extra?: React.ReactNode;
-}
-
-export interface SuggestionGroup {
-  trigger: string;
-  suggestions: SuggestionItem[]
-}
-
 export const CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS =
   "chat-workspace-suggestion-popup";
 
@@ -49,7 +37,7 @@ interface Props extends Pick<SenderProps, 'autoSize' | 'className' | 'classNames
   activeAgent?: SelectedModel | null
   apiBaseUrl: string
   running?: boolean
-  suggestionGroups?: SuggestionGroup[]
+  suggestionGroups?: WebPlugin.SuggestionGroup[]
   onActiveAgentChange?: (activeAgent: SelectedModel) => void
   onCancel?: () => Promise<void> | void
   onSubmit?: (...args: Parameters<Required<SenderProps>['onSubmit']>) => Promise<void> | void

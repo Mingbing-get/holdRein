@@ -1,21 +1,20 @@
 import { useCallback, useRef, useState } from "react";
-
-import type { SuggestionGroup, SuggestionItem } from "..";
+import type { WebPlugin } from "@hold-rein/plugin-web";
 
 export interface SuggestionTrigger {
-  trigger: SuggestionGroup["trigger"];
+  trigger: WebPlugin.SuggestionGroup["trigger"];
   query: string;
 }
 
 export interface UseSenderSuggestionsOptions {
-  suggestionGroups?: SuggestionGroup[] | undefined;
+  suggestionGroups?: WebPlugin.SuggestionGroup[] | undefined;
 }
 
 export interface UseSenderSuggestionsResult {
   currentTrigger: React.RefObject<SuggestionTrigger | null>;
   suggestionOpen: boolean;
   closeSuggestions: () => void;
-  getItemsByQuery: (trigger?: SuggestionTrigger) => SuggestionItem[];
+  getItemsByQuery: (trigger?: SuggestionTrigger) => WebPlugin.SuggestionItem[];
   getTriggerQuery: (
     value: string,
     cursorIndex?: number | null
@@ -42,7 +41,7 @@ export function useSenderSuggestions({
 
   const getItemsByQuery = useCallback((
     trigger?: SuggestionTrigger
-  ): SuggestionItem[] => {
+  ): WebPlugin.SuggestionItem[] => {
     if (!trigger || !suggestionGroups?.length) return [];
 
     for (const group of suggestionGroups) {

@@ -1,4 +1,5 @@
 import { Flex } from "antd";
+import type { WebPlugin } from "@hold-rein/plugin-web";
 import { useLayoutEffect, useRef } from "react";
 
 import { useAppWorkspace } from "../../app/app-workspace-context";
@@ -7,14 +8,14 @@ import {
   ApprovalPanel,
   useAgentTasks
 } from "../agent-messages";
-import Sender, { type SuggestionGroup } from "./sender";
+import Sender from "./sender";
 
 interface ChatWorkspaceProps {
   activeTaskName: string;
   apiBaseUrl: string;
 }
 
-const groups: SuggestionGroup[] = [
+const groups: WebPlugin.SuggestionGroup[] = [
   {
     trigger: "/",
     suggestions: [

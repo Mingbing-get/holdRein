@@ -142,9 +142,23 @@ export namespace WebPlugin {
     readonly id: string;
   }
 
+  export interface SuggestionItem {
+    children?: SuggestionItem[];
+    extra?: React.ReactNode;
+    icon?: React.ReactNode;
+    label: string;
+    value: string;
+  }
+
+  export interface SuggestionGroup {
+    suggestions: SuggestionItem[];
+    trigger: string;
+  }
+
   export interface Contribution {
     readonly rightPanels?: readonly RightPanel[];
     readonly senderActions?: readonly SenderAction[];
+    readonly senderSuggestions?: readonly SuggestionGroup[];
     readonly settings?: readonly SettingsItem[];
     readonly toolRenders?: readonly ToolRender[];
   }

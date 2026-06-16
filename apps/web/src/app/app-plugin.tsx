@@ -20,6 +20,7 @@ export interface AppPluginContextValue {
   rightPanels: WebPlugin.RightPanel[];
   settings: WebPlugin.SettingsItem[];
   senderActions: WebPlugin.SenderAction[];
+  senderSuggestions: WebPlugin.SuggestionGroup[];
   toolRenders: WebPlugin.ToolRender[];
 }
 
@@ -30,6 +31,7 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
   const [rightPanels, setRightPanels] = useState<WebPlugin.RightPanel[]>([])
   const [settings, setSettings] = useState<WebPlugin.SettingsItem[]>([])
   const [senderActions, setSenderActions] = useState<WebPlugin.SenderAction[]>([])
+  const [senderSuggestions, setSenderSuggestions] = useState<WebPlugin.SuggestionGroup[]>([])
   const [toolRenders, setToolRenders] = useState<WebPlugin.ToolRender[]>([])
 
   const appUi = useAppUi()
@@ -62,6 +64,9 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
     if (contribution.toolRenders?.length) {
       setToolRenders(old => [...old, ...(contribution.toolRenders || [])])
     }
+    if (contribution.senderSuggestions?.length) {
+      setSenderSuggestions(old => [...old, ...(contribution.senderSuggestions || [])])
+    }
   }, [])
 
   const clear = useCallback(() => {
@@ -69,6 +74,7 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
     setSettings([])
     setSenderActions([])
     setToolRenders([])
+    setSenderSuggestions([])
   }, [])
 
   const loadFromPlugins = useCallback(async (plugins: readonly WebPlugin.Plugin[]) => {
@@ -107,12 +113,14 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
     rightPanels,
     settings,
     senderActions,
-    toolRenders
+    toolRenders,
+    senderSuggestions
   }), [
     rightPanels,
     senderActions,
     settings,
-    toolRenders
+    toolRenders,
+    senderSuggestions
   ])
 
   return (

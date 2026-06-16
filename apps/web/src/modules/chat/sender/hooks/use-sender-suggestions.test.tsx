@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 
 import { act, renderHook } from "@testing-library/react";
+import type { WebPlugin } from "@hold-rein/plugin-web";
 import { describe, expect, it } from "vitest";
 
-import type { SuggestionGroup } from "..";
 import { useSenderSuggestions } from "./use-sender-suggestions";
 
-const suggestionGroups: SuggestionGroup[] = [
+const suggestionGroups: WebPlugin.SuggestionGroup[] = [
   {
     trigger: "/",
     suggestions: [
