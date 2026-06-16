@@ -99,10 +99,17 @@ export namespace WebPlugin {
     toolName: string;
   }
 
+  export interface DefaultToolRenderProps {
+    icon?: React.ReactNode,
+    title: string,
+    children: React.ReactNode
+  }
+
   export interface ToolRenderProps {
     readonly result?: ToolResultMessage;
     readonly toolCall: ToolCall;
-    readonly DefaultToolRender: ComponentType<{ icon?: React.ReactNode, title: string, children: React.ReactNode }>;
+    readonly renderDefaultChildren: () => React.ReactNode;
+    readonly DefaultToolRender: ComponentType<DefaultToolRenderProps>;
   }
 
   export interface ToolRender {

@@ -4,6 +4,7 @@ import { Bubble, Think } from "@ant-design/x";
 import "./message-list.css";
 
 import { useAppWorkspace } from "../../app/app-workspace-context";
+import { useAppPlugins } from '../../app/app-plugin';
 import type {
   AgentMessage,
   AssistantMessage,
@@ -12,7 +13,8 @@ import type {
 } from "./agent-message-types";
 import { useAgentTasks } from "./agent-tasks-context";
 import { MarkdownContent } from "./markdown-content";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
+import type { WebPlugin } from '@hold-rein/plugin-web'
 
 export function AgentMessageList({ messages }: { messages: AgentMessage[] }) {
   return (
@@ -73,6 +75,7 @@ function ToolCallMessageItem({ toolCall }: { toolCall: ToolCall }) {
     state: { activeTaskId }
   } = useAppWorkspace();
   const { getTaskState } = useAgentTasks();
+  const { toolRenders } = useAppPlugins();
 
   const toolResult = useMemo(() => {
     return getTaskState(activeTaskId)?.messages.find(
@@ -81,26 +84,53 @@ function ToolCallMessageItem({ toolCall }: { toolCall: ToolCall }) {
     )
   }, [activeTaskId, getTaskState, toolCall.id]);
 
-  const resultText = toolResult ? getText(toolResult.content) : "";
+  const toolRender = useMemo(() => {
+    return toolRenders.find(item => item.toolName === toolCall.name)
+  }, [toolRenders, toolCall.name])
+
+  const renderDefaultChildren = useCallback(() => (
+    <div className="agent-tool-call">
+      <ToolCallSection title="参数" value={formatToolValue(toolCall.arguments)} />
+      {toolResult ? (
+        <ToolCallSection
+          danger={toolResult.isError}
+          title="执行结果"
+          value={toolResult ? getText(toolResult.content) : ""}
+        />
+      ) : null}
+    </div>
+  ), [toolCall, toolResult])
+
+  if (toolRender) {
+    return (
+      <toolRender.Render
+        toolCall={toolCall}
+        DefaultToolRender={DefaultToolRender}
+        renderDefaultChildren={renderDefaultChildren}
+        result={toolResult!}
+      />
+    )
+  }
 
   return (
-    <Think
+    <DefaultToolRender
       title={`run tool: ${toolCall.name}`}
-      blink
-      defaultExpanded={false}
-      loading={!toolResult}
       icon={<ToolOutlined />}
     >
-      <div className="agent-tool-call">
-        <ToolCallSection title="参数" value={formatToolValue(toolCall.arguments)} />
-        {toolResult ? (
-          <ToolCallSection
-            danger={toolResult.isError}
-            title="执行结果"
-            value={resultText}
-          />
-        ) : null}
-      </div>
+      {renderDefaultChildren()}
+    </DefaultToolRender>
+  )
+}
+
+function DefaultToolRender({ icon, title, children }: WebPlugin.DefaultToolRenderProps) {
+  return (
+    <Think
+      title={title}
+      blink
+      defaultExpanded={false}
+      icon={icon}
+    >
+      {children}
     </Think>
   )
 }
