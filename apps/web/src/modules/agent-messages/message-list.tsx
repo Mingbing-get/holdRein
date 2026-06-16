@@ -1,15 +1,27 @@
 import { Alert, Flex, Typography } from "antd";
+import { ToolOutlined } from "@ant-design/icons";
 import { Bubble, Think } from "@ant-design/x";
+import "./message-list.css";
 
-import type { AgentMessage, AssistantMessage } from "./agent-message-types";
+import { useAppWorkspace } from "../../app/app-workspace-context";
+import type {
+  AgentMessage,
+  AssistantMessage,
+  ToolCall,
+  ToolResultMessage
+} from "./agent-message-types";
+import { useAgentTasks } from "./agent-tasks-context";
 import { MarkdownContent } from "./markdown-content";
+import { useMemo } from "react";
 
 export function AgentMessageList({ messages }: { messages: AgentMessage[] }) {
   return (
     <Flex data-testid="agent-message-list" gap={12} vertical>
-      {messages.map((message) => (
-        <AgentMessageItem key={message.id} message={message} />
-      ))}
+      {messages
+        .filter((message) => message.role !== "toolResult")
+        .map((message) => (
+          <AgentMessageItem key={message.id} message={message} />
+        ))}
     </Flex>
   );
 }
@@ -22,11 +34,7 @@ function AgentMessageItem({ message }: { message: AgentMessage }) {
     return <AssistantMessageItem message={message} />;
   }
   if (message.role === "toolResult") {
-    return (
-      <Typography.Text code {...(message.isError ? { type: "danger" as const } : {})}>
-        {message.toolName}: {getText(message.content)}
-      </Typography.Text>
-    );
+    return null;
   }
   if (message.role === "bashExecution") {
     return <Typography.Text code>{message.command}: {message.output}</Typography.Text>;
@@ -53,11 +61,82 @@ function AssistantMessageItem({ message }: { message: AssistantMessage }) {
         if (block.type === "thinking") {
           return <Think key={index} title="思考过程">{block.thinking}</Think>;
         }
-        return <Typography.Text code key={index}>{block.name}</Typography.Text>;
+        return <ToolCallMessageItem key={index} toolCall={block} />;
       })}
       {message.errorMessage ? <Alert type="error" title="Agent 错误" description={message.errorMessage} /> : null}
     </Flex>
   );
+}
+
+function ToolCallMessageItem({ toolCall }: { toolCall: ToolCall }) {
+  const {
+    state: { activeTaskId }
+  } = useAppWorkspace();
+  const { getTaskState } = useAgentTasks();
+
+  const toolResult = useMemo(() => {
+    return getTaskState(activeTaskId)?.messages.find(
+      (message): message is ToolResultMessage =>
+        message.role === "toolResult" && message.toolCallId === toolCall.id
+    )
+  }, [activeTaskId, getTaskState, toolCall.id]);
+
+  const resultText = toolResult ? getText(toolResult.content) : "";
+
+  return (
+    <Think
+      title={`run tool: ${toolCall.name}`}
+      blink
+      defaultExpanded={false}
+      loading={!toolResult}
+      icon={<ToolOutlined />}
+    >
+      <div className="agent-tool-call">
+        <ToolCallSection title="参数" value={formatToolValue(toolCall.arguments)} />
+        {toolResult ? (
+          <ToolCallSection
+            danger={toolResult.isError}
+            title="执行结果"
+            value={resultText}
+          />
+        ) : null}
+      </div>
+    </Think>
+  )
+}
+
+function ToolCallSection({
+  danger,
+  title,
+  value
+}: {
+  danger?: boolean;
+  title: string;
+  value: string;
+}) {
+  return (
+    <section className="agent-tool-call__section">
+      <div className="agent-tool-call__section-title">{title}</div>
+      <pre
+        className={
+          danger
+            ? "agent-tool-call__content agent-tool-call__content--danger"
+            : "agent-tool-call__content"
+        }
+      >
+        {value || "(empty)"}
+      </pre>
+    </section>
+  );
+}
+
+function formatToolValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
 }
 
 function getText(content: string | { type: string; text?: string }[]): string {

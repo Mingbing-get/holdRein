@@ -3,12 +3,37 @@
 import "@testing-library/jest-dom/vitest";
 import { readFileSync } from "node:fs";
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AgentMessageList } from "./message-list";
+import type { AgentMessage } from "./agent-message-types";
+
+const agentTasksMock = vi.hoisted(() => ({
+  activeTaskId: "task-1",
+  taskMessages: [] as AgentMessage[]
+}));
+
+vi.mock("../../app/app-workspace-context", () => ({
+  useAppWorkspace: () => ({
+    state: { activeTaskId: agentTasksMock.activeTaskId }
+  })
+}));
+
+vi.mock("./agent-tasks-context", () => ({
+  useAgentTasks: () => ({
+    getTaskState: (taskId: string) =>
+      taskId === agentTasksMock.activeTaskId
+        ? { messages: agentTasksMock.taskMessages }
+        : undefined
+  })
+}));
 
 describe("AgentMessageList", () => {
-  afterEach(cleanup);
+  afterEach(() => {
+    cleanup();
+    agentTasksMock.activeTaskId = "task-1";
+    agentTasksMock.taskMessages = [];
+  });
 
   it("renders structured user and assistant content", () => {
     render(
@@ -60,6 +85,45 @@ describe("AgentMessageList", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Assistant heading" })
     ).toBeInTheDocument();
+  });
+
+  it("renders tool arguments and result through its tool call", () => {
+    const assistantMessage: AgentMessage = {
+      api: "openai-responses",
+      content: [
+        {
+          arguments: { command: "pnpm test" },
+          id: "tool-call-1",
+          name: "bash",
+          type: "toolCall"
+        }
+      ],
+      id: "assistant-1",
+      model: "gpt-4.1",
+      provider: "openai",
+      role: "assistant",
+      stopReason: "toolUse",
+      timestamp: 1
+    };
+    agentTasksMock.taskMessages = [
+      assistantMessage,
+      {
+        content: [{ text: "Tests passed", type: "text" }],
+        id: "tool-result-1",
+        isError: false,
+        role: "toolResult",
+        timestamp: 2,
+        toolCallId: "tool-call-1",
+        toolName: "bash"
+      }
+    ];
+
+    render(<AgentMessageList messages={[assistantMessage]} />);
+
+    expect(screen.getByText("参数")).toBeInTheDocument();
+    expect(screen.getByText(/"command": "pnpm test"/)).toBeInTheDocument();
+    expect(screen.getByText("执行结果")).toBeInTheDocument();
+    expect(screen.getByText("Tests passed")).toBeInTheDocument();
   });
 
   it("styles Markdown with application theme variables", () => {
