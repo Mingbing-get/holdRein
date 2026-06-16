@@ -5,7 +5,9 @@ import {
   type SenderProps
 } from "@ant-design/x";
 import type { WebPlugin } from "@hold-rein/plugin-web";
+import { useMemo } from "react";
 
+import { useAppPlugins } from "../../../app/app-plugin";
 import { ModelSelector, type SelectedModel } from "../model-selector";
 import { WorkspaceSelector } from "../workspace-selector";
 import {
@@ -18,7 +20,6 @@ import {
   shouldHandleSpaceKeydown,
   shouldHandleSuggestionEnterKeydown
 } from "./utils";
-import { useMemo } from "react";
 
 export {
   clampCursorIndex,
@@ -55,6 +56,7 @@ export default function Sender({
   onSubmit,
   ...senderProps
 }: Props) {
+  const { senderActions, senderSuggestions } = useAppPlugins();
   const {
     draftMessage,
     handleChangeMessage,
@@ -66,6 +68,13 @@ export default function Sender({
     onMessageChange,
     onSubmit
   });
+  const mergedSuggestionGroups = useMemo(
+    () => [
+      ...(suggestionGroups ?? []),
+      ...senderSuggestions
+    ],
+    [senderSuggestions, suggestionGroups]
+  );
   
   const {
     closeSuggestions,
@@ -76,7 +85,7 @@ export default function Sender({
     setSuggestionOpen,
     suggestionOpen
   } = useSenderSuggestions({
-    suggestionGroups
+    suggestionGroups: mergedSuggestionGroups
   });
 
   const disabled = useMemo(() => senderProps.disabled || !draftMessage?.length, [senderProps.disabled, draftMessage])
@@ -177,7 +186,10 @@ export default function Sender({
 
                   return (
                     <Flex align="center" justify="space-between" gap={8}>
-                      <Flex align="center">
+                      <Flex
+                        align="center"
+                        data-testid="sender-footer-tools"
+                      >
                         <WorkspaceSelector apiBaseUrl={apiBaseUrl} />
                         <Divider
                           orientation="vertical"
@@ -192,6 +204,25 @@ export default function Sender({
                             ? { onChange: onActiveAgentChange }
                             : {})}
                         />
+                        {senderActions.length ? (
+                          <>
+                            <Divider
+                              orientation="vertical"
+                              style={{
+                                borderColor:
+                                  "var(--app-color-border-secondary)"
+                              }}
+                            />
+                            {senderActions.map(({ id, Render }) => (
+                              <Render
+                                changeMessage={handleChangeMessage}
+                                draftMessage={draftMessage}
+                                insertText={insertText}
+                                key={id}
+                              />
+                            ))}
+                          </>
+                        ) : null}
                       </Flex>
                       {action}
                     </Flex>

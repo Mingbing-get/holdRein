@@ -15,6 +15,32 @@ const baseWebPlugin: WebPlugin.Plugin = {
     //     toolName: 'shell_exec',
     //     Render: () => '1212'
     //   }
+    // ],
+    // senderSuggestions: [
+    //   {
+    //     trigger: '/',
+    //     suggestions: [
+    //       {
+    //         label: 'from plugin',
+    //         value: 'plugin'
+    //       }
+    //     ]
+    //   },
+    //   {
+    //     trigger: '@',
+    //     suggestions: [
+    //       {
+    //         label: 'from plugin',
+    //         value: 'plugin'
+    //       }
+    //     ]
+    //   }
+    // ],
+    // senderActions: [
+    //   {
+    //     id: 'test',
+    //     Render: () => 'aasd'
+    //   }
     // ]
   }
 }

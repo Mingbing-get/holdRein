@@ -52,6 +52,49 @@ describe("useSenderSuggestions", () => {
     ]);
   });
 
+  it("merges suggestions that share the same trigger", () => {
+    const { result } = renderHook(() =>
+      useSenderSuggestions({
+        suggestionGroups: [
+          {
+            trigger: "/",
+            suggestions: [
+              {
+                label: "release",
+                value: "/release"
+              }
+            ]
+          },
+          {
+            trigger: "/",
+            suggestions: [
+              {
+                label: "review",
+                value: "/review"
+              }
+            ]
+          }
+        ]
+      })
+    );
+
+    expect(
+      result.current.getItemsByQuery({
+        query: "re",
+        trigger: "/"
+      })
+    ).toEqual([
+      {
+        label: "release",
+        value: "/release"
+      },
+      {
+        label: "review",
+        value: "/review"
+      }
+    ]);
+  });
+
   it("detects a trigger token before the cursor", () => {
     const { result } = renderHook(() =>
       useSenderSuggestions({

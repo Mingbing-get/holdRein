@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
 export interface SuggestionTrigger {
@@ -28,6 +28,27 @@ export function useSenderSuggestions({
 }: UseSenderSuggestionsOptions): UseSenderSuggestionsResult {
   const [suggestionOpen, setSuggestionOpen] = useState(false);
   const currentTrigger = useRef<SuggestionTrigger>(null);
+  const mergedSuggestionGroups = useMemo(() => {
+    if (!suggestionGroups?.length) return [];
+
+    const groupsByTrigger = new Map<string, WebPlugin.SuggestionGroup>();
+
+    for (const group of suggestionGroups) {
+      const existingGroup = groupsByTrigger.get(group.trigger);
+
+      if (existingGroup) {
+        existingGroup.suggestions.push(...group.suggestions);
+        continue;
+      }
+
+      groupsByTrigger.set(group.trigger, {
+        suggestions: [...group.suggestions],
+        trigger: group.trigger
+      });
+    }
+
+    return Array.from(groupsByTrigger.values());
+  }, [suggestionGroups]);
 
   const closeSuggestions = useCallback(() => {
     setSuggestionOpen(false);
@@ -42,9 +63,9 @@ export function useSenderSuggestions({
   const getItemsByQuery = useCallback((
     trigger?: SuggestionTrigger
   ): WebPlugin.SuggestionItem[] => {
-    if (!trigger || !suggestionGroups?.length) return [];
+    if (!trigger || !mergedSuggestionGroups.length) return [];
 
-    for (const group of suggestionGroups) {
+    for (const group of mergedSuggestionGroups) {
       if (group.trigger === trigger.trigger) {
         return group.suggestions.filter((item) =>
           item.label.includes(trigger.query)
@@ -59,13 +80,13 @@ export function useSenderSuggestions({
     value: string,
     cursorIndex?: number | null
   ): SuggestionTrigger | undefined => {
-    if (!value || !suggestionGroups?.length) return;
+    if (!value || !mergedSuggestionGroups.length) return;
 
     const textBeforeCursor =
       cursorIndex == null ? value : value.slice(0, cursorIndex);
 
     if (textBeforeCursor.length === 1) {
-      for (const group of suggestionGroups) {
+      for (const group of mergedSuggestionGroups) {
         if (group.trigger === textBeforeCursor) {
           return {
             query: "",
@@ -80,7 +101,7 @@ export function useSenderSuggestions({
     const matchValue = splitValues[splitValues.length - 1];
     if (!matchValue) return;
 
-    for (const group of suggestionGroups) {
+    for (const group of mergedSuggestionGroups) {
       if (matchValue.startsWith(`${group.trigger}`)) {
         const trigger: SuggestionTrigger = {
           query: matchValue.substring(1),
@@ -93,7 +114,7 @@ export function useSenderSuggestions({
         return trigger;
       }
     }
-  }, [getItemsByQuery, suggestionGroups]);
+  }, [getItemsByQuery, mergedSuggestionGroups]);
 
   return {
     closeSuggestions,

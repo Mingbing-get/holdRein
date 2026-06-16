@@ -1,18 +1,20 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
+import type { WebPlugin } from "@hold-rein/plugin-web";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import React, { forwardRef, useImperativeHandle, useRef } from "react";
 import {
   act,
+  cleanup,
   fireEvent,
   render,
   screen,
   waitFor
 } from "@testing-library/react";
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS,
@@ -25,6 +27,12 @@ import {
   shouldHandleSpaceKeydown,
   shouldHandleSuggestionEnterKeydown
 } from "./utils";
+
+const mockUseAppPlugins = vi.hoisted(() => vi.fn());
+
+afterEach(() => {
+  cleanup();
+});
 
 interface MockSenderProps {
   disabled?: boolean;
@@ -176,6 +184,10 @@ vi.mock("../workspace-selector", () => ({
   WorkspaceSelector: () => <span>工作空间选择</span>
 }));
 
+vi.mock("../../../app/app-plugin", () => ({
+  useAppPlugins: mockUseAppPlugins
+}));
+
 function getWebSourcePath(pathFromWebSrc: string): string {
   const pathFromWebPackage = join(process.cwd(), "src", pathFromWebSrc);
 
@@ -320,6 +332,13 @@ describe("sender suggestion theme styles", () => {
 });
 
 describe("Sender action button", () => {
+  beforeEach(() => {
+    mockUseAppPlugins.mockReturnValue({
+      senderActions: [],
+      senderSuggestions: []
+    });
+  });
+
   it("disables the footer send button when the sender is disabled", () => {
     render(<Sender apiBaseUrl="" disabled />);
 
@@ -417,5 +436,35 @@ describe("Sender action button", () => {
     fireEvent.click(screen.getByRole("button", { name: "中断执行" }));
 
     expect(onCancel).toHaveBeenCalledOnce();
+  });
+
+  it("renders plugin sender actions after the model selector with a divider", () => {
+    const Render: WebPlugin.SenderAction["Render"] = ({ draftMessage }) => (
+      <button type="button">插件动作:{draftMessage}</button>
+    );
+
+    mockUseAppPlugins.mockReturnValue({
+      senderActions: [
+        {
+          id: "plugin_action",
+          Render
+        }
+      ],
+      senderSuggestions: []
+    });
+
+    render(<Sender apiBaseUrl="" />);
+
+    fireEvent.change(screen.getByLabelText("消息"), {
+      target: { value: "hello" }
+    });
+
+    const footerTools = screen.getByTestId("sender-footer-tools");
+    expect(footerTools).toHaveTextContent(
+      "工作空间选择模型选择插件动作:hello"
+    );
+
+    const dividers = footerTools.querySelectorAll(".ant-divider-vertical");
+    expect(dividers).toHaveLength(2);
   });
 });

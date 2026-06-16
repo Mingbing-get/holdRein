@@ -135,7 +135,11 @@ export namespace WebPlugin {
     readonly title: string;
   }
 
-  export type SenderActionProps = Readonly<Record<string, never>>;
+  export interface SenderActionProps {
+    draftMessage: string
+    changeMessage: (message: string) => void
+    insertText: (insertedText: string, overwriteLength?: number | undefined) => void
+  };
 
   export interface SenderAction {
     readonly Render: ComponentType<SenderActionProps>;
