@@ -8,43 +8,11 @@ import {
 } from "react";
 import { App as AntdApp, ConfigProvider, theme } from "antd";
 import type { PropsWithChildren } from "react";
+import type { WebPlugin } from '@hold-rein/plugin-web'
 
 import "./theme.css";
 
-export type ThemeMode = "light" | "dark";
-export type MainContentView = "chat" | "modelProviders";
-export type SidebarView = "workspace" | "settings";
-
-export interface AppUiState {
-  activeMainView: MainContentView;
-  activeSidebarView: SidebarView;
-  rightSidebarCollapsed: boolean;
-  rightSidebarResizing: boolean;
-  rightSidebarWidth: number;
-  sidebarCollapsed: boolean;
-  sidebarResizing: boolean;
-  sidebarWidth: number;
-  themeMode: ThemeMode;
-}
-
-export interface AppUiContextValue {
-  openChatWorkspace: () => void;
-  openModelProviders: () => void;
-  openSettingsNavigation: () => void;
-  openWorkspaceNavigation: () => void;
-  state: AppUiState;
-  setActiveMainView: (view: MainContentView) => void;
-  setActiveSidebarView: (view: SidebarView) => void;
-  setRightSidebarResizing: (rightSidebarResizing: boolean) => void;
-  setRightSidebarWidth: (rightSidebarWidth: number) => void;
-  setSidebarResizing: (sidebarResizing: boolean) => void;
-  setSidebarWidth: (sidebarWidth: number) => void;
-  toggleRightSidebar: () => void;
-  toggleSidebar: () => void;
-  toggleThemeMode: () => void;
-}
-
-const DEFAULT_APP_UI_STATE: AppUiState = {
+const DEFAULT_APP_UI_STATE: WebPlugin.AppUiState = {
   activeMainView: "chat",
   activeSidebarView: "workspace",
   rightSidebarCollapsed: true,
@@ -56,7 +24,7 @@ const DEFAULT_APP_UI_STATE: AppUiState = {
   themeMode: "light"
 };
 
-const AppUiContext = createContext<AppUiContextValue | null>(null);
+const AppUiContext = createContext<WebPlugin.AppUiContextValue | null>(null);
 
 const THEME_ALGORITHMS = {
   dark: theme.darkAlgorithm,
@@ -89,7 +57,7 @@ const ANTD_COMPONENT_TOKENS = {
 } as const;
 
 export function AppUiProvider({ children }: PropsWithChildren) {
-  const [state, setState] = useState<AppUiState>(DEFAULT_APP_UI_STATE);
+  const [state, setState] = useState<WebPlugin.AppUiState>(DEFAULT_APP_UI_STATE);
 
   useEffect(() => {
     document.documentElement.dataset.themeMode = state.themeMode;
@@ -127,14 +95,14 @@ export function AppUiProvider({ children }: PropsWithChildren) {
     }));
   }, []);
 
-  const setActiveMainView = useCallback((activeMainView: MainContentView) => {
+  const setActiveMainView = useCallback((activeMainView: WebPlugin.MainContentView) => {
     setState((currentState) => ({
       ...currentState,
       activeMainView
     }));
   }, []);
 
-  const setActiveSidebarView = useCallback((activeSidebarView: SidebarView) => {
+  const setActiveSidebarView = useCallback((activeSidebarView: WebPlugin.SidebarView) => {
     setState((currentState) => ({
       ...currentState,
       activeSidebarView
@@ -193,7 +161,7 @@ export function AppUiProvider({ children }: PropsWithChildren) {
     }));
   }, []);
 
-  const contextValue = useMemo<AppUiContextValue>(
+  const contextValue = useMemo<WebPlugin.AppUiContextValue>(
     () => ({
       openChatWorkspace,
       openModelProviders,
