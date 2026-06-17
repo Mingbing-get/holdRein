@@ -134,6 +134,8 @@ export function createAgentRuntime(
           systemPrompt: ({ resources }) =>
             [
               ...(contribution.systemPrompts || []),
+              `Workspace: ${input.workspacePath}`,
+              `Current time: ${new Date().toISOString()}`,
               "Use shell_exec for workspace commands and skill scripts.",
               "Resolve skill-relative references from each skill file directory.",
               formatSkillsForSystemPrompt(resources.skills ?? [])

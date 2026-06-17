@@ -14,6 +14,7 @@ import { createAgentRuntime } from "./agent-runtime";
 const prompt = vi.fn().mockResolvedValue(undefined);
 const sessionRepoConstructor = vi.fn();
 const executionEnvConstructor = vi.fn();
+const harnessConstructor = vi.fn();
 const harnessOn = vi.fn();
 const harnessInterrupt = vi.fn();
 const harnessSubscribers: ((event: { type: string }) => unknown)[] = [];
@@ -39,6 +40,10 @@ vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
         harnessSubscribers.push(listener);
         return vi.fn();
       });
+
+      constructor(options: unknown) {
+        harnessConstructor(options);
+      }
     },
     JsonlSessionRepo: class {
       readonly options: unknown;
@@ -69,6 +74,7 @@ vi.mock("../../plugin", () => ({
 describe("agent runtime sessions", () => {
   beforeEach(() => {
     executionEnvConstructor.mockClear();
+    harnessConstructor.mockClear();
     harnessOn.mockClear();
     harnessInterrupt.mockClear();
     harnessSubscribers.length = 0;
@@ -130,6 +136,27 @@ describe("agent runtime sessions", () => {
       path: "/sessions/session-1.jsonl"
     });
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it("includes the workspace path and current time in the system prompt", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-17T09:30:00.000Z"));
+    try {
+      const { repo } = createSessionRepo();
+      const runtime = createRuntime(repo);
+
+      await runtime.start(createRunInput());
+
+      const systemPrompt = harnessConstructor.mock.calls[0]?.[0]
+        ?.systemPrompt as
+        | ((input: { resources: { skills: unknown[] } }) => string)
+        | undefined;
+      const promptText = systemPrompt?.({ resources: { skills: [] } });
+      expect(promptText).toContain("Workspace: /tmp/workspace");
+      expect(promptText).toContain("Current time: 2026-06-17T09:30:00.000Z");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("loads messages from an opened session", async () => {
