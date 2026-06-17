@@ -181,11 +181,16 @@ export namespace WebPlugin {
     messages: AgentMessage[];
     status: "idle" | "running" | "completed" | "error";
     taskId?: string;
+    activeAgent?: {
+      modelId: string;
+      providerId: string;
+    } | null;
+    activeWorkspaceId?: string
   };
 
   export interface RightPanel {
     readonly Render: ComponentType<RightPanelProps>;
-    readonly icon?: ReactNode;
+    readonly icon: ReactNode;
     readonly id: string;
     readonly title: string;
   }

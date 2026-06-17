@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import type { PropsWithChildren } from "react";
 
 import { useAppUi } from "../../../app/app-ui-context";
+import RightPanel from "./panel";
 
 const MIN_RIGHT_SIDEBAR_WIDTH = 220;
 const MAX_RIGHT_SIDEBAR_WIDTH = 640;
@@ -78,7 +79,7 @@ export function RightSideAside({ children }: PropsWithChildren) {
         width: rightSidebarWidth
       }}
     >
-      {children}
+      {children ?? <RightPanel />}
       <div
         aria-label="Resize chat right sidebar"
         aria-orientation="vertical"

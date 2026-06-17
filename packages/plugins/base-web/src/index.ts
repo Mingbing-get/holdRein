@@ -41,6 +41,20 @@ const baseWebPlugin: WebPlugin.Plugin = {
     //     id: 'test',
     //     Render: () => 'aasd'
     //   }
+    // ],
+    // rightPanels: [
+    //   {
+    //     id: 'test',
+    //     icon: 'aa',
+    //     title: 'test aa',
+    //     Render: () => 'content'
+    //   },
+    //   {
+    //     id: 'test1',
+    //     icon: 'bb',
+    //     title: 'test bb',
+    //     Render: () => 'content bbb'
+    //   }
     // ]
   }
 }
