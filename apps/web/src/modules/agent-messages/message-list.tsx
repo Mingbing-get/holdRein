@@ -1,5 +1,5 @@
 import { Alert, Flex, Typography } from "antd";
-import { ToolOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, RollbackOutlined, ToolOutlined } from "@ant-design/icons";
 import { Bubble, Think } from "@ant-design/x";
 import "./message-list.css";
 
@@ -38,9 +38,28 @@ function AgentMessageItem({ message }: { message: WebPlugin.AgentMessage }) {
     return <Typography.Text code>{message.command}: {message.output}</Typography.Text>;
   }
   if (message.role === "custom") {
-    return message.display ? <Alert title={message.customType} description={getText(message.content)} /> : null;
+    return message.display ? (
+      <Think
+        title={message.customType}
+        icon={<RollbackOutlined />}
+        defaultExpanded={false}
+        blink
+      >
+        {getText(message.content)}
+      </Think>
+    ) : null;
   }
-  return <Alert title={message.role} description={message.summary} />;
+
+  return (
+    <Think
+      title={message.role}
+      icon={<InfoCircleOutlined />}
+      defaultExpanded={false}
+      blink
+    >
+      {getText(message.summary)}
+    </Think>
+  )
 }
 
 function AssistantMessageItem({ message }: { message: WebPlugin.AssistantMessage }) {
