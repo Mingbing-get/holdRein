@@ -64,9 +64,7 @@ describe("RightPanel", () => {
     renderRightPanel();
 
     await waitFor(() => {
-      expect(screen.getByTestId("inspector-panel")).toHaveTextContent(
-        "inspector:task-1:idle:0"
-      );
+      expect(screen.getByLabelText("Workspace file tree")).toBeInTheDocument();
     });
 
     const switcher = screen.getByRole("tablist", {
@@ -78,18 +76,21 @@ describe("RightPanel", () => {
     );
     const inspectorTab = screen.getByRole("tab", { name: "检查器" });
     const runsTab = screen.getByRole("tab", { name: "运行详情" });
+    const filesTab = screen.getByRole("tab", { name: "查看文件" });
     const allTabs = screen.getAllByRole("tab");
     const separators = screen.getAllByRole("separator", {
       name: "Plugin right panel separator"
     });
 
     expect(separators).toHaveLength(allTabs.length - 1);
+    expect(allTabs[0]).toBe(filesTab);
     for (const separator of separators) {
       expect(separator).toHaveStyle({
         background: "var(--app-color-border-secondary)"
       });
     }
 
+    expect(filesTab).toHaveAttribute("aria-selected", "true");
     expect(inspectorTab).toHaveTextContent("I");
     expect(runsTab).toHaveTextContent("R");
     expect(runsTab).toHaveStyle({
@@ -106,11 +107,17 @@ describe("RightPanel", () => {
     });
     expect(inspectorTab).toHaveAttribute(
       "aria-selected",
-      "true"
+      "false"
     );
     expect(runsTab).toHaveAttribute(
       "aria-selected",
       "false"
+    );
+
+    fireEvent.click(inspectorTab);
+
+    expect(screen.getByTestId("inspector-panel")).toHaveTextContent(
+      "inspector:task-1:idle:0"
     );
 
     fireEvent.click(runsTab);

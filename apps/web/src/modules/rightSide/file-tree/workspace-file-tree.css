@@ -1,0 +1,67 @@
+.workspace-file-tree {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.workspace-file-tree__state {
+  color: var(--app-color-text-secondary);
+  padding: 12px 8px;
+}
+
+.workspace-file-tree__list {
+  min-width: 100%;
+}
+
+.workspace-file-tree__row {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: var(--app-color-text);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: 7px;
+  min-height: 28px;
+  overflow: hidden;
+  padding-bottom: 0;
+  padding-right: 8px;
+  padding-top: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.workspace-file-tree__row:hover,
+.workspace-file-tree__row--selected {
+  background: var(--app-color-fill-secondary);
+}
+
+.workspace-file-tree__row--unsupported {
+  color: var(--app-color-text-tertiary);
+  cursor: default;
+}
+
+.workspace-file-tree__row-icon {
+  align-items: center;
+  color: var(--app-color-text-secondary);
+  display: inline-flex;
+  flex: 0 0 16px;
+  font-size: 14px;
+  justify-content: center;
+}
+
+.workspace-file-tree__row-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-file-tree__editor {
+  border-bottom: 1px solid var(--app-color-border-secondary);
+  border-top: 1px solid var(--app-color-border-secondary);
+  height: 280px;
+  margin: 4px 0 8px;
+}

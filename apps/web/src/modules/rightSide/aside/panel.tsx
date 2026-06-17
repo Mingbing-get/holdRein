@@ -1,3 +1,4 @@
+import { FileOutlined } from "@ant-design/icons";
 import { Popover } from "antd";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 import { Fragment } from "react";
@@ -6,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppPlugins } from "../../../app/app-plugin";
 import { useAppWorkspace } from "../../../app/app-workspace-context";
 import { useAgentTasks } from "../../agent-messages";
+import { WorkspaceFileTree } from "../file-tree";
 
 export default function RightPanel() {
   const { rightPanels } = useAppPlugins();
@@ -17,18 +19,33 @@ export default function RightPanel() {
   const [hoveredPanelId, setHoveredPanelId] = useState<string>("");
 
   const taskState = getTaskState(activeTaskId);
-  const firstPanelId = rightPanels[0]?.id ?? "";
+  const builtinPanels = useMemo<WebPlugin.RightPanel[]>(
+    () => [
+      {
+        Render: WorkspaceFileTree,
+        icon: <FileOutlined aria-hidden="true" />,
+        id: "workspace-files",
+        title: "查看文件"
+      }
+    ],
+    []
+  );
+  const panels = useMemo(
+    () => [...builtinPanels, ...rightPanels],
+    [builtinPanels, rightPanels]
+  );
+  const firstPanelId = panels[0]?.id ?? "";
 
   useEffect(() => {
-    if (!rightPanels.length) {
+    if (!panels.length) {
       setActivePanelId("");
       return;
     }
 
-    if (!rightPanels.some((panel) => panel.id === activePanelId)) {
+    if (!panels.some((panel) => panel.id === activePanelId)) {
       setActivePanelId(firstPanelId);
     }
-  }, [activePanelId, firstPanelId, rightPanels]);
+  }, [activePanelId, firstPanelId, panels]);
 
   const panelProps = useMemo<WebPlugin.RightPanelProps>(
     () => ({
@@ -48,13 +65,13 @@ export default function RightPanel() {
   );
 
   const activePanel =
-    rightPanels.find((panel) => panel.id === (activePanelId || firstPanelId)) ??
-    rightPanels[0];
+    panels.find((panel) => panel.id === (activePanelId || firstPanelId)) ??
+    panels[0];
   const ActivePanelRender = activePanel?.Render;
 
   const tabButtons = useMemo(
     () =>
-      rightPanels.map((panel, index) => {
+      panels.map((panel, index) => {
         const isActive = panel.id === (activePanelId || firstPanelId);
         const isHovered = panel.id === hoveredPanelId;
 
@@ -119,10 +136,10 @@ export default function RightPanel() {
           </Fragment>
         );
       }),
-    [activePanelId, firstPanelId, hoveredPanelId, rightPanels]
+    [activePanelId, firstPanelId, hoveredPanelId, panels]
   );
 
-  if (!rightPanels.length) {
+  if (!panels.length) {
     return null;
   }
 
