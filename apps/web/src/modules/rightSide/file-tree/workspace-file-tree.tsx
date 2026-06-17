@@ -9,8 +9,8 @@ import { useAppUi } from "../../../app/app-ui-context";
 import { useAppWorkspace } from "../../../app/app-workspace-context";
 import type { FileSystemEntry } from "../../../components/fileSelector";
 import {
+  fetchDirectoryEntries,
   fetchFileContent,
-  fetchWorkspaceEntriesRecursive
 } from "./workspace-file-tree-api";
 
 import "./workspace-file-tree.css";
@@ -85,7 +85,7 @@ export function WorkspaceFileTree() {
     setLoading(true);
     setError(null);
 
-    void fetchWorkspaceEntriesRecursive(workspacePath)
+    void fetchDirectoryEntries(workspacePath)
       .then((listing) => {
         if (active) {
           setEntries(listing.entries);
@@ -108,19 +108,37 @@ export function WorkspaceFileTree() {
     };
   }, [activeWorkspace?.path]);
 
-  const toggleFolder = useCallback((path: string) => {
-    setExpandedPaths((currentPaths) => {
-      const nextPaths = new Set(currentPaths);
-
-      if (nextPaths.has(path)) {
-        nextPaths.delete(path);
-      } else {
-        nextPaths.add(path);
+  const toggleFolder = useCallback(
+    (entry: FileSystemEntry) => {
+      if (expandedPaths.has(entry.path)) {
+        setExpandedPaths((currentPaths) => {
+          const nextPaths = new Set(currentPaths);
+          nextPaths.delete(entry.path);
+          return nextPaths;
+        });
+        return;
       }
 
-      return nextPaths;
-    });
-  }, []);
+      const expandFolder = () => {
+        setExpandedPaths((currentPaths) => new Set(currentPaths).add(entry.path));
+      };
+
+      if (entry.children) {
+        expandFolder();
+        return;
+      }
+
+      void fetchDirectoryEntries(entry.path)
+        .then((listing) => {
+          setEntries((currentEntries) =>
+            updateEntryChildren(currentEntries, entry.path, listing.entries)
+          );
+          expandFolder();
+        })
+        .catch(() => undefined);
+    },
+    [expandedPaths]
+  );
 
   const toggleFile = useCallback(
     (entry: FileSystemEntry) => {
@@ -188,7 +206,7 @@ interface WorkspaceFileTreeEntryProps {
   level: number;
   monacoTheme: string;
   onToggleFile: (entry: FileSystemEntry) => void;
-  onToggleFolder: (path: string) => void;
+  onToggleFolder: (entry: FileSystemEntry) => void;
   openFile: OpenFileState | null;
 }
 
@@ -219,7 +237,7 @@ function WorkspaceFileTreeEntry({
         className={rowClassName}
         onClick={() => {
           if (isFolder) {
-            onToggleFolder(entry.path);
+            onToggleFolder(entry);
             return;
           }
 
@@ -286,4 +304,28 @@ function getEntryIcon(entry: FileSystemEntry, isExpanded: boolean) {
 
 function getSupportedLanguage(entry: FileSystemEntry): string | undefined {
   return SUPPORTED_LANGUAGES[entry.extension.toLowerCase()];
+}
+
+function updateEntryChildren(
+  entries: FileSystemEntry[],
+  path: string,
+  children: FileSystemEntry[]
+): FileSystemEntry[] {
+  return entries.map((entry) => {
+    if (entry.path === path) {
+      return {
+        ...entry,
+        children
+      };
+    }
+
+    if (!entry.children) {
+      return entry;
+    }
+
+    return {
+      ...entry,
+      children: updateEntryChildren(entry.children, path, children)
+    };
+  });
 }

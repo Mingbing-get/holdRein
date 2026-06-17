@@ -9,20 +9,16 @@ export interface FileSystemFileContent {
   filePath: string;
 }
 
-export async function fetchWorkspaceEntriesRecursive(
-  workspacePath: string
+export async function fetchDirectoryEntries(
+  parentPath: string
 ): Promise<FileSystemDirectoryListing> {
   const result = await request<FileSystemDirectoryListing>({
     method: "GET",
-    path: "/api/v1/file-system/entries/recursive",
-    query: {
-      ignores: "node_modules",
-      parentPath: workspacePath,
-      useGitIgnore: true
-    }
+    path: "/api/v1/file-system/entries",
+    query: { parentPath }
   });
 
-  return normalizeDirectoryListing(result.data, workspacePath);
+  return normalizeDirectoryListing(result.data, parentPath);
 }
 
 export async function fetchFileContent(

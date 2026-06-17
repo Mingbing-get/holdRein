@@ -49,20 +49,12 @@ describe("WorkspaceFileTree", () => {
     vi.unstubAllGlobals();
   });
 
-  it("loads the active workspace tree, toggles folders, and opens supported files read-only", async () => {
+  it("loads directories one level at a time and opens supported files read-only", async () => {
     fetchMock
       .mockResolvedValueOnce(
         jsonResponse({
           entries: [
             {
-              children: [
-                {
-                  extension: ".ts",
-                  kind: "file",
-                  name: "main.ts",
-                  path: "/workspace/src/main.ts"
-                }
-              ],
               extension: "",
               kind: "folder",
               name: "src",
@@ -76,6 +68,19 @@ describe("WorkspaceFileTree", () => {
             }
           ],
           parentPath: "/workspace"
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          entries: [
+            {
+              extension: ".ts",
+              kind: "file",
+              name: "main.ts",
+              path: "/workspace/src/main.ts"
+            }
+          ],
+          parentPath: "/workspace/src"
         })
       )
       .mockResolvedValueOnce(
@@ -95,7 +100,7 @@ describe("WorkspaceFileTree", () => {
 
     fireEvent.click(screen.getByRole("treeitem", { name: "src" }));
 
-    expect(screen.getByRole("treeitem", { name: "main.ts" })).toHaveStyle({
+    expect(await screen.findByRole("treeitem", { name: "main.ts" })).toHaveStyle({
       paddingLeft: "24px"
     });
 
@@ -109,7 +114,7 @@ describe("WorkspaceFileTree", () => {
     expect(editor).toHaveAttribute("data-theme", "vs");
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      "/api/v1/file-system/entries/recursive?ignores=node_modules&parentPath=%2Fworkspace&useGitIgnore=true",
+      "/api/v1/file-system/entries?parentPath=%2Fworkspace",
       {
         body: undefined,
         headers: undefined,
@@ -118,6 +123,15 @@ describe("WorkspaceFileTree", () => {
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       2,
+      "/api/v1/file-system/entries?parentPath=%2Fworkspace%2Fsrc",
+      {
+        body: undefined,
+        headers: undefined,
+        method: "GET"
+      }
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
       "/api/v1/file-system/file-content?filePath=%2Fworkspace%2Fsrc%2Fmain.ts",
       {
         body: undefined,
