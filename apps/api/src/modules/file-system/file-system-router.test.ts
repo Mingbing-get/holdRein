@@ -92,3 +92,127 @@ describe("GET /api/v1/file-system/entries", () => {
     expect(response.body.msg).toBe("parentPath must be inside the root directory");
   });
 });
+
+describe("GET /api/v1/file-system/entries/recursive", () => {
+  beforeEach(async () => {
+    rootPath = await mkdtemp(join(tmpdir(), "hold-rein-files-"));
+    await mkdir(join(rootPath, "src", "components"), { recursive: true });
+    await mkdir(join(rootPath, "docs"));
+    await writeFile(join(rootPath, "README.md"), "hello");
+    await writeFile(join(rootPath, "src", "main.ts"), "export {};");
+    await writeFile(join(rootPath, "src", "components", "button.ts"), "export {};");
+  });
+
+  afterEach(async () => {
+    await rm(rootPath, { force: true, recursive: true });
+  });
+
+  it("returns folders and files below the configured root recursively", async () => {
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
+      .get("/api/v1/file-system/entries/recursive");
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({
+      parentPath: rootPath,
+      entries: [
+        {
+          extension: "",
+          kind: "folder",
+          name: "docs",
+          path: join(rootPath, "docs")
+        },
+        {
+          extension: "",
+          kind: "folder",
+          name: "src",
+          path: join(rootPath, "src")
+        },
+        {
+          extension: "",
+          kind: "folder",
+          name: "components",
+          path: join(rootPath, "src", "components")
+        },
+        {
+          extension: ".ts",
+          kind: "file",
+          name: "button.ts",
+          path: join(rootPath, "src", "components", "button.ts")
+        },
+        {
+          extension: ".ts",
+          kind: "file",
+          name: "main.ts",
+          path: join(rootPath, "src", "main.ts")
+        },
+        {
+          extension: ".md",
+          kind: "file",
+          name: "README.md",
+          path: join(rootPath, "README.md")
+        }
+      ]
+    });
+  });
+
+  it("rejects parentPath values outside the configured root", async () => {
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
+      .get("/api/v1/file-system/entries/recursive")
+      .query({ parentPath: tmpdir() });
+
+    expect(response.status).toBe(400);
+    expect(response.body.msg).toBe("parentPath must be inside the root directory");
+  });
+});
+
+describe("GET /api/v1/file-system/file-content", () => {
+  beforeEach(async () => {
+    rootPath = await mkdtemp(join(tmpdir(), "hold-rein-files-"));
+    await mkdir(join(rootPath, "src"));
+    await writeFile(join(rootPath, "src", "message.txt"), "你好，Hold Rein");
+  });
+
+  afterEach(async () => {
+    await rm(rootPath, { force: true, recursive: true });
+  });
+
+  it("returns UTF-8 text content for a file inside the configured root", async () => {
+    const filePath = join(rootPath, "src", "message.txt");
+
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
+      .get("/api/v1/file-system/file-content")
+      .query({ filePath });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({
+      content: "你好，Hold Rein",
+      filePath
+    });
+  });
+
+  it("requires filePath to be a string", async () => {
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
+      .get("/api/v1/file-system/file-content");
+
+    expect(response.status).toBe(400);
+    expect(response.body.msg).toBe("filePath must be a string");
+  });
+
+  it("rejects filePath values outside the configured root", async () => {
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
+      .get("/api/v1/file-system/file-content")
+      .query({ filePath: join(tmpdir(), "outside.txt") });
+
+    expect(response.status).toBe(400);
+    expect(response.body.msg).toBe("filePath must be inside the root directory");
+  });
+
+  it("rejects directory paths", async () => {
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
+      .get("/api/v1/file-system/file-content")
+      .query({ filePath: join(rootPath, "src") });
+
+    expect(response.status).toBe(400);
+    expect(response.body.msg).toBe("filePath must be a file");
+  });
+});
