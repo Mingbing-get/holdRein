@@ -1,5 +1,4 @@
 import { Flex } from "antd";
-import type { WebPlugin } from "@hold-rein/plugin-web";
 import { useLayoutEffect, useRef } from "react";
 
 import { useAppWorkspace } from "../../app/app-workspace-context";
@@ -9,31 +8,12 @@ import {
   useAgentTasks
 } from "../agent-messages";
 import Sender from "./sender";
+import { useWorkspaceFileSuggestions } from "./use-workspace-file-suggestions";
 
 interface ChatWorkspaceProps {
   activeTaskName: string;
   apiBaseUrl: string;
 }
-
-const groups: WebPlugin.SuggestionGroup[] = [
-  {
-    trigger: "/",
-    suggestions: [
-      {
-        label: "Run release checklist",
-        value: "/release checklist"
-      },
-      {
-        label: "Review incidents",
-        value: "/incidents review"
-      },
-      {
-        label: "Prepare handoff",
-        value: "/handoff summary"
-      }
-    ]
-  }
-]
 
 const BOTTOM_TOLERANCE_PX = 2;
 
@@ -58,6 +38,10 @@ export function ChatWorkspace({
   );
   const taskState = getTaskState(activeTaskId);
   const pendingApproval = getPendingApproval(activeTaskId);
+  const suggestionGroups = useWorkspaceFileSuggestions(
+    apiBaseUrl,
+    taskState?.status
+  );
   const senderDisabled = !activeWorkspaceId || !activeAgent;
   const bottomRef = useRef<HTMLDivElement>(null);
   const previousTaskIdRef = useRef(activeTaskId);
@@ -128,7 +112,7 @@ export function ChatWorkspace({
         apiBaseUrl={apiBaseUrl}
         disabled={senderDisabled}
         running={taskState?.status === "running"}
-        suggestionGroups={groups}
+        suggestionGroups={suggestionGroups}
         autoSize={{ minRows: 1, maxRows: 4 }}
         onActiveAgentChange={setActiveAgent}
         onCancel={async () => {

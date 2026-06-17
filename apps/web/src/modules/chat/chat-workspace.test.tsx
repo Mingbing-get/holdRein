@@ -104,6 +104,10 @@ vi.mock("./sender", () => ({
   )
 }));
 
+vi.mock("./use-workspace-file-suggestions", () => ({
+  useWorkspaceFileSuggestions: () => []
+}));
+
 describe("ChatWorkspace", () => {
   const scrollIntoView = vi.fn();
 
