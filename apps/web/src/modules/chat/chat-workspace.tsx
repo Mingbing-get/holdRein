@@ -111,8 +111,11 @@ export function ChatWorkspace({
         activeAgent={activeAgent}
         apiBaseUrl={apiBaseUrl}
         disabled={senderDisabled}
+        draftKey="chat-workspace-sender"
         running={taskState?.status === "running"}
         suggestionGroups={suggestionGroups}
+        taskId={activeTaskId}
+        workspacePath={activeWorkspace?.path}
         autoSize={{ minRows: 1, maxRows: 4 }}
         onActiveAgentChange={setActiveAgent}
         onCancel={async () => {

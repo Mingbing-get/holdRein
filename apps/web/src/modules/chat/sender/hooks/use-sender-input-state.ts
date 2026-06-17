@@ -5,16 +5,20 @@ import {
   clampCursorIndex,
   getCurrentCursorCharacterIndex
 } from "../utils";
+import { useSenderDraft } from "./use-sender-draft";
 
 type SenderSubmitHandler = Required<SenderProps>["onSubmit"];
 type SenderInstance = React.ElementRef<typeof ASender>;
 type InputElement = HTMLTextAreaElement | null;
 
 export interface UseSenderInputStateOptions {
+  draftKey?: string | undefined;
   onMessageChange?: ((message: string) => void) | undefined;
   onSubmit?:
     | ((...args: Parameters<SenderSubmitHandler>) => Promise<void> | void)
     | undefined;
+  taskId?: string | undefined;
+  workspacePath?: string | undefined;
 }
 
 export interface UseSenderInputStateResult {
@@ -27,17 +31,28 @@ export interface UseSenderInputStateResult {
 }
 
 export function useSenderInputState({
+  draftKey,
   onMessageChange,
-  onSubmit
+  onSubmit,
+  taskId,
+  workspacePath
 }: UseSenderInputStateOptions): UseSenderInputStateResult {
-  const [draftMessage, setDraftMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const senderRef = useRef<SenderInstance>(null);
+  const {
+    clearDraft,
+    draftMessage,
+    setDraftMessage
+  } = useSenderDraft({
+    draftKey,
+    taskId,
+    workspacePath
+  });
 
   const handleChangeMessage = useCallback((message: string) => {
     setDraftMessage(message);
     onMessageChange?.(message);
-  }, [onMessageChange]);
+  }, [onMessageChange, setDraftMessage]);
 
   const focusCursorAt = useCallback((cursorIndex: number) => {
     requestAnimationFrame(() => {
@@ -77,11 +92,11 @@ export function useSenderInputState({
 
     try {
       await onSubmit?.(...args);
-      setDraftMessage("");
+      clearDraft();
     } finally {
       setLoading(false);
     }
-  }, [onSubmit]);
+  }, [clearDraft, onSubmit]);
 
   return {
     draftMessage,

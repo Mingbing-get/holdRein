@@ -365,6 +365,30 @@ describe("Sender action button", () => {
     });
   });
 
+  it("restores the draft when switching back to a task", () => {
+    const view = render(
+      <Sender apiBaseUrl="" draftKey="sender-test" taskId="task-one" />
+    );
+
+    fireEvent.change(screen.getByLabelText("消息"), {
+      target: { value: "Draft for task one" }
+    });
+    view.rerender(
+      <Sender apiBaseUrl="" draftKey="sender-test" taskId="task-two" />
+    );
+
+    expect(screen.getByLabelText("消息")).toHaveValue("");
+
+    fireEvent.change(screen.getByLabelText("消息"), {
+      target: { value: "Draft for task two" }
+    });
+    view.rerender(
+      <Sender apiBaseUrl="" draftKey="sender-test" taskId="task-one" />
+    );
+
+    expect(screen.getByLabelText("消息")).toHaveValue("Draft for task one");
+  });
+
   it("submits the draft with Enter when suggestions are closed", async () => {
     const onSubmit = vi.fn();
     render(<Sender apiBaseUrl="" onSubmit={onSubmit} />);

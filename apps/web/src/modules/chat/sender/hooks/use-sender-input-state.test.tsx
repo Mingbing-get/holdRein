@@ -55,6 +55,65 @@ describe("useSenderInputState", () => {
     expect(result.current.loading).toBe(false);
   });
 
+  it("clears the persisted draft after submit succeeds", async () => {
+    const onSubmit = vi.fn();
+    const { rerender, result } = renderHook(
+      ({ taskId }) =>
+        useSenderInputState({
+          draftKey: "input-submit-clear",
+          onSubmit,
+          taskId,
+          workspacePath: "/workspace"
+        }),
+      {
+        initialProps: { taskId: "task-one" }
+      }
+    );
+
+    act(() => {
+      result.current.handleChangeMessage("hello");
+    });
+    rerender({ taskId: "task-two" });
+    rerender({ taskId: "task-one" });
+
+    expect(result.current.draftMessage).toBe("hello");
+
+    await act(async () => {
+      await result.current.handleSubmit("hello");
+    });
+    rerender({ taskId: "task-two" });
+    rerender({ taskId: "task-one" });
+
+    expect(result.current.draftMessage).toBe("");
+  });
+
+  it("restores the previous draft after changing another task draft", () => {
+    const { rerender, result } = renderHook(
+      ({ taskId }) =>
+        useSenderInputState({
+          draftKey: "input-switch-restore",
+          taskId,
+          workspacePath: "/workspace"
+        }),
+      {
+        initialProps: { taskId: "task-one" }
+      }
+    );
+
+    act(() => {
+      result.current.handleChangeMessage("first draft");
+    });
+    rerender({ taskId: "task-two" });
+    expect(result.current.draftMessage).toBe("");
+
+    act(() => {
+      result.current.handleChangeMessage("second draft");
+    });
+    rerender({ taskId: "task-one" });
+
+    expect(result.current.draftMessage).toBe("first draft");
+  });
+
   it("stops loading when submit rejects and keeps the draft message", async () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error("failed"));
     const { result } = renderHook(() =>

@@ -1,4 +1,9 @@
 export {
+  useSenderDraft,
+  type UseSenderDraftOptions,
+  type UseSenderDraftResult
+} from "./use-sender-draft";
+export {
   useSenderInputState,
   type UseSenderInputStateOptions,
   type UseSenderInputStateResult

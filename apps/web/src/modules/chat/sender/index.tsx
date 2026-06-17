@@ -37,23 +37,29 @@ export const CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS =
 interface Props extends Pick<SenderProps, 'autoSize' | 'className' | 'classNames' | 'disabled' | 'placeholder'> {
   activeAgent?: SelectedModel | null
   apiBaseUrl: string
+  draftKey?: string | undefined
   running?: boolean
-  suggestionGroups?: WebPlugin.SuggestionGroup[]
+  suggestionGroups?: WebPlugin.SuggestionGroup[] | undefined
+  taskId?: string | undefined
   onActiveAgentChange?: (activeAgent: SelectedModel) => void
   onCancel?: () => Promise<void> | void
   onSubmit?: (...args: Parameters<Required<SenderProps>['onSubmit']>) => Promise<void> | void
   onMessageChange?: (message: string) => void
+  workspacePath?: string | undefined
 }
 
 export default function Sender({
   activeAgent,
   apiBaseUrl,
+  draftKey,
   running = false,
   onCancel,
   onActiveAgentChange,
   suggestionGroups,
+  taskId,
   onMessageChange,
   onSubmit,
+  workspacePath,
   ...senderProps
 }: Props) {
   const { senderActions, senderSuggestions } = useAppPlugins();
@@ -65,8 +71,11 @@ export default function Sender({
     loading,
     senderRef
   } = useSenderInputState({
+    draftKey,
     onMessageChange,
-    onSubmit
+    onSubmit,
+    taskId,
+    workspacePath
   });
   const mergedSuggestionGroups = useMemo(
     () => [
