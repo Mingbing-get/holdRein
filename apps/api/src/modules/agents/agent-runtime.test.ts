@@ -269,6 +269,7 @@ describe("agent runtime sessions", () => {
 
   it("appends plugin continuation as a visible custom message and starts the next harness with an empty prompt", async () => {
     const { appendCustomMessageEntry, create, open, repo } = createSessionRepo();
+    const eventBus = createAgentEventBus();
     resolveContributions.mockResolvedValue({
       onAgentEnd: vi.fn().mockResolvedValue({
         details: { source: "test-plugin" },
@@ -279,9 +280,15 @@ describe("agent runtime sessions", () => {
       systemPrompts: [],
       tools: []
     });
-    const runtime = createRuntime(repo);
+    const runtime = createRuntime(repo, eventBus);
 
-    await runtime.start(createRunInput());
+    const result = await runtime.start(createRunInput());
+    const messages: unknown[] = [];
+    eventBus.subscribe({ agentId: result.agentId }, (event) => {
+      if (event.type === "message_start") {
+        messages.push(event.payload);
+      }
+    });
     await harnessSubscribers[0]?.({ type: "agent_end" });
 
     expect(appendCustomMessageEntry).toHaveBeenCalledWith(
@@ -293,6 +300,16 @@ describe("agent runtime sessions", () => {
     expect(prompt).toHaveBeenNthCalledWith(2, "");
     expect(create).toHaveBeenCalledOnce();
     expect(open).not.toHaveBeenCalled();
+    expect(messages).toEqual([
+      {
+        message: expect.objectContaining({
+          content: "Check whether another step is needed",
+          customType: "agent_continuation",
+          display: true,
+          role: "custom"
+        })
+      }
+    ]);
   });
 
   it("resolves fresh plugin contributions for continuation harnesses with the continuation prompt", async () => {
@@ -352,10 +369,13 @@ describe("agent runtime sessions", () => {
   });
 });
 
-function createRuntime(sessionRepo: JsonlSessionRepoApi) {
+function createRuntime(
+  sessionRepo: JsonlSessionRepoApi,
+  eventBus = createAgentEventBus()
+) {
   return createAgentRuntime({
     approvalStore: createAgentApprovalStore(),
-    eventBus: createAgentEventBus(),
+    eventBus,
     sessionRepo
   });
 }

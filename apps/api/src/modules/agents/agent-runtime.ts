@@ -289,6 +289,20 @@ export function createAgentRuntime(
           true,
           continuation.details
         );
+        options.eventBus.emit({
+          agentId: harnessAgentId,
+          payload: {
+            message: {
+              content: continuation.prompt,
+              customType: AGENT_CONTINUATION_CUSTOM_TYPE,
+              display: true,
+              id: `message_${randomUUID()}`,
+              role: "custom",
+              timestamp: Date.now()
+            } satisfies StoredAgentMessage
+          },
+          type: "message_start"
+        });
         await startHarness(AGENT_CONTINUE_PROMPT, {
           agentId: harnessAgentId,
           isContinue: true,
