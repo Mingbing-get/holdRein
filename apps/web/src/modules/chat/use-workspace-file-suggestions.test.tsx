@@ -17,7 +17,7 @@ describe("useWorkspaceFileSuggestions", () => {
 
   beforeEach(() => {
     vi.stubGlobal("fetch", fetchMock);
-    fetchMock.mockReturnValue(new Promise(() => {}));
+    fetchMock.mockReturnValue(new Promise(() => undefined));
   });
 
   afterEach(() => {
@@ -32,16 +32,18 @@ describe("useWorkspaceFileSuggestions", () => {
         jsonResponse({
           entries: [
             {
+              children: [
+                {
+                  extension: ".ts",
+                  kind: "file",
+                  name: "main.ts",
+                  path: "/Users/mingbing/apps/workspace-one/src/main.ts"
+                }
+              ],
               extension: "",
               kind: "folder",
               name: "src",
               path: "/Users/mingbing/apps/workspace-one/src"
-            },
-            {
-              extension: ".ts",
-              kind: "file",
-              name: "main.ts",
-              path: "/Users/mingbing/apps/workspace-one/src/main.ts"
             }
           ],
           parentPath: "/Users/mingbing/apps/workspace-one"
@@ -63,9 +65,18 @@ describe("useWorkspaceFileSuggestions", () => {
     const view = renderHookProbe("running");
 
     await waitFor(() => {
-      expect(screen.getByTestId("suggestions")).toHaveTextContent(
-        "src/:/src/,src/main.ts:/src/main.ts"
-      );
+      expect(readSuggestions()).toEqual([
+        {
+          children: [
+            {
+              label: "main.ts",
+              value: "/src/main.ts"
+            }
+          ],
+          label: "src/",
+          value: "/src/"
+        }
+      ]);
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "http://localhost:4000/api/v1/file-system/entries/recursive?parentPath=%2FUsers%2Fmingbing%2Fapps%2Fworkspace-one"
@@ -74,9 +85,12 @@ describe("useWorkspaceFileSuggestions", () => {
     view.rerender(getHookProbe("completed"));
 
     await waitFor(() => {
-      expect(screen.getByTestId("suggestions")).toHaveTextContent(
-        "README.md:/README.md"
-      );
+      expect(readSuggestions()).toEqual([
+        {
+          label: "README.md",
+          value: "/README.md"
+        }
+      ]);
     });
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
@@ -124,12 +138,10 @@ function SuggestionsProbe({
     taskStatus
   );
   const suggestions = suggestionGroups.flatMap((group) =>
-    group.suggestions.map(
-      (suggestion) => `${suggestion.label}:${suggestion.value}`
-    )
+    group.suggestions
   );
 
-  return <div data-testid="suggestions">{suggestions.join(",")}</div>;
+  return <div data-testid="suggestions">{JSON.stringify(suggestions)}</div>;
 }
 
 function jsonResponse(data: unknown): Response {
@@ -141,4 +153,8 @@ function jsonResponse(data: unknown): Response {
     }),
     ok: true
   } as Response;
+}
+
+function readSuggestions(): unknown {
+  return JSON.parse(screen.getByTestId("suggestions").textContent ?? "[]");
 }

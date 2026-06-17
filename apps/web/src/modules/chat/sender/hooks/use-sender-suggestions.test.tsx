@@ -95,6 +95,64 @@ describe("useSenderSuggestions", () => {
     ]);
   });
 
+  it("returns matching nested items while preserving parent suggestions", () => {
+    const { result } = renderHook(() =>
+      useSenderSuggestions({
+        suggestionGroups: [
+          {
+            trigger: "/",
+            suggestions: [
+              {
+                children: [
+                  {
+                    children: [
+                      {
+                        label: "button.ts",
+                        value: "/src/components/button.ts"
+                      }
+                    ],
+                    label: "components/",
+                    value: "/src/components/"
+                  },
+                  {
+                    label: "main.ts",
+                    value: "/src/main.ts"
+                  }
+                ],
+                label: "src/",
+                value: "/src/"
+              }
+            ]
+          }
+        ]
+      })
+    );
+
+    expect(
+      result.current.getItemsByQuery({
+        query: "button",
+        trigger: "/"
+      })
+    ).toEqual([
+      {
+        children: [
+          {
+            children: [
+              {
+                label: "button.ts",
+                value: "/src/components/button.ts"
+              }
+            ],
+            label: "components/",
+            value: "/src/components/"
+          }
+        ],
+        label: "src/",
+        value: "/src/"
+      }
+    ]);
+  });
+
   it("detects a trigger token before the cursor", () => {
     const { result } = renderHook(() =>
       useSenderSuggestions({

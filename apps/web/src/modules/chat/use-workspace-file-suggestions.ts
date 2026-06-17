@@ -85,7 +85,7 @@ export function useWorkspaceFileSuggestions(
       {
         trigger: "/",
         suggestions: entries.map((entry) =>
-          createFileSuggestion(entry, workspacePath)
+          createFileSuggestion(entry, workspacePath, "")
         )
       }
     ];
@@ -125,14 +125,19 @@ function createWorkspaceEntriesRecursiveUrl(
 
 function createFileSuggestion(
   entry: FileSystemEntry,
-  workspacePath: string
+  workspacePath: string,
+  parentRelativePath: string
 ): WebPlugin.SuggestionItem {
   const relativePath = getRelativeWorkspacePath(workspacePath, entry.path);
-  const suggestionPath =
-    entry.kind === "folder" ? `${relativePath}/` : relativePath;
+  const suggestionLabel = entry.kind === "folder" ? `${entry.name}/` : entry.name;
+  const suggestionPath = entry.kind === "folder" ? `${relativePath}/` : relativePath;
+  const children = entry.children?.map((childEntry) =>
+    createFileSuggestion(childEntry, workspacePath, relativePath)
+  );
 
   return {
-    label: suggestionPath,
+    ...(children?.length ? { children } : {}),
+    label: parentRelativePath ? suggestionLabel : suggestionPath,
     value: `/${suggestionPath}`
   };
 }
@@ -172,7 +177,8 @@ function areEntriesEqual(
       leftEntry.extension === rightEntry.extension &&
       leftEntry.kind === rightEntry.kind &&
       leftEntry.name === rightEntry.name &&
-      leftEntry.path === rightEntry.path
+      leftEntry.path === rightEntry.path &&
+      areEntriesEqual(leftEntry.children ?? [], rightEntry.children ?? [])
     );
   });
 }

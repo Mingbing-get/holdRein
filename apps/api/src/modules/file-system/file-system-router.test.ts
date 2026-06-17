@@ -107,7 +107,7 @@ describe("GET /api/v1/file-system/entries/recursive", () => {
     await rm(rootPath, { force: true, recursive: true });
   });
 
-  it("returns folders and files below the configured root recursively", async () => {
+  it("returns folders and files below the configured root recursively as a tree", async () => {
     const response = await request(await createApp({ fileSystemRootPath: rootPath }))
       .get("/api/v1/file-system/entries/recursive");
 
@@ -116,34 +116,39 @@ describe("GET /api/v1/file-system/entries/recursive", () => {
       parentPath: rootPath,
       entries: [
         {
+          children: [],
           extension: "",
           kind: "folder",
           name: "docs",
           path: join(rootPath, "docs")
         },
         {
+          children: [
+            {
+              children: [
+                {
+                  extension: ".ts",
+                  kind: "file",
+                  name: "button.ts",
+                  path: join(rootPath, "src", "components", "button.ts")
+                }
+              ],
+              extension: "",
+              kind: "folder",
+              name: "components",
+              path: join(rootPath, "src", "components")
+            },
+            {
+              extension: ".ts",
+              kind: "file",
+              name: "main.ts",
+              path: join(rootPath, "src", "main.ts")
+            }
+          ],
           extension: "",
           kind: "folder",
           name: "src",
           path: join(rootPath, "src")
-        },
-        {
-          extension: "",
-          kind: "folder",
-          name: "components",
-          path: join(rootPath, "src", "components")
-        },
-        {
-          extension: ".ts",
-          kind: "file",
-          name: "button.ts",
-          path: join(rootPath, "src", "components", "button.ts")
-        },
-        {
-          extension: ".ts",
-          kind: "file",
-          name: "main.ts",
-          path: join(rootPath, "src", "main.ts")
         },
         {
           extension: ".md",

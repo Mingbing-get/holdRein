@@ -7,6 +7,7 @@ export interface ApiResponse<T> {
 export type FileSystemEntryKind = "file" | "folder";
 
 export interface FileSystemEntry {
+  children?: FileSystemEntry[];
   extension: string;
   kind: FileSystemEntryKind;
   name: string;

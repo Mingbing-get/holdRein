@@ -67,14 +67,12 @@ export function useSenderSuggestions({
 
     for (const group of mergedSuggestionGroups) {
       if (group.trigger === trigger.trigger) {
-        return group.suggestions.filter((item) =>
-          item.label.includes(trigger.query)
-        );
+        return filterSuggestionItems(group.suggestions, trigger.query);
       }
     }
 
     return [];
-  }, [suggestionGroups]);
+  }, [mergedSuggestionGroups]);
 
   const getTriggerQuery = useCallback((
     value: string,
@@ -125,4 +123,30 @@ export function useSenderSuggestions({
     setSuggestionOpen,
     suggestionOpen
   };
+}
+
+function filterSuggestionItems(
+  items: WebPlugin.SuggestionItem[],
+  query: string
+): WebPlugin.SuggestionItem[] {
+  return items.flatMap((item) => {
+    const filteredChildren = item.children
+      ? filterSuggestionItems(item.children, query)
+      : [];
+
+    if (item.label.includes(query) || item.value.includes(query)) {
+      return [item];
+    }
+
+    if (filteredChildren.length) {
+      return [
+        {
+          ...item,
+          children: filteredChildren
+        }
+      ];
+    }
+
+    return [];
+  });
 }

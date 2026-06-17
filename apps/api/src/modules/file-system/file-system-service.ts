@@ -4,6 +4,7 @@ import { extname, isAbsolute, parse, relative, resolve } from "node:path";
 export type FileSystemEntryKind = "file" | "folder";
 
 export interface FileSystemEntry {
+  children?: FileSystemEntry[];
   extension: string;
   kind: FileSystemEntryKind;
   name: string;
@@ -134,40 +135,25 @@ function isPathInsideRoot(rootPath: string, targetPath: string): boolean {
 
 async function listEntriesRecursive(parentPath: string): Promise<FileSystemEntry[]> {
   const entries = await readdir(parentPath, { withFileTypes: true });
-  const visibleEntries = entries
+  const visibleEntries = await Promise.all(entries
     .filter((entry) => !entry.name.startsWith("."))
     .filter((entry) => entry.isDirectory() || entry.isFile())
-    .map<FileSystemEntry>((entry) => {
+    .map<Promise<FileSystemEntry>>(async (entry) => {
       const entryPath = resolve(parentPath, entry.name);
       const isDirectory = entry.isDirectory();
 
       return {
+        ...(isDirectory
+          ? { children: await listEntriesRecursive(entryPath) }
+          : {}),
         extension: isDirectory ? "" : extname(entry.name),
         kind: isDirectory ? "folder" : "file",
         name: entry.name,
         path: entryPath
       };
-    })
-    .sort(compareEntries);
+    }));
 
-  const nestedEntries = new Map(
-    await Promise.all(
-      visibleEntries
-        .filter((entry) => entry.kind === "folder")
-        .map(async (entry): Promise<[string, FileSystemEntry[]]> => [
-          entry.path,
-          await listEntriesRecursive(entry.path)
-        ])
-    )
-  );
-
-  return visibleEntries.flatMap((entry) => {
-    if (entry.kind !== "folder") {
-      return [entry];
-    }
-
-    return [entry, ...(nestedEntries.get(entry.path) ?? [])];
-  });
+  return visibleEntries.sort(compareEntries);
 }
 
 function compareEntries(left: FileSystemEntry, right: FileSystemEntry): number {

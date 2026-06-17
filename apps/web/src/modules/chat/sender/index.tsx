@@ -113,6 +113,8 @@ export default function Sender({
         open={suggestionOpen}
         styles={{
           popup: {
+            maxHeight: '60vh',
+            overflowY: 'auto',
             border: "1px solid var(--app-color-border-secondary)",
             borderRadius: 16,
             boxShadow:
