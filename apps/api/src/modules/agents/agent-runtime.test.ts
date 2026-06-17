@@ -268,7 +268,7 @@ describe("agent runtime sessions", () => {
   });
 
   it("appends plugin continuation as a custom message and starts the next harness with the continue sentinel", async () => {
-    const { appendCustomMessageEntry, repo } = createSessionRepo();
+    const { appendCustomMessageEntry, create, open, repo } = createSessionRepo();
     resolveContributions.mockResolvedValue({
       onAgentEnd: vi.fn().mockResolvedValue({
         details: { source: "test-plugin" },
@@ -291,6 +291,8 @@ describe("agent runtime sessions", () => {
       { source: "test-plugin" }
     );
     expect(prompt).toHaveBeenNthCalledWith(2, "__continue__");
+    expect(create).toHaveBeenCalledOnce();
+    expect(open).not.toHaveBeenCalled();
   });
 
   it("resolves fresh plugin contributions for continuation harnesses with the continuation prompt", async () => {
@@ -319,6 +321,8 @@ describe("agent runtime sessions", () => {
     expect(resolveContributions).toHaveBeenCalledTimes(2);
     expect(resolveContributions.mock.calls[1]?.[0]).toEqual(
       expect.objectContaining({
+        agentName: "main",
+        isContinue: true,
         prompt: "Use the plugin-selected follow-up prompt"
       })
     );
@@ -330,6 +334,21 @@ describe("agent runtime sessions", () => {
       "second plugin prompt"
     );
     expect(prompt).toHaveBeenNthCalledWith(2, "__continue__");
+  });
+
+  it("resolves initial plugin contributions for the main agent as a non-continuation run", async () => {
+    const { repo } = createSessionRepo();
+    const runtime = createRuntime(repo);
+
+    await runtime.start(createRunInput());
+
+    expect(resolveContributions).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentName: "main",
+        isContinue: false,
+        prompt: "Continue"
+      })
+    );
   });
 });
 

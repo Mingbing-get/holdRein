@@ -34,7 +34,9 @@ export namespace ServerPlugin {
   // 模型相关
 
   export interface RuntimeContext {
+    readonly agentName: string;
     readonly env: ExecutionEnv;
+    readonly isContinue: boolean;
     readonly session: Session;
     readonly model: Model<Api>;
     readonly thinkingLevel: ThinkingLevel;
