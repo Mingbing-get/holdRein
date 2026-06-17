@@ -93,21 +93,28 @@ describe("AgentMessageList", () => {
     ).toBeInTheDocument();
   });
 
-  it("does not render the internal continue sentinel user message", () => {
-    render(
+  it("does not render the internal empty continue user message", () => {
+    const { container } = render(
       <AgentMessageList
         messages={[
           {
-            content: "__continue__",
+            content: "",
             id: "continue-message",
             role: "user",
             timestamp: 1
+          },
+          {
+            content: "Visible prompt",
+            id: "visible-message",
+            role: "user",
+            timestamp: 2
           }
         ]}
       />
     );
 
-    expect(screen.queryByText("__continue__")).not.toBeInTheDocument();
+    expect(screen.getByText("Visible prompt")).toBeInTheDocument();
+    expect(container.querySelectorAll(".ant-bubble")).toHaveLength(1);
   });
 
   it("renders tool arguments and result through its tool call", () => {

@@ -29,7 +29,7 @@ import {
 import { pluginRegistry } from '../../plugin'
 
 const AGENT_CONTINUATION_CUSTOM_TYPE = "agent_continuation";
-const AGENT_CONTINUE_PROMPT = "__continue__";
+const AGENT_CONTINUE_PROMPT = "";
 
 export interface AgentRuntime {
   interrupt: (agentId: string) => Promise<boolean>;
@@ -286,7 +286,7 @@ export function createAgentRuntime(
         await harnessSession.appendCustomMessageEntry(
           AGENT_CONTINUATION_CUSTOM_TYPE,
           continuation.prompt,
-          false,
+          true,
           continuation.details
         );
         await startHarness(AGENT_CONTINUE_PROMPT, {

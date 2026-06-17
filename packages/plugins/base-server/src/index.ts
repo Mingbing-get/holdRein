@@ -8,7 +8,14 @@ const baseServerPlugin: ServerPlugin.Plugin = {
   registerRoutes: createRouter,
   contributionResolver: (context) => {
     return {
-      tools: [createShellExecTool(context.env)]
+      tools: [createShellExecTool(context.env)],
+      onAgentEnd: () => {
+        if (context.isContinue) {
+          return
+        }
+
+        return { prompt: '测试自动运行' }
+      }
     }
   }
 }

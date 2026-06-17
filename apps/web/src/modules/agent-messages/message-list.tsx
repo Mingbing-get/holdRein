@@ -10,7 +10,7 @@ import { MarkdownContent } from "./markdown-content";
 import { useCallback, useMemo } from "react";
 import type { WebPlugin } from '@hold-rein/plugin-web'
 
-const AGENT_CONTINUE_PROMPT = "__continue__";
+const AGENT_CONTINUE_PROMPT = "";
 
 export function AgentMessageList({ messages }: { messages: WebPlugin.AgentMessage[] }) {
   return (

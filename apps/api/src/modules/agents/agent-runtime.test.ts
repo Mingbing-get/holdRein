@@ -267,7 +267,7 @@ describe("agent runtime sessions", () => {
     expect(eventTypes).toEqual(["agent_end", "task_end"]);
   });
 
-  it("appends plugin continuation as a custom message and starts the next harness with the continue sentinel", async () => {
+  it("appends plugin continuation as a visible custom message and starts the next harness with an empty prompt", async () => {
     const { appendCustomMessageEntry, create, open, repo } = createSessionRepo();
     resolveContributions.mockResolvedValue({
       onAgentEnd: vi.fn().mockResolvedValue({
@@ -287,10 +287,10 @@ describe("agent runtime sessions", () => {
     expect(appendCustomMessageEntry).toHaveBeenCalledWith(
       "agent_continuation",
       "Check whether another step is needed",
-      false,
+      true,
       { source: "test-plugin" }
     );
-    expect(prompt).toHaveBeenNthCalledWith(2, "__continue__");
+    expect(prompt).toHaveBeenNthCalledWith(2, "");
     expect(create).toHaveBeenCalledOnce();
     expect(open).not.toHaveBeenCalled();
   });
@@ -333,7 +333,7 @@ describe("agent runtime sessions", () => {
     expect(systemPrompt?.({ resources: { skills: [] } })).toContain(
       "second plugin prompt"
     );
-    expect(prompt).toHaveBeenNthCalledWith(2, "__continue__");
+    expect(prompt).toHaveBeenNthCalledWith(2, "");
   });
 
   it("resolves initial plugin contributions for the main agent as a non-continuation run", async () => {
