@@ -58,10 +58,16 @@ type HarnessSession = Awaited<ReturnType<JsonlSessionRepoApi["create"]>>;
 
 interface StartHarnessOptions {
   agentId?: string;
+  agentName?: string;
   isContinue: boolean;
   pluginPrompt: string;
   session?: HarnessSession;
 }
+
+type CreateHarnessOptions = StartHarnessOptions & {
+  agentId: string;
+  session: HarnessSession;
+};
 
 interface StartHarnessResult {
   agentId: string;
@@ -111,19 +117,14 @@ export function createAgentRuntime(
         throw new Error("Unknown model");
       }
 
-      const createHarness = async (
-        harnessAgentId: string,
-        harnessSession: HarnessSession,
-        pluginPrompt: string,
-        isContinue: boolean
-      ) => {
+      const createHarness = async (harnessOptions: CreateHarnessOptions) => {
         let activeMessageId: string | undefined;
         const pluginContext: ServerPlugin.RuntimeContext = {
-          agentName: "main",
+          agentName: harnessOptions.agentName ?? "main",
           env,
-          isContinue,
-          session: harnessSession,
-          prompt: pluginPrompt,
+          isContinue: harnessOptions.isContinue,
+          session: harnessOptions.session,
+          prompt: harnessOptions.pluginPrompt,
           thinkingLevel: 'medium',
           model
         }
@@ -147,7 +148,7 @@ export function createAgentRuntime(
           },
           model: contribution.model || model,
           resources: { skills },
-          session: harnessSession,
+          session: harnessOptions.session,
           systemPrompt: ({ resources }) =>
             [
               ...(contribution.systemPrompts || []),
@@ -172,7 +173,7 @@ export function createAgentRuntime(
           if (event.type === "message_start") {
             activeMessageId = `message_${randomUUID()}`;
             options.eventBus.emit({
-              agentId: harnessAgentId,
+              agentId: harnessOptions.agentId,
               payload: { message: toStoredAgentMessage(activeMessageId, event.message) },
               type: "message_start"
             });
@@ -180,7 +181,7 @@ export function createAgentRuntime(
           }
           if (event.type === "message_update" && activeMessageId) {
             options.eventBus.emit({
-              agentId: harnessAgentId,
+              agentId: harnessOptions.agentId,
               payload: {
                 delta: event.assistantMessageEvent,
                 messageId: activeMessageId
@@ -193,7 +194,7 @@ export function createAgentRuntime(
             const messageId = activeMessageId ?? `message_${randomUUID()}`;
             const message = toStoredAgentMessage(messageId, event.message);
             options.eventBus.emit({
-              agentId: harnessAgentId,
+              agentId: harnessOptions.agentId,
               payload: { message },
               type: "message_end"
             });
@@ -201,8 +202,13 @@ export function createAgentRuntime(
             return;
           }
           if (event.type === "agent_end") {
-            options.eventBus.emit({ agentId: harnessAgentId, type: "agent_end" });
-            await continueOrEndTask(harnessAgentId, harnessSession, contribution);
+            options.eventBus.emit({ agentId: harnessOptions.agentId, type: "agent_end" });
+            await continueOrEndTask(
+              harnessOptions.agentId,
+              harnessOptions.agentName,
+              harnessOptions.session,
+              contribution
+            );
           }
         });
 
@@ -216,7 +222,7 @@ export function createAgentRuntime(
             requestApproval: async (title) => {
               const approvalId = `approval_${randomUUID()}`;
               const approvalRequest: ToolApprovalRequest = {
-                agentId: harnessAgentId,
+                agentId: harnessOptions.agentId,
                 approvalId,
                 ...(title === undefined ? {} : { title }),
                 tool: {
@@ -229,7 +235,7 @@ export function createAgentRuntime(
               };
               const approval = options.approvalStore.request(approvalRequest);
               options.eventBus.emit({
-                agentId: harnessAgentId,
+                agentId: harnessOptions.agentId,
                 payload: approvalRequest,
                 type: "approval_requested"
               });
@@ -255,6 +261,7 @@ export function createAgentRuntime(
 
       const continueOrEndTask = async (
         harnessAgentId: string,
+        harnessAgentName: string | undefined,
         harnessSession: HarnessSession,
         contribution: ServerPlugin.Contribution
       ) => {
@@ -286,7 +293,10 @@ export function createAgentRuntime(
           agentId: harnessAgentId,
           isContinue: true,
           pluginPrompt: continuation.prompt,
-          session: harnessSession
+          session: harnessSession,
+          ...(harnessAgentName === undefined
+            ? {}
+            : { agentName: harnessAgentName })
         });
       };
 
@@ -300,12 +310,11 @@ export function createAgentRuntime(
         const harnessSessionMetadata = toAgentSessionMetadata(
           await harnessSession.getMetadata()
         );
-        const harness = await createHarness(
-          harnessAgentId,
-          harnessSession,
-          harnessOptions.pluginPrompt,
-          harnessOptions.isContinue
-        );
+        const harness = await createHarness({
+          ...harnessOptions,
+          agentId: harnessAgentId,
+          session: harnessSession
+        });
         runningAgents.set(harnessAgentId, {
           harness,
           sessionId: harnessSessionMetadata.id
