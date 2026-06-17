@@ -100,7 +100,7 @@ export function reduceAgentTaskState(
     const message = typeof payload?.message === "string" ? payload.message : "Agent run failed";
     return { ...next, error: message, status: "error" };
   }
-  if (action.event.type === "agent_end") {
+  if (action.event.type === "task_end") {
     return { ...next, status: "completed" };
   }
   return next;

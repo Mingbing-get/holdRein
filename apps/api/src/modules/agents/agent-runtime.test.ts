@@ -16,6 +16,7 @@ const sessionRepoConstructor = vi.fn();
 const executionEnvConstructor = vi.fn();
 const harnessOn = vi.fn();
 const harnessInterrupt = vi.fn();
+const harnessSubscribers: ((event: { type: string }) => unknown)[] = [];
 const resolveContributions = vi.hoisted(() =>
   vi.fn().mockResolvedValue({
     skillDirs: [],
@@ -34,7 +35,10 @@ vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
       interrupt = harnessInterrupt;
       on = harnessOn;
       prompt = prompt;
-      subscribe = vi.fn();
+      subscribe = vi.fn((listener: (event: { type: string }) => unknown) => {
+        harnessSubscribers.push(listener);
+        return vi.fn();
+      });
     },
     JsonlSessionRepo: class {
       readonly options: unknown;
@@ -67,6 +71,7 @@ describe("agent runtime sessions", () => {
     executionEnvConstructor.mockClear();
     harnessOn.mockClear();
     harnessInterrupt.mockClear();
+    harnessSubscribers.length = 0;
     prompt.mockClear();
     resolveContributions.mockResolvedValue({
       skillDirs: [],
@@ -212,6 +217,51 @@ describe("agent runtime sessions", () => {
       reason: "Keep generated output for inspection"
     });
   });
+
+  it("emits task_end when no plugin continues after an agent run ends", async () => {
+    const { repo } = createSessionRepo();
+    const eventBus = createAgentEventBus();
+    const runtime = createAgentRuntime({
+      approvalStore: createAgentApprovalStore(),
+      eventBus,
+      sessionRepo: repo
+    });
+    const result = await runtime.start(createRunInput());
+    const eventTypes: string[] = [];
+    eventBus.subscribe({ agentId: result.agentId }, (event) => {
+      eventTypes.push(event.type);
+    });
+
+    await harnessSubscribers[0]?.({ type: "agent_end" });
+
+    expect(eventTypes).toEqual(["agent_end", "task_end"]);
+  });
+
+  it("appends plugin continuation as a custom message and starts the next harness with the continue sentinel", async () => {
+    const { appendCustomMessageEntry, repo } = createSessionRepo();
+    resolveContributions.mockResolvedValue({
+      onAgentEnd: vi.fn().mockResolvedValue({
+        details: { source: "test-plugin" },
+        prompt: "Check whether another step is needed"
+      }),
+      skillDirs: [],
+      skills: [],
+      systemPrompts: [],
+      tools: []
+    });
+    const runtime = createRuntime(repo);
+
+    await runtime.start(createRunInput());
+    await harnessSubscribers[0]?.({ type: "agent_end" });
+
+    expect(appendCustomMessageEntry).toHaveBeenCalledWith(
+      "agent_continuation",
+      "Check whether another step is needed",
+      false,
+      { source: "test-plugin" }
+    );
+    expect(prompt).toHaveBeenNthCalledWith(2, "__continue__");
+  });
 });
 
 function createRuntime(sessionRepo: JsonlSessionRepoApi) {
@@ -240,6 +290,7 @@ function createSessionRepo() {
     path: "/sessions/session-1.jsonl"
   };
   const session = {
+    appendCustomMessageEntry: vi.fn(),
     buildContext: vi.fn().mockResolvedValue({
       messages: [{ content: "Saved prompt", role: "user", timestamp: 1 }],
       model: null,
@@ -257,5 +308,5 @@ function createSessionRepo() {
     open
   } as unknown as JsonlSessionRepoApi;
 
-  return { create, open, repo };
+  return { appendCustomMessageEntry: session.appendCustomMessageEntry, create, open, repo };
 }

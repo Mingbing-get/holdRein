@@ -73,6 +73,25 @@ describe("AgentTasksProvider", () => {
     });
   });
 
+  it("keeps a resumed task running when only the agent run ends", async () => {
+    const fetcher = createResumedTaskFetcher("agent_end");
+
+    render(
+      <AppWorkspaceProvider>
+        <AgentTasksProvider apiBaseUrl="" fetcher={fetcher}>
+          <ResumedTaskProbe />
+        </AgentTasksProvider>
+      </AppWorkspaceProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("resumed-task-status")).toHaveTextContent(
+        "running"
+      );
+      expect(screen.getByTestId("unread-completion")).toHaveTextContent("false");
+    });
+  });
+
   it("submits and removes a pending approval", async () => {
     const fetcher = createApprovalFetcher();
 
@@ -376,7 +395,9 @@ function createAgentFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
   }) as AgentMessageFetcher & ReturnType<typeof vi.fn>;
 }
 
-function createResumedTaskFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
+function createResumedTaskFetcher(
+  terminalEvent = "task_end"
+): AgentMessageFetcher & ReturnType<typeof vi.fn> {
   const encoder = new TextEncoder();
 
   return vi.fn(async (input: RequestInfo | URL) => {
@@ -391,7 +412,7 @@ function createResumedTaskFetcher(): AgentMessageFetcher & ReturnType<typeof vi.
         start(controller) {
           controller.enqueue(
             encoder.encode(
-              '{"agentId":"agent-resumed","sequence":1,"timestamp":"now","type":"agent_end"}\n'
+              `{"agentId":"agent-resumed","sequence":1,"timestamp":"now","type":"${terminalEvent}"}\n`
             )
           );
           controller.close();

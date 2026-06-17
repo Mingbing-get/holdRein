@@ -61,6 +61,7 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
       const skillDirs: string[] = [];
       const systemPrompts: string[] = [];
       const subscribes: NonNullable<ServerPlugin.Contribution["subscribe"]>[] = [];
+      const agentEndHandlers: NonNullable<ServerPlugin.Contribution["onAgentEnd"]>[] = [];
 
       for (const plugin of plugins.values()) {
         if (!plugin.contributionResolver) {
@@ -80,6 +81,9 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
         if (contribution.subscribe) {
           subscribes.push(contribution.subscribe);
         }
+        if (contribution.onAgentEnd) {
+          agentEndHandlers.push(contribution.onAgentEnd);
+        }
       }
 
       const contribution: ServerPlugin.Contribution = {
@@ -89,18 +93,32 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
         systemPrompts
       };
 
-      if (subscribes.length > 0) {
-        return {
-          ...contribution,
-          subscribe(event) {
-            for (const subscribe of subscribes) {
-              subscribe(event);
+      return {
+        ...contribution,
+        ...(subscribes.length > 0
+          ? {
+              subscribe(event: Parameters<NonNullable<ServerPlugin.Contribution["subscribe"]>>[0]) {
+                for (const subscribe of subscribes) {
+                  subscribe(event);
+                }
+              }
             }
-          }
-        };
-      }
+          : {}),
+        ...(agentEndHandlers.length > 0
+          ? {
+              async onAgentEnd(input: ServerPlugin.AgentEndInput) {
+                for (const onAgentEnd of agentEndHandlers) {
+                  const continuation = await onAgentEnd(input);
+                  if (continuation) {
+                    return continuation;
+                  }
+                }
 
-      return contribution;
+                return undefined;
+              }
+            }
+          : {})
+      };
     }
   };
 }

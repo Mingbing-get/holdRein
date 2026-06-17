@@ -7,7 +7,7 @@ import { createActiveTaskRunRegistry } from "./active-task-run-registry";
 import { createAgentsService } from "./agents-service";
 
 describe("agents service task status", () => {
-  it("marks a started task completed when the agent run ends", async () => {
+  it("keeps a started task running when only the agent run ends", async () => {
     const repository = createInMemoryWorkspaceRepository();
     const eventBus = createAgentEventBus();
     const activeTaskRuns = createActiveTaskRunRegistry();
@@ -36,6 +36,37 @@ describe("agents service task status", () => {
     expect(activeTaskRuns.getAgentId(result.task.id)).toBe("agent-1");
 
     eventBus.emit({ agentId: "agent-1", type: "agent_end" });
+
+    expect(repository.findTaskById(result.task.id)?.status).toBe("running");
+    expect(activeTaskRuns.getAgentId(result.task.id)).toBe("agent-1");
+  });
+
+  it("marks a started task completed when the task ends", async () => {
+    const repository = createInMemoryWorkspaceRepository();
+    const eventBus = createAgentEventBus();
+    const activeTaskRuns = createActiveTaskRunRegistry();
+    const service = createAgentsService({
+      activeTaskRuns,
+      approvalStore: createAgentApprovalStore(),
+      eventBus,
+      now: () => new Date("2026-06-11T00:00:00.000Z"),
+      repository,
+      runtime: {
+        interrupt: vi.fn(),
+        listMessages: vi.fn(),
+        start: vi.fn().mockResolvedValue(createRun("agent-1"))
+      },
+      titleGenerator: { generateTitle: vi.fn().mockResolvedValue("Task") }
+    });
+
+    const result = await service.startAgent({
+      modelId: "gpt-4.1",
+      prompt: "Inspect",
+      provider: "openai",
+      workspacePath: "/tmp/workspace"
+    });
+
+    eventBus.emit({ agentId: "agent-1", type: "task_end" });
 
     expect(repository.findTaskById(result.task.id)?.status).toBe("completed");
     expect(activeTaskRuns.getAgentId(result.task.id)).toBeUndefined();

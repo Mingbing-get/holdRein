@@ -105,4 +105,60 @@ describe("createServerPluginRegistry", () => {
     contribution.subscribe?.(event);
     expect(subscribeCalls).toEqual(["static", "dynamic"]);
   });
+
+  it("uses the first plugin agent-end continuation in registration order", async () => {
+    const registry = createServerPluginRegistry();
+    const calls: string[] = [];
+    const context = {} as ServerPlugin.RuntimeContext;
+    const input = {
+      messages: [],
+      runInput: {
+        modelId: "gpt-4.1",
+        prompt: "Inspect",
+        provider: "openai",
+        taskId: "task-1",
+        workspacePath: "/workspace"
+      },
+      session: {
+        createdAt: "now",
+        id: "session-1",
+        path: "/sessions/session-1.jsonl"
+      }
+    };
+
+    registry.register({
+      id: "first",
+      contributionResolver: {
+        onAgentEnd() {
+          calls.push("first");
+          return undefined;
+        }
+      }
+    });
+    registry.register({
+      id: "second",
+      contributionResolver: {
+        onAgentEnd() {
+          calls.push("second");
+          return { prompt: "Continue" };
+        }
+      }
+    });
+    registry.register({
+      id: "third",
+      contributionResolver: {
+        onAgentEnd() {
+          calls.push("third");
+          return { prompt: "Skip" };
+        }
+      }
+    });
+
+    const contribution = await registry.resolveContributions(context);
+
+    await expect(contribution.onAgentEnd?.(input)).resolves.toEqual({
+      prompt: "Continue"
+    });
+    expect(calls).toEqual(["first", "second"]);
+  });
 });

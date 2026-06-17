@@ -139,6 +139,28 @@ describe("agent task message reducer", () => {
 
     expect(state.pendingApprovals).toEqual([]);
   });
+
+  it("keeps the task running when an agent run ends before the task ends", () => {
+    const running = reduceAgentTaskState(createInitialAgentTaskState("task-1"), {
+      prompt: "Inspect",
+      type: "prompt_submitted"
+    });
+    const state = reduceAgentTaskState(running, {
+      event: event(1, "agent_end", undefined),
+      type: "event_received"
+    });
+
+    expect(state.status).toBe("running");
+  });
+
+  it("marks the task completed when the task ends", () => {
+    const state = reduceAgentTaskState(createInitialAgentTaskState("task-1"), {
+      event: event(1, "task_end", undefined),
+      type: "event_received"
+    });
+
+    expect(state.status).toBe("completed");
+  });
 });
 
 function event(sequence: number, type: string, payload: unknown) {

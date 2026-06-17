@@ -1,4 +1,5 @@
 import type {
+  AgentMessage,
   AgentHarnessEvent,
   AgentTool,
   ExecutionEnv,
@@ -25,9 +26,7 @@ export namespace ServerPlugin {
   type RseponseType = "success" | "badRequest" | "unauthorized" | "forbidden" | "notFound" | "conflict" | "internalError"
 
   export interface RouteContext {
-    RESPONSE_CODE_DEFINITIONS: {
-      [K in RseponseType]: ResponseCodeDefinition
-    }
+    RESPONSE_CODE_DEFINITIONS: Record<RseponseType, ResponseCodeDefinition>
     sendSuccess: <T>(response: Response, data: T, message?: string) => void
     sendError(response: Response, definition: ResponseCodeDefinition, message?: string): void
   }
@@ -39,6 +38,32 @@ export namespace ServerPlugin {
     readonly session: Session;
     readonly model: Model<Api>;
     readonly thinkingLevel: ThinkingLevel;
+    readonly prompt: string;
+  }
+
+  export interface AgentSessionMetadata {
+    readonly createdAt: string;
+    readonly id: string;
+    readonly path: string;
+  }
+
+  export interface RunAgentInput {
+    readonly modelId: string;
+    readonly prompt: string;
+    readonly provider: string;
+    readonly session?: AgentSessionMetadata;
+    readonly taskId: string;
+    readonly workspacePath: string;
+  }
+
+  export interface AgentEndInput {
+    readonly messages: readonly AgentMessage[];
+    readonly runInput: RunAgentInput;
+    readonly session: AgentSessionMetadata;
+  }
+
+  export interface AgentContinuation {
+    readonly details?: unknown;
     readonly prompt: string;
   }
 
@@ -68,6 +93,9 @@ export namespace ServerPlugin {
     readonly skillDirs?: readonly string[];
     readonly systemPrompts?: readonly string[];
     readonly subscribe?: (event: AgentHarnessEvent) => void;
+    readonly onAgentEnd?: (
+      input: AgentEndInput
+    ) => AgentContinuation | undefined | Promise<AgentContinuation | undefined>;
   }
 
   export type ContributionResolver =

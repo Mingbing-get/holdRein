@@ -93,6 +93,23 @@ describe("AgentMessageList", () => {
     ).toBeInTheDocument();
   });
 
+  it("does not render the internal continue sentinel user message", () => {
+    render(
+      <AgentMessageList
+        messages={[
+          {
+            content: "__continue__",
+            id: "continue-message",
+            role: "user",
+            timestamp: 1
+          }
+        ]}
+      />
+    );
+
+    expect(screen.queryByText("__continue__")).not.toBeInTheDocument();
+  });
+
   it("renders tool arguments and result through its tool call", () => {
     const assistantMessage: WebPlugin.AgentMessage = {
       api: "openai-responses",

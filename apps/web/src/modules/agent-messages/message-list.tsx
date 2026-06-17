@@ -10,11 +10,13 @@ import { MarkdownContent } from "./markdown-content";
 import { useCallback, useMemo } from "react";
 import type { WebPlugin } from '@hold-rein/plugin-web'
 
+const AGENT_CONTINUE_PROMPT = "__continue__";
+
 export function AgentMessageList({ messages }: { messages: WebPlugin.AgentMessage[] }) {
   return (
     <Flex data-testid="agent-message-list" gap={12} vertical>
       {messages
-        .filter((message) => message.role !== "toolResult")
+        .filter((message) => message.role !== "toolResult" && !isContinueSentinel(message))
         .map((message) => (
           <AgentMessageItem key={message.id} message={message} />
         ))}
@@ -169,4 +171,8 @@ function getText(content: string | { type: string; text?: string }[]): string {
     .filter((block) => block.type === "text")
     .map((block) => block.text ?? "")
     .join("");
+}
+
+function isContinueSentinel(message: WebPlugin.AgentMessage): boolean {
+  return message.role === "user" && getText(message.content) === AGENT_CONTINUE_PROMPT;
 }

@@ -55,7 +55,7 @@ function monitorTaskRun(input: {
     { agentId: input.agentId },
     (event) => {
       const status: TaskRow["status"] | undefined =
-        event.type === "agent_end"
+        event.type === "task_end"
           ? "completed"
           : event.type === "agent_error"
             ? "error"

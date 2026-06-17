@@ -366,7 +366,7 @@ function startSubscription(input: {
           { event, type: "event_received" }
         )
       }));
-      if (event.type === "agent_end") {
+      if (event.type === "task_end") {
         input.onTaskStatus(input.taskId, "completed");
       }
       if (event.type === "agent_error") {

@@ -28,6 +28,9 @@ import {
 } from "./agent-types";
 import { pluginRegistry } from '../../plugin'
 
+const AGENT_CONTINUATION_CUSTOM_TYPE = "agent_continuation";
+const AGENT_CONTINUE_PROMPT = "__continue__";
+
 export interface AgentRuntime {
   interrupt: (agentId: string) => Promise<boolean>;
   listMessages: (input: {
@@ -112,135 +115,176 @@ export function createAgentRuntime(
       const { skills: loadedSkills } = await loadSkills(env, skillDirs);
       const skills = [...loadedSkills, ...(contribution.skills || [])];
 
-      const harness = new AgentHarness({
-        activeToolNames: contribution.tools?.map(tool => tool.name) || [],
-        env,
-        getApiKeyAndHeaders: async () => {
-          const apiKey =
-            (await options.getApiKey?.(input.provider, input.modelId)) ??
-            getEnvApiKey(input.provider);
-
-          return apiKey ? { apiKey } : undefined;
-        },
-        model: contribution.model || model,
-        resources: { skills },
-        session,
-        systemPrompt: ({ resources }) =>
-          [
-            ...(contribution.systemPrompts || []),
-            "Use shell_exec for workspace commands and skill scripts.",
-            "Resolve skill-relative references from each skill file directory.",
-            formatSkillsForSystemPrompt(resources.skills ?? [])
-          ]
-            .filter(Boolean)
-            .join("\n\n"),
-        tools: contribution.tools || []
-      });
-
       let activeMessageId: string | undefined;
-      harness.subscribe((event) => {
-        try {
-          contribution.subscribe?.(event)
-        } catch {
-          // Keep plugin subscriber failures from breaking agent event delivery.
-        }
 
-        if (event.type === "message_start") {
-          activeMessageId = `message_${randomUUID()}`;
-          options.eventBus.emit({
-            agentId,
-            payload: { message: toStoredAgentMessage(activeMessageId, event.message) },
-            type: "message_start"
-          });
-          return;
-        }
-        if (event.type === "message_update" && activeMessageId) {
-          options.eventBus.emit({
-            agentId,
-            payload: {
-              delta: event.assistantMessageEvent,
-              messageId: activeMessageId
-            },
-            type: "message_delta"
-          });
-          return;
-        }
-        if (event.type === "message_end") {
-          const messageId = activeMessageId ?? `message_${randomUUID()}`;
-          const message = toStoredAgentMessage(messageId, event.message);
-          options.eventBus.emit({
-            agentId,
-            payload: { message },
-            type: "message_end"
-          });
-          activeMessageId = undefined;
-          return;
-        }
-        if (event.type === "agent_end") {
-          options.eventBus.emit({ agentId, type: "agent_end" });
-        }
-      });
+      const createHarness = () => {
+        const harness = new AgentHarness({
+          activeToolNames: contribution.tools?.map(tool => tool.name) || [],
+          env,
+          getApiKeyAndHeaders: async () => {
+            const apiKey =
+              (await options.getApiKey?.(input.provider, input.modelId)) ??
+              getEnvApiKey(input.provider);
 
-      harness.on("tool_call", async (event) => {
-        const tool = contribution.tools?.find(tool => tool.name === event.toolName)
-        if (!tool?.beforeExecute) return
+            return apiKey ? { apiKey } : undefined;
+          },
+          model: contribution.model || model,
+          resources: { skills },
+          session,
+          systemPrompt: ({ resources }) =>
+            [
+              ...(contribution.systemPrompts || []),
+              "Use shell_exec for workspace commands and skill scripts.",
+              "Resolve skill-relative references from each skill file directory.",
+              formatSkillsForSystemPrompt(resources.skills ?? [])
+            ]
+              .filter(Boolean)
+              .join("\n\n"),
+          tools: contribution.tools || []
+        });
 
-        const beforeExecuteoptions: ServerPlugin.ToolBeforeExecuteOptions = {
-          workspacePath: input.workspacePath,
-          event,
-          requestApproval: async (title) => {
-            const approvalId = `approval_${randomUUID()}`;
-            const approvalRequest: ToolApprovalRequest = {
-              agentId,
-              approvalId,
-              ...(title === undefined ? {} : { title }),
-              tool: {
-                name: tool.name,
-                input: event.input,
-                ...(tool.description === undefined ? {} : { description: tool.description }),
-                ...(tool.label === undefined ? {} : { label: tool.label }),
-                toolCallId: event.toolCallId
-              }
-            };
-            const approval = options.approvalStore.request(approvalRequest);
+        harness.subscribe(async (event) => {
+          try {
+            contribution.subscribe?.(event)
+          } catch {
+            // Keep plugin subscriber failures from breaking agent event delivery.
+          }
+
+          if (event.type === "message_start") {
+            activeMessageId = `message_${randomUUID()}`;
             options.eventBus.emit({
               agentId,
-              payload: approvalRequest,
-              type: "approval_requested"
+              payload: { message: toStoredAgentMessage(activeMessageId, event.message) },
+              type: "message_start"
             });
-
-            const decision = await approval;
-
-            return decision.approved
-              ? undefined
-              : {
-                  block: true,
-                  reason:
-                    decision.reason?.trim() ||
-                    `User denied execute tool: ${tool.name}`
-                };
+            return;
           }
-        }
+          if (event.type === "message_update" && activeMessageId) {
+            options.eventBus.emit({
+              agentId,
+              payload: {
+                delta: event.assistantMessageEvent,
+                messageId: activeMessageId
+              },
+              type: "message_delta"
+            });
+            return;
+          }
+          if (event.type === "message_end") {
+            const messageId = activeMessageId ?? `message_${randomUUID()}`;
+            const message = toStoredAgentMessage(messageId, event.message);
+            options.eventBus.emit({
+              agentId,
+              payload: { message },
+              type: "message_end"
+            });
+            activeMessageId = undefined;
+            return;
+          }
+          if (event.type === "agent_end") {
+            options.eventBus.emit({ agentId, type: "agent_end" });
+            await continueOrEndTask();
+          }
+        });
 
-        return await tool.beforeExecute(beforeExecuteoptions)
-      });
+        harness.on("tool_call", async (event) => {
+          const tool = contribution.tools?.find(tool => tool.name === event.toolName)
+          if (!tool?.beforeExecute) return
 
-      runningAgents.set(agentId, { harness, sessionId: sessionMetadata.id });
+          const beforeExecuteoptions: ServerPlugin.ToolBeforeExecuteOptions = {
+            workspacePath: input.workspacePath,
+            event,
+            requestApproval: async (title) => {
+              const approvalId = `approval_${randomUUID()}`;
+              const approvalRequest: ToolApprovalRequest = {
+                agentId,
+                approvalId,
+                ...(title === undefined ? {} : { title }),
+                tool: {
+                  name: tool.name,
+                  input: event.input,
+                  ...(tool.description === undefined ? {} : { description: tool.description }),
+                  ...(tool.label === undefined ? {} : { label: tool.label }),
+                  toolCallId: event.toolCallId
+                }
+              };
+              const approval = options.approvalStore.request(approvalRequest);
+              options.eventBus.emit({
+                agentId,
+                payload: approvalRequest,
+                type: "approval_requested"
+              });
 
-      void harness.prompt(input.prompt)
-        .catch((error) => {
+              const decision = await approval;
+
+              return decision.approved
+                ? undefined
+                : {
+                    block: true,
+                    reason:
+                      decision.reason?.trim() ||
+                      `User denied execute tool: ${tool.name}`
+                  };
+            }
+          }
+
+          return await tool.beforeExecute(beforeExecuteoptions)
+        });
+
+        return harness;
+      };
+
+      const startHarness = (promptText: string) => {
+        const harness = createHarness();
+        runningAgents.set(agentId, { harness, sessionId: sessionMetadata.id });
+
+        void harness.prompt(promptText)
+          .catch((error) => {
+            options.eventBus.emit({
+              agentId,
+              payload: {
+                message:
+                  error instanceof Error ? error.message : "Agent run failed"
+              },
+              type: "agent_error"
+            });
+          })
+          .finally(() => {
+            if (runningAgents.get(agentId)?.harness === harness) {
+              runningAgents.delete(agentId);
+            }
+          });
+      };
+
+      const continueOrEndTask = async () => {
+        const currentSessionMetadata = toAgentSessionMetadata(
+          await session.getMetadata()
+        );
+        const context = await session.buildContext();
+        const continuation = await contribution.onAgentEnd?.({
+          messages: context.messages,
+          runInput: { ...input, session: currentSessionMetadata },
+          session: currentSessionMetadata
+        });
+
+        if (!continuation?.prompt) {
           options.eventBus.emit({
             agentId,
-            payload: {
-              message:
-                error instanceof Error ? error.message : "Agent run failed"
-            },
-            type: "agent_error"
+            type: "task_end"
           });
-        })
-        .finally(() => {
-          runningAgents.delete(agentId);
-        });
+          return;
+        }
+
+        await session.appendCustomMessageEntry(
+          AGENT_CONTINUATION_CUSTOM_TYPE,
+          continuation.prompt,
+          false,
+          continuation.details
+        );
+        startHarness(AGENT_CONTINUE_PROMPT);
+      };
+
+      startHarness(input.prompt);
 
       return {
         agentId,
@@ -269,6 +313,18 @@ async function interruptHarness(harness: AgentHarness): Promise<void> {
   }
 
   throw new Error("Agent runtime does not support interruption");
+}
+
+function toAgentSessionMetadata(metadata: {
+  createdAt: string;
+  id: string;
+  path: string;
+}): AgentSessionMetadata {
+  return {
+    createdAt: metadata.createdAt,
+    id: metadata.id,
+    path: metadata.path
+  };
 }
 
 function createSessionRepo(): JsonlSessionRepoApi {
