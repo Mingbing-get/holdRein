@@ -79,6 +79,8 @@ describe("agent runtime sessions", () => {
     harnessInterrupt.mockClear();
     harnessSubscribers.length = 0;
     prompt.mockClear();
+    prompt.mockResolvedValue(undefined);
+    resolveContributions.mockClear();
     resolveContributions.mockResolvedValue({
       skillDirs: [],
       skills: [],
@@ -179,6 +181,7 @@ describe("agent runtime sessions", () => {
   });
 
   it("interrupts a running harness by agent id", async () => {
+    prompt.mockReturnValue(new Promise(() => undefined));
     const { repo } = createSessionRepo();
     const runtime = createRuntime(repo);
     const result = await runtime.start(createRunInput());
@@ -286,6 +289,45 @@ describe("agent runtime sessions", () => {
       "Check whether another step is needed",
       false,
       { source: "test-plugin" }
+    );
+    expect(prompt).toHaveBeenNthCalledWith(2, "__continue__");
+  });
+
+  it("resolves fresh plugin contributions for continuation harnesses with the continuation prompt", async () => {
+    const { repo } = createSessionRepo();
+    resolveContributions
+      .mockResolvedValueOnce({
+        onAgentEnd: vi.fn().mockResolvedValue({
+          prompt: "Use the plugin-selected follow-up prompt"
+        }),
+        skillDirs: [],
+        skills: [],
+        systemPrompts: ["first plugin prompt"],
+        tools: []
+      })
+      .mockResolvedValueOnce({
+        skillDirs: [],
+        skills: [],
+        systemPrompts: ["second plugin prompt"],
+        tools: []
+      });
+    const runtime = createRuntime(repo);
+
+    await runtime.start(createRunInput());
+    await harnessSubscribers[0]?.({ type: "agent_end" });
+
+    expect(resolveContributions).toHaveBeenCalledTimes(2);
+    expect(resolveContributions.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        prompt: "Use the plugin-selected follow-up prompt"
+      })
+    );
+    const systemPrompt = harnessConstructor.mock.calls[1]?.[0]
+      ?.systemPrompt as
+      | ((input: { resources: { skills: unknown[] } }) => string)
+      | undefined;
+    expect(systemPrompt?.({ resources: { skills: [] } })).toContain(
+      "second plugin prompt"
     );
     expect(prompt).toHaveBeenNthCalledWith(2, "__continue__");
   });

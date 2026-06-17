@@ -102,22 +102,24 @@ export function createAgentRuntime(
         throw new Error("Unknown model");
       }
 
-      const pluginContext: ServerPlugin.RuntimeContext = {
-        env,
-        session,
-        prompt: input.prompt,
-        thinkingLevel: 'medium',
-        model
-      }
-      const contribution = await pluginRegistry.resolveContributions(pluginContext)
-
-      const skillDirs = getSkillDirs(input.workspacePath, [...(options.skillDirs || []), ...(contribution.skillDirs || [])]);
-      const { skills: loadedSkills } = await loadSkills(env, skillDirs);
-      const skills = [...loadedSkills, ...(contribution.skills || [])];
-
       let activeMessageId: string | undefined;
 
-      const createHarness = () => {
+      const createHarness = async (pluginPrompt: string) => {
+        const pluginContext: ServerPlugin.RuntimeContext = {
+          env,
+          session,
+          prompt: pluginPrompt,
+          thinkingLevel: 'medium',
+          model
+        }
+        const contribution = await pluginRegistry.resolveContributions(pluginContext)
+        const skillDirs = getSkillDirs(
+          input.workspacePath,
+          [...(options.skillDirs || []), ...(contribution.skillDirs || [])]
+        );
+        const { skills: loadedSkills } = await loadSkills(env, skillDirs);
+        const skills = [...loadedSkills, ...(contribution.skills || [])];
+
         const harness = new AgentHarness({
           activeToolNames: contribution.tools?.map(tool => tool.name) || [],
           env,
@@ -185,7 +187,7 @@ export function createAgentRuntime(
           }
           if (event.type === "agent_end") {
             options.eventBus.emit({ agentId, type: "agent_end" });
-            await continueOrEndTask();
+            await continueOrEndTask(contribution);
           }
         });
 
@@ -236,29 +238,9 @@ export function createAgentRuntime(
         return harness;
       };
 
-      const startHarness = (promptText: string) => {
-        const harness = createHarness();
-        runningAgents.set(agentId, { harness, sessionId: sessionMetadata.id });
-
-        void harness.prompt(promptText)
-          .catch((error) => {
-            options.eventBus.emit({
-              agentId,
-              payload: {
-                message:
-                  error instanceof Error ? error.message : "Agent run failed"
-              },
-              type: "agent_error"
-            });
-          })
-          .finally(() => {
-            if (runningAgents.get(agentId)?.harness === harness) {
-              runningAgents.delete(agentId);
-            }
-          });
-      };
-
-      const continueOrEndTask = async () => {
+      const continueOrEndTask = async (
+        contribution: ServerPlugin.Contribution
+      ) => {
         const currentSessionMetadata = toAgentSessionMetadata(
           await session.getMetadata()
         );
@@ -283,10 +265,32 @@ export function createAgentRuntime(
           false,
           continuation.details
         );
-        startHarness(AGENT_CONTINUE_PROMPT);
+        await startHarness(AGENT_CONTINUE_PROMPT, continuation.prompt);
       };
 
-      startHarness(input.prompt);
+      const startHarness = async (promptText: string, pluginPrompt = promptText) => {
+        const harness = await createHarness(pluginPrompt);
+        runningAgents.set(agentId, { harness, sessionId: sessionMetadata.id });
+
+        void harness.prompt(promptText)
+          .catch((error) => {
+            options.eventBus.emit({
+              agentId,
+              payload: {
+                message:
+                  error instanceof Error ? error.message : "Agent run failed"
+              },
+              type: "agent_error"
+            });
+          })
+          .finally(() => {
+            if (runningAgents.get(agentId)?.harness === harness) {
+              runningAgents.delete(agentId);
+            }
+          });
+      };
+
+      await startHarness(input.prompt);
 
       return {
         agentId,
