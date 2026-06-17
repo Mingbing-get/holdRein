@@ -79,7 +79,7 @@ describe("useWorkspaceFileSuggestions", () => {
       ]);
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:4000/api/v1/file-system/entries/recursive?parentPath=%2FUsers%2Fmingbing%2Fapps%2Fworkspace-one"
+      "http://localhost:4000/api/v1/file-system/entries/recursive?parentPath=%2FUsers%2Fmingbing%2Fapps%2Fworkspace-one&ignores=node_modules&useGitIgnore=true"
     );
 
     view.rerender(getHookProbe("completed"));

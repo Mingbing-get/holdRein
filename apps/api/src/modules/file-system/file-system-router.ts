@@ -58,6 +58,8 @@ export function createFileSystemRouter(
     "/file-system/entries/recursive",
     (request: Request, response: Response): void => {
       const parentPath = getParentPath(request.query.parentPath);
+      const ignores = getOptionalQueryStringArray(request.query.ignores);
+      const useGitIgnore = getOptionalQueryBoolean(request.query.useGitIgnore);
 
       if (parentPath === null) {
         sendError(
@@ -68,8 +70,28 @@ export function createFileSystemRouter(
         return;
       }
 
+      if (ignores === null) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "ignores must be a string array"
+        );
+        return;
+      }
+
+      if (useGitIgnore === null) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "useGitIgnore must be a boolean"
+        );
+        return;
+      }
+
       const listOptions = {
+        ...(ignores === undefined ? {} : { ignores }),
         ...(parentPath === undefined ? {} : { parentPath }),
+        ...(useGitIgnore === undefined ? {} : { useGitIgnore }),
         ...(options.fileSystemRootPath === undefined
           ? {}
           : { rootPath: options.fileSystemRootPath })
@@ -141,4 +163,40 @@ function getParentPath(parentPath: Request["query"][string]): string | undefined
 
 function getRequiredQueryString(value: Request["query"][string]): string | null {
   return typeof value === "string" ? value : null;
+}
+
+function getOptionalQueryStringArray(
+  value: Request["query"][string]
+): string[] | undefined | null {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value === "string") {
+    return [value];
+  }
+
+  if (Array.isArray(value) && value.every((item) => typeof item === "string")) {
+    return value;
+  }
+
+  return null;
+}
+
+function getOptionalQueryBoolean(
+  value: Request["query"][string]
+): boolean | undefined | null {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === "true") {
+    return true;
+  }
+
+  if (value === "false") {
+    return false;
+  }
+
+  return null;
 }

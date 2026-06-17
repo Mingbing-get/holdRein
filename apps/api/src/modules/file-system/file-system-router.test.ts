@@ -160,6 +160,96 @@ describe("GET /api/v1/file-system/entries/recursive", () => {
     });
   });
 
+  it("omits ignored folder and file names from recursive entries", async () => {
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
+      .get(
+        "/api/v1/file-system/entries/recursive?ignores=components&ignores=README.md"
+      );
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({
+      parentPath: rootPath,
+      entries: [
+        {
+          children: [],
+          extension: "",
+          kind: "folder",
+          name: "docs",
+          path: join(rootPath, "docs")
+        },
+        {
+          children: [
+            {
+              extension: ".ts",
+              kind: "file",
+              name: "main.ts",
+              path: join(rootPath, "src", "main.ts")
+            }
+          ],
+          extension: "",
+          kind: "folder",
+          name: "src",
+          path: join(rootPath, "src")
+        }
+      ]
+    });
+  });
+
+  it("applies gitignore rules with explicit ignores when requested", async () => {
+    await mkdir(join(rootPath, "dist"));
+    await writeFile(join(rootPath, ".gitignore"), "dist/\n*.log\nsrc/generated.ts\n");
+    await writeFile(join(rootPath, "debug.log"), "debug");
+    await writeFile(join(rootPath, "dist", "bundle.js"), "bundle");
+    await writeFile(join(rootPath, "src", "generated.ts"), "export {};");
+
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
+      .get(
+        "/api/v1/file-system/entries/recursive?useGitIgnore=true&ignores=README.md"
+      );
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({
+      parentPath: rootPath,
+      entries: [
+        {
+          children: [],
+          extension: "",
+          kind: "folder",
+          name: "docs",
+          path: join(rootPath, "docs")
+        },
+        {
+          children: [
+            {
+              children: [
+                {
+                  extension: ".ts",
+                  kind: "file",
+                  name: "button.ts",
+                  path: join(rootPath, "src", "components", "button.ts")
+                }
+              ],
+              extension: "",
+              kind: "folder",
+              name: "components",
+              path: join(rootPath, "src", "components")
+            },
+            {
+              extension: ".ts",
+              kind: "file",
+              name: "main.ts",
+              path: join(rootPath, "src", "main.ts")
+            }
+          ],
+          extension: "",
+          kind: "folder",
+          name: "src",
+          path: join(rootPath, "src")
+        }
+      ]
+    });
+  });
+
   it("rejects parentPath values outside the configured root", async () => {
     const response = await request(await createApp({ fileSystemRootPath: rootPath }))
       .get("/api/v1/file-system/entries/recursive")

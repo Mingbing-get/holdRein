@@ -120,7 +120,14 @@ function createWorkspaceEntriesRecursiveUrl(
   apiBaseUrl: string,
   parentPath: string
 ): string {
-  return `${apiBaseUrl.replace(/\/$/, "")}/api/v1/file-system/entries/recursive?parentPath=${encodeURIComponent(parentPath)}`;
+  const baseUrl = apiBaseUrl.replace(/\/$/, "");
+  const query = new URLSearchParams({
+    parentPath,
+    ignores: "node_modules",
+    useGitIgnore: "true"
+  });
+
+  return `${baseUrl}/api/v1/file-system/entries/recursive?${query.toString()}`;
 }
 
 function createFileSuggestion(

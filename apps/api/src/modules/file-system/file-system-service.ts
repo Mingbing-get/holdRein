@@ -22,8 +22,10 @@ export interface FileSystemFileContent {
 }
 
 export interface ListDirectoryOptions {
+  ignores?: string[];
   parentPath?: string;
   rootPath?: string;
+  useGitIgnore?: boolean;
 }
 
 export interface ReadFileContentOptions {
@@ -75,8 +77,10 @@ export async function listDirectoryEntriesRecursive(
     throw new Error("parentPath must be a directory");
   }
 
+  const ignoreMatcher = await createIgnoreMatcher(parentPath, options);
+
   return {
-    entries: await listEntriesRecursive(parentPath),
+    entries: await listEntriesRecursive(parentPath, ignoreMatcher),
     parentPath
   };
 }
@@ -133,18 +137,61 @@ function isPathInsideRoot(rootPath: string, targetPath: string): boolean {
   );
 }
 
-async function listEntriesRecursive(parentPath: string): Promise<FileSystemEntry[]> {
+type IgnoreMatcher = (entryPath: string, name: string, isDirectory: boolean) => boolean;
+
+interface GitIgnoreRule {
+  directoryOnly: boolean;
+  hasSlash: boolean;
+  ignored: boolean;
+  pattern: string;
+  regex: RegExp;
+}
+
+async function createIgnoreMatcher(
+  parentPath: string,
+  options: ListDirectoryOptions
+): Promise<IgnoreMatcher> {
+  const ignoredNames = new Set(options.ignores ?? []);
+  const gitIgnoreRules = options.useGitIgnore
+    ? await loadGitIgnoreRules(parentPath)
+    : [];
+
+  return (entryPath, name, isDirectory) => {
+    if (ignoredNames.has(name)) {
+      return true;
+    }
+
+    const relativeEntryPath = normalizeRelativePath(relative(parentPath, entryPath));
+
+    return isIgnoredByGitIgnoreRules(
+      relativeEntryPath,
+      name,
+      isDirectory,
+      gitIgnoreRules
+    );
+  };
+}
+
+async function listEntriesRecursive(
+  parentPath: string,
+  ignoreMatcher: IgnoreMatcher
+): Promise<FileSystemEntry[]> {
   const entries = await readdir(parentPath, { withFileTypes: true });
   const visibleEntries = await Promise.all(entries
     .filter((entry) => !entry.name.startsWith("."))
     .filter((entry) => entry.isDirectory() || entry.isFile())
+    .filter((entry) => {
+      const entryPath = resolve(parentPath, entry.name);
+
+      return !ignoreMatcher(entryPath, entry.name, entry.isDirectory());
+    })
     .map<Promise<FileSystemEntry>>(async (entry) => {
       const entryPath = resolve(parentPath, entry.name);
       const isDirectory = entry.isDirectory();
 
       return {
         ...(isDirectory
-          ? { children: await listEntriesRecursive(entryPath) }
+          ? { children: await listEntriesRecursive(entryPath, ignoreMatcher) }
           : {}),
         extension: isDirectory ? "" : extname(entry.name),
         kind: isDirectory ? "folder" : "file",
@@ -154,6 +201,127 @@ async function listEntriesRecursive(parentPath: string): Promise<FileSystemEntry
     }));
 
   return visibleEntries.sort(compareEntries);
+}
+
+async function loadGitIgnoreRules(parentPath: string): Promise<GitIgnoreRule[]> {
+  let gitIgnoreContent = "";
+
+  try {
+    gitIgnoreContent = await readFile(resolve(parentPath, ".gitignore"), "utf8");
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return [];
+    }
+
+    throw error;
+  }
+
+  return gitIgnoreContent
+    .split(/\r?\n/u)
+    .map(parseGitIgnoreRule)
+    .filter((rule): rule is GitIgnoreRule => rule !== null);
+}
+
+function parseGitIgnoreRule(line: string): GitIgnoreRule | null {
+  let pattern = line.trim();
+
+  if (!pattern || pattern.startsWith("#")) {
+    return null;
+  }
+
+  if (pattern.startsWith("\\#") || pattern.startsWith("\\!")) {
+    pattern = pattern.slice(1);
+  }
+
+  const ignored = !pattern.startsWith("!");
+  pattern = ignored ? pattern : pattern.slice(1);
+
+  if (!pattern) {
+    return null;
+  }
+
+  if (pattern.startsWith("/")) {
+    pattern = pattern.slice(1);
+  }
+
+  const directoryOnly = pattern.endsWith("/");
+  pattern = directoryOnly ? pattern.slice(0, -1) : pattern;
+
+  if (!pattern) {
+    return null;
+  }
+
+  return {
+    directoryOnly,
+    hasSlash: pattern.includes("/"),
+    ignored,
+    pattern,
+    regex: createGitIgnorePatternRegex(pattern)
+  };
+}
+
+function isIgnoredByGitIgnoreRules(
+  relativeEntryPath: string,
+  name: string,
+  isDirectory: boolean,
+  rules: readonly GitIgnoreRule[]
+): boolean {
+  let ignored = false;
+
+  for (const rule of rules) {
+    if (rule.directoryOnly && !isDirectory) {
+      continue;
+    }
+
+    const target = rule.hasSlash ? relativeEntryPath : name;
+
+    if (rule.regex.test(target)) {
+      ignored = rule.ignored;
+    }
+  }
+
+  return ignored;
+}
+
+function createGitIgnorePatternRegex(pattern: string): RegExp {
+  let source = "";
+
+  for (let index = 0; index < pattern.length; index += 1) {
+    const character = pattern[index] ?? "";
+    const nextCharacter = pattern[index + 1];
+
+    if (character === "*" && nextCharacter === "*") {
+      source += ".*";
+      index += 1;
+      continue;
+    }
+
+    if (character === "*") {
+      source += "[^/]*";
+      continue;
+    }
+
+    if (character === "?") {
+      source += "[^/]";
+      continue;
+    }
+
+    source += escapeRegexCharacter(character);
+  }
+
+  return new RegExp(`^${source}$`, "u");
+}
+
+function normalizeRelativePath(path: string): string {
+  return path.replace(/\\/gu, "/");
+}
+
+function escapeRegexCharacter(character: string): string {
+  return character.replace(/[|\\{}()[\]^$+*?.]/gu, "\\$&");
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && "code" in error;
 }
 
 function compareEntries(left: FileSystemEntry, right: FileSystemEntry): number {
