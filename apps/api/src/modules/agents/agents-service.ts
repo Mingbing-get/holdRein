@@ -15,6 +15,7 @@ import {
   type DeleteTaskResult,
   renameTask
 } from "./agent-task-actions";
+import { interruptRunningSubagents } from "./agent-subagent-lifecycle";
 import { startTaskRun } from "./task-run-monitor";
 import type {
   AgentEventSubscription,
@@ -98,7 +99,8 @@ export function createAgentsService(
 
       return input;
     },
-    deleteTask: ({ taskId }) => deleteTask(options.repository, taskId),
+    deleteTask: ({ taskId }) =>
+      deleteTask(options.repository, taskId, subagentRepository),
     getTaskTitle: async ({ taskId }) => {
       const task = options.repository.findTaskById(taskId);
 
@@ -152,11 +154,14 @@ export function createAgentsService(
         return { status: "not_running", taskId };
       }
 
-      options.repository.updateTaskStatus(
-        taskId,
-        "error",
-        now().toISOString()
-      );
+      const interruptedAt = now().toISOString();
+      options.repository.updateTaskStatus(taskId, "error", interruptedAt);
+      await interruptRunningSubagents({
+        now: interruptedAt,
+        runtime: options.runtime,
+        subagentRepository,
+        taskId
+      });
       options.activeTaskRuns?.remove(taskId);
 
       return { agentId, status: "interrupted", taskId };

@@ -120,7 +120,9 @@ export const subagents = sqliteTable(
     sessionCreatedAt: text("session_created_at"),
     sessionId: text("session_id"),
     sessionPath: text("session_path"),
-    status: text("status", { enum: ["running", "completed"] }).notNull(),
+    status: text("status", {
+      enum: ["running", "completed", "interrupted"]
+    }).notNull(),
     taskId: text("task_id")
       .notNull()
       .references(() => tasks.id, { onDelete: "cascade" }),

@@ -1,6 +1,8 @@
 import { unlink } from "node:fs/promises";
 
 import type { TaskTitleResult } from "./agent-types";
+import { deleteSubagentsForTask } from "./agent-subagent-lifecycle";
+import type { SubagentRepository } from "./subagent-repository";
 import type { WorkspaceRepository } from "../workspaces/workspace-repository";
 
 export interface DeleteTaskResult {
@@ -10,7 +12,8 @@ export interface DeleteTaskResult {
 
 export async function deleteTask(
   repository: WorkspaceRepository,
-  taskId: string
+  taskId: string,
+  subagentRepository?: SubagentRepository
 ): Promise<DeleteTaskResult> {
   const task = repository.findTaskById(taskId);
 
@@ -24,6 +27,9 @@ export async function deleteTask(
 
   if (task.sessionPath) {
     await deleteSessionFile(task.sessionPath);
+  }
+  if (subagentRepository) {
+    await deleteSubagentsForTask({ subagentRepository, taskId });
   }
   repository.deleteTaskById(taskId);
 

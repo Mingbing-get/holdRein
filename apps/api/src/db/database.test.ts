@@ -82,6 +82,10 @@ describe("database", () => {
       expect.stringContaining("status TEXT NOT NULL")
     );
     expect(exec).toHaveBeenNthCalledWith(
+      12,
+      expect.stringContaining("CHECK(status IN ('running', 'completed', 'interrupted'))")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
       11,
       expect.stringContaining("CREATE INDEX IF NOT EXISTS tasks_workspace_id_idx")
     );
@@ -218,13 +222,22 @@ describe("database", () => {
       `).run();
       expect(
         sqlite.prepare(
-          "SELECT session_id, session_path, session_created_at FROM subagents WHERE agent_id = 'agent-child'"
+          "SELECT session_id, session_path, session_created_at, status FROM subagents WHERE agent_id = 'agent-child'"
         ).get()
       ).toEqual({
         session_created_at: "created",
         session_id: "session-child",
-        session_path: "/sessions/session-child.jsonl"
+        session_path: "/sessions/session-child.jsonl",
+        status: "running"
       });
+      sqlite.prepare(
+        "UPDATE subagents SET status = 'interrupted' WHERE agent_id = 'agent-child'"
+      ).run();
+      expect(
+        sqlite.prepare(
+          "SELECT status FROM subagents WHERE agent_id = 'agent-child'"
+        ).get()
+      ).toEqual({ status: "interrupted" });
       expect(() => sqlite.prepare(`
         INSERT INTO subagents (
           agent_id, parent_agent_id, task_id, status,
@@ -309,7 +322,7 @@ describe("database", () => {
     }
   });
 
-  it("upgrades legacy subagents with nullable session metadata columns", () => {
+  it("upgrades legacy subagents with nullable session metadata columns and interrupted status support", () => {
     const sqlite = new Database(":memory:");
 
     try {
@@ -371,6 +384,14 @@ describe("database", () => {
         session_id: null,
         session_path: null
       });
+      sqlite.prepare(
+        "UPDATE subagents SET status = 'interrupted' WHERE agent_id = 'agent-child'"
+      ).run();
+      expect(
+        sqlite
+          .prepare("SELECT status FROM subagents WHERE agent_id = 'agent-child'")
+          .get()
+      ).toEqual({ status: "interrupted" });
     } finally {
       sqlite.close();
     }

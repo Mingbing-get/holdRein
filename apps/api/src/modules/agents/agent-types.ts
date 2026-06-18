@@ -61,7 +61,7 @@ export interface TaskSubagentHistory {
   agentId: string;
   messages: StoredAgentMessage[];
   parentAgentId: string;
-  status: "running" | "completed";
+  status: "running" | "completed" | "interrupted";
 }
 
 export interface TaskMessageHistory {

@@ -48,11 +48,11 @@ describe.each([
     expect(
       repository.updateStatus(
         "agent-child",
-        "completed",
+        "interrupted",
         "2026-06-18T00:01:00.000Z"
       )
     ).toEqual(expect.objectContaining({
-      status: "completed",
+      status: "interrupted",
       updatedAt: "2026-06-18T00:01:00.000Z"
     }));
 

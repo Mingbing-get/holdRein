@@ -102,7 +102,7 @@ const CREATE_SUBAGENTS_TABLE_SQL = `
     agent_id TEXT PRIMARY KEY NOT NULL,
     parent_agent_id TEXT NOT NULL,
     task_id TEXT NOT NULL,
-    status TEXT NOT NULL CHECK(status IN ('running', 'completed')),
+    status TEXT NOT NULL CHECK(status IN ('running', 'completed', 'interrupted')),
     session_id TEXT,
     session_path TEXT,
     session_created_at TEXT,
@@ -181,7 +181,57 @@ export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
   addColumnIfMissing(sqlite, ADD_SUBAGENTS_SESSION_ID_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_SUBAGENTS_SESSION_PATH_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_SUBAGENTS_SESSION_CREATED_AT_COLUMN_SQL);
+  relaxSubagentStatusConstraint(sqlite);
   sqlite.exec(DROP_TASK_MESSAGES_TABLE_SQL);
+}
+
+function relaxSubagentStatusConstraint(sqlite: {
+  exec: (sql: string) => void;
+  prepare?: (sql: string) => {
+    get: () => { sql?: string | null } | undefined;
+  };
+}): void {
+  const createTableSql = sqlite
+    .prepare?.("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'subagents'")
+    .get()?.sql;
+
+  if (
+    typeof createTableSql !== "string" ||
+    !createTableSql.includes("CHECK(status IN ('running', 'completed'))")
+  ) {
+    return;
+  }
+
+  sqlite.exec(`
+    PRAGMA foreign_keys=OFF;
+    CREATE TABLE subagents_new (
+      agent_id TEXT PRIMARY KEY NOT NULL,
+      parent_agent_id TEXT NOT NULL,
+      task_id TEXT NOT NULL,
+      status TEXT NOT NULL CHECK(status IN ('running', 'completed', 'interrupted')),
+      session_id TEXT,
+      session_path TEXT,
+      session_created_at TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+    ) STRICT;
+    INSERT INTO subagents_new (
+      agent_id, parent_agent_id, task_id, status,
+      session_id, session_path, session_created_at,
+      created_at, updated_at
+    )
+    SELECT
+      agent_id, parent_agent_id, task_id, status,
+      session_id, session_path, session_created_at,
+      created_at, updated_at
+    FROM subagents;
+    DROP TABLE subagents;
+    ALTER TABLE subagents_new RENAME TO subagents;
+    CREATE INDEX IF NOT EXISTS subagents_task_id_idx
+    ON subagents (task_id);
+    PRAGMA foreign_keys=ON;
+  `);
 }
 
 function addColumnIfMissing(
