@@ -1,8 +1,6 @@
 import { Router } from 'express'
 
-import type { ServerPlugin } from '@hold-rein/plugin-server'
-
-export default function createRouter(context: ServerPlugin.RouteContext): Router {
+export default function createRouter(): Router {
   const router = Router()
 
   // router.get('/test', (request, response) => {

@@ -1,5 +1,5 @@
 import { Alert, Flex, Typography } from "antd";
-import { BranchesOutlined, InfoCircleOutlined, RollbackOutlined, ToolOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, RollbackOutlined, ToolOutlined } from "@ant-design/icons";
 import { Bubble, Think } from "@ant-design/x";
 import "./message-list.css";
 

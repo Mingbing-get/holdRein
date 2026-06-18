@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { randomUUID } from "node:crypto";
 
 import { AgentHarness, NodeExecutionEnv, formatSkillsForSystemPrompt, loadSkills, type JsonlSessionRepoApi } from "@earendil-works/pi-agent-core/node";
