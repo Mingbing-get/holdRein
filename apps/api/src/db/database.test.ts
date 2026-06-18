@@ -15,6 +15,7 @@ describe("database", () => {
     expect(schema).toHaveProperty("customProviderModels");
     expect(schema).toHaveProperty("workspaces");
     expect(schema).toHaveProperty("tasks");
+    expect(schema).toHaveProperty("subagents");
     expect(schema).not.toHaveProperty("taskMessages");
   });
 
@@ -23,7 +24,7 @@ describe("database", () => {
 
     migrateDatabase({ exec } as { exec: (sql: string) => void });
 
-    expect(exec).toHaveBeenCalledTimes(17);
+    expect(exec).toHaveBeenCalledTimes(19);
     expect(exec).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_model_providers")
@@ -83,6 +84,14 @@ describe("database", () => {
     expect(exec).toHaveBeenNthCalledWith(
       11,
       expect.stringContaining("CREATE INDEX IF NOT EXISTS tasks_workspace_id_idx")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      12,
+      expect.stringContaining("CREATE TABLE IF NOT EXISTS subagents")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      13,
+      expect.stringContaining("CREATE INDEX IF NOT EXISTS subagents_task_id_idx")
     );
     expect(exec).toHaveBeenLastCalledWith(
       expect.stringContaining("DROP TABLE IF EXISTS task_messages")
@@ -184,6 +193,22 @@ describe("database", () => {
           )
           .run()
       ).toThrow();
+      sqlite.prepare(`
+        INSERT INTO subagents (
+          agent_id, parent_agent_id, task_id, status, created_at, updated_at
+        ) VALUES (
+          'agent-child', 'agent-parent', 'task-1', 'running', 'now', 'now'
+        )
+      `).run();
+      expect(() => sqlite.prepare(`
+        INSERT INTO subagents (
+          agent_id, parent_agent_id, task_id, status, created_at, updated_at
+        ) VALUES (
+          'agent-invalid', 'agent-parent', 'task-1', 'failed', 'now', 'now'
+        )
+      `).run()).toThrow();
+      sqlite.prepare("DELETE FROM tasks WHERE id = 'task-1'").run();
+      expect(sqlite.prepare("SELECT * FROM subagents").all()).toEqual([]);
     } finally {
       sqlite.close();
     }

@@ -97,6 +97,23 @@ const CREATE_TASKS_WORKSPACE_ID_INDEX_SQL = `
   ON tasks (workspace_id)
 `;
 
+const CREATE_SUBAGENTS_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS subagents (
+    agent_id TEXT PRIMARY KEY NOT NULL,
+    parent_agent_id TEXT NOT NULL,
+    task_id TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('running', 'completed')),
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+  ) STRICT
+`;
+
+const CREATE_SUBAGENTS_TASK_ID_INDEX_SQL = `
+  CREATE INDEX IF NOT EXISTS subagents_task_id_idx
+  ON subagents (task_id)
+`;
+
 const ADD_TASKS_LAST_MODEL_ID_COLUMN_SQL = `
   ALTER TABLE tasks ADD COLUMN last_model_id TEXT
 `;
@@ -139,6 +156,8 @@ export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
   sqlite.exec(CREATE_WORKSPACES_PATH_INDEX_SQL);
   sqlite.exec(CREATE_TASKS_TABLE_SQL);
   sqlite.exec(CREATE_TASKS_WORKSPACE_ID_INDEX_SQL);
+  sqlite.exec(CREATE_SUBAGENTS_TABLE_SQL);
+  sqlite.exec(CREATE_SUBAGENTS_TASK_ID_INDEX_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_LAST_MODEL_ID_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_SESSION_ID_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_SESSION_PATH_COLUMN_SQL);

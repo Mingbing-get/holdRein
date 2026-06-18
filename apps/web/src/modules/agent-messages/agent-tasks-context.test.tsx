@@ -5,12 +5,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  AppWorkspaceProvider,
-  useAppWorkspace
-} from "../../app/app-workspace-context";
+import { AppWorkspaceProvider, useAppWorkspace } from "../../app/app-workspace-context";
 import type { AgentMessageFetcher } from "./agent-message-api";
 import { AgentTasksProvider, useAgentTasks } from "./agent-tasks-context";
+import { jsonResponse, startResult, streamResponse } from "./agent-tasks-context-test-utils";
 
 describe("AgentTasksProvider", () => {
   afterEach(() => {
@@ -90,6 +88,23 @@ describe("AgentTasksProvider", () => {
       );
       expect(screen.getByTestId("unread-completion")).toHaveTextContent("false");
     });
+  });
+
+  it("subscribes to a subagent announced by a custom message", async () => {
+    const fetcher = createSubagentFetcher();
+
+    render(
+      <AppWorkspaceProvider>
+        <AgentTasksProvider apiBaseUrl="" fetcher={fetcher}>
+          <StartTaskProbe />
+        </AgentTasksProvider>
+      </AppWorkspaceProvider>
+    );
+
+    await waitFor(() => expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/agents/agent-child/events",
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    ));
   });
 
   it("submits and removes a pending approval", async () => {
@@ -352,27 +367,7 @@ function createAgentFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
     const url = String(input);
 
     if (url.endsWith("/api/v1/agents/start")) {
-      return jsonResponse({
-        agentId: "agent-1",
-        sessionId: "session-1",
-        status: "running",
-        task: {
-          id: "task-1",
-          initialUserMessage: "Inspect the project",
-          lastContinuedAt: "2026-06-08T00:00:00.000Z",
-          lastModelName: "gpt-4.1",
-          lastModelProvider: "openai",
-          lastModelProviderSource: "built_in",
-          status: "running",
-          title: "",
-          workspaceId: "workspace-1"
-        },
-        workspace: {
-          id: "workspace-1",
-          name: "workspace",
-          path: "/workspace"
-        }
-      });
+      return jsonResponse(startResult());
     }
 
     if (url.endsWith("/api/v1/agents/tasks/task-1/title")) {
@@ -420,6 +415,25 @@ function createResumedTaskFetcher(
       }),
       { status: 200 }
     );
+  }) as AgentMessageFetcher & ReturnType<typeof vi.fn>;
+}
+
+function createSubagentFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
+  const encoder = new TextEncoder();
+
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith("/api/v1/agents/start")) {
+      return jsonResponse(startResult());
+    }
+    if (url.endsWith("/title")) return jsonResponse({ id: "task-1", title: "Project inspection" });
+    return streamResponse((controller) => {
+      if (url.includes("agent-1/events")) {
+        controller.enqueue(encoder.encode(
+          '{"agentId":"agent-1","payload":{"message":{"content":"Subagent is running","customType":"callsubagent","details":{"agentId":"agent-child","session":{"id":"session-child"}},"display":true,"id":"message-subagent","role":"custom","timestamp":1}},"sequence":1,"timestamp":"now","type":"message_start"}\n'
+        ));
+      }
+    });
   }) as AgentMessageFetcher & ReturnType<typeof vi.fn>;
 }
 
@@ -483,11 +497,4 @@ function createCancelFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
       { status: 200 }
     );
   }) as AgentMessageFetcher & ReturnType<typeof vi.fn>;
-}
-
-function jsonResponse(data: unknown): Response {
-  return new Response(JSON.stringify({ code: 0, data, msg: "ok" }), {
-    headers: { "Content-Type": "application/json" },
-    status: 200
-  });
 }

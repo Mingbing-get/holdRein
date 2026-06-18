@@ -170,6 +170,7 @@ export interface StoredBashExecutionMessage extends StoredMessageBase {
 export interface StoredCustomMessage extends StoredMessageBase {
   content: string | StoredUserContent[];
   customType: string;
+  details?: unknown;
   display: boolean;
   role: "custom";
 }

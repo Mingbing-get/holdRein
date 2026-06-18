@@ -46,7 +46,7 @@ export function reduceAgentTaskState(
     };
   }
   if (action.type === "history_loaded") {
-    return { ...state, messages: action.messages };
+    return registerSubagentRuns({ ...state, messages: action.messages }, action.messages);
   }
   if (action.type === "subscription_failed") {
     return { ...state, error: action.message, status: "error" };
@@ -83,7 +83,9 @@ export function reduceAgentTaskState(
   }
   if (action.event.type === "message_start") {
     const message = payload?.message as WebPlugin.AgentMessage | undefined;
-    return message ? upsertMessage(next, message) : next;
+    return message
+      ? registerSubagentRuns(upsertMessage(next, message), [message])
+      : next;
   }
   if (action.event.type === "message_delta") {
     const messageId = payload?.messageId;
@@ -128,6 +130,37 @@ function upsertMessage(state: AgentTaskState, message: WebPlugin.AgentMessage): 
   const messages = [...state.messages];
   messages[index] = message;
   return { ...state, messages };
+}
+
+function registerSubagentRuns(
+  state: AgentTaskState,
+  messages: WebPlugin.AgentMessage[]
+): AgentTaskState {
+  const runs = messages.flatMap(getSubagentRun);
+  if (!runs.length) return state;
+
+  const nextRuns = [...state.runs];
+  for (const run of runs) {
+    if (!nextRuns.some((candidate) => candidate.agentId === run.agentId)) {
+      nextRuns.push(run);
+    }
+  }
+
+  return nextRuns.length === state.runs.length
+    ? state
+    : { ...state, runs: nextRuns, status: "running" };
+}
+
+function getSubagentRun(message: WebPlugin.AgentMessage) {
+  if (message.role !== "custom" || message.customType !== "callsubagent") {
+    return [];
+  }
+  const details = getRecord(message.details);
+  const session = getRecord(details?.session);
+
+  return typeof details?.agentId === "string" && typeof session?.id === "string"
+    ? [{ agentId: details.agentId, sessionId: session.id, status: "running" as const }]
+    : [];
 }
 
 function getMessageText(message: WebPlugin.AgentMessage): string {

@@ -7,7 +7,9 @@ export function toStoredAgentMessage(
 ): StoredAgentMessage {
   const stored = { ...message, id } as StoredAgentMessage & Record<string, unknown>;
 
-  delete stored.details;
+  if (stored.role !== "custom") {
+    delete stored.details;
+  }
   delete stored.diagnostics;
   delete stored.responseId;
   delete stored.responseModel;

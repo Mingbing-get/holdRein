@@ -111,6 +111,23 @@ export const tasks = sqliteTable(
   })
 );
 
+export const subagents = sqliteTable(
+  "subagents",
+  {
+    agentId: text("agent_id").primaryKey(),
+    createdAt: text("created_at").notNull(),
+    parentAgentId: text("parent_agent_id").notNull(),
+    status: text("status", { enum: ["running", "completed"] }).notNull(),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => tasks.id, { onDelete: "cascade" }),
+    updatedAt: text("updated_at").notNull()
+  },
+  (table) => ({
+    taskIdIndex: index("subagents_task_id_idx").on(table.taskId)
+  })
+);
+
 export type CustomModelProviderRow = typeof customModelProviders.$inferSelect;
 export type NewCustomModelProviderRow = typeof customModelProviders.$inferInsert;
 export type ProviderApiKeyRow = typeof providerApiKeys.$inferSelect;
@@ -121,3 +138,5 @@ export type WorkspaceRow = typeof workspaces.$inferSelect;
 export type NewWorkspaceRow = typeof workspaces.$inferInsert;
 export type TaskRow = typeof tasks.$inferSelect;
 export type NewTaskRow = typeof tasks.$inferInsert;
+export type SubagentRow = typeof subagents.$inferSelect;
+export type NewSubagentRow = typeof subagents.$inferInsert;

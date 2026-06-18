@@ -17,7 +17,7 @@
 - Modify: `apps/api/src/modules/agents/agent-runtime.ts:100-243`
 - Test: `apps/api/src/modules/agents/agent-runtime.test.ts:373-457`
 
-- [ ] **Step 1: Write the failing ordering test**
+- [x] **Step 1: Write the failing ordering test**
 
 Update the existing `call_subagent` runtime test to execute the tool and assert
 that neither `appendCustomMessageEntry` nor a custom frontend event occurs yet.
@@ -49,7 +49,7 @@ await harnessSubscribers[0]?.({
 Assert that frontend roles are `toolResult`, then `custom`, and that the custom
 session append occurs only after the matching `message_end`.
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Run:
 
@@ -60,7 +60,7 @@ pnpm exec vitest run apps/api/src/modules/agents/agent-runtime.test.ts
 Expected: FAIL because `appendVisibleCustomMessage` still runs inside the tool
 execution callback, before any tool-result event.
 
-- [ ] **Step 3: Propagate the tool-call identity**
+- [x] **Step 3: Propagate the tool-call identity**
 
 Change `createCallSubagentTool` so its callback input explicitly includes the
 current ID:
@@ -75,7 +75,7 @@ startSubagent: (input: {
 
 Pass the `toolCallId` received by `execute` into this callback.
 
-- [ ] **Step 4: Stage and flush the visible message**
+- [x] **Step 4: Stage and flush the visible message**
 
 Inside `createHarness`, create a harness-local map keyed by tool-call ID. After
 the child agent starts, add the custom-message payload to the map instead of
@@ -86,13 +86,13 @@ message role is `toolResult`, take the entry matching `message.toolCallId`, call
 `appendVisibleCustomMessage`, and delete the entry only after the append and
 frontend publication succeed.
 
-- [ ] **Step 5: Add parallel-call coverage**
+- [x] **Step 5: Add parallel-call coverage**
 
 Stage two calls with different IDs, deliver their tool-result message events,
 and verify each visible message follows its own result. This protects the map
 against completion-order coupling.
 
-- [ ] **Step 6: Run focused tests and verify GREEN**
+- [x] **Step 6: Run focused tests and verify GREEN**
 
 Run:
 
@@ -102,7 +102,7 @@ pnpm exec vitest run apps/api/src/modules/agents/agent-runtime.test.ts
 
 Expected: PASS.
 
-- [ ] **Step 7: Run API typecheck and regression tests**
+- [x] **Step 7: Run API typecheck and regression tests**
 
 Run:
 
@@ -113,9 +113,40 @@ pnpm exec vitest run apps/api/src/modules/agents
 
 Expected: both commands PASS with no TypeScript errors or failed tests.
 
-- [ ] **Step 8: Review the diff without committing unrelated work**
+- [x] **Step 8: Review the diff without committing unrelated work**
 
 Run `git diff --check` and inspect only the four relevant API files. Leave the
 user's existing uncommitted changes intact; do not create an implementation
 commit unless explicitly requested.
 
+### Task 2: Run child completion hooks in the child context
+
+**Files:**
+- Modify: `apps/api/src/modules/agents/agent-runtime.ts`
+- Test: `apps/api/src/modules/agents/agent-runtime.test.ts`
+- Test support: `apps/api/src/modules/agents/agent-runtime-test-utils.ts`
+
+- [x] **Step 1: Add a failing child-session hook test**
+
+Create distinct parent and child sessions, end the child harness, and assert
+that the child contribution's `onAgentEnd` receives the child session metadata
+and messages before the parent is resumed.
+
+- [x] **Step 2: Verify RED**
+
+Run the focused runtime test and confirm the hook was not called.
+
+- [x] **Step 3: Return continuation state from `continueOrEndTask`**
+
+Return `true` when a subagent result, running subagent, or plugin prompt keeps
+the agent alive; return `false` when no further work exists.
+
+- [x] **Step 4: Finish children only after their own hook declines continuation**
+
+Pass the child contribution into `finishSubagent`, call `continueOrEndTask`
+with the child's identity and session, and mark it completed only when that
+call returns `false`.
+
+- [x] **Step 5: Verify GREEN and regressions**
+
+Run the focused runtime test, API typecheck, and all agents module tests.

@@ -46,3 +46,13 @@ the harness instead of silently dropping the message.
 - Verify multiple pending calls are matched by `toolCallId` rather than
   completion timing.
 
+## Subagent Completion Lifecycle
+
+When a child harness emits `agent_end`, its own contribution must receive
+`onAgentEnd` with the child session and child messages. If the hook returns a
+prompt, the child continues and remains running. Only when the child has no
+continuation is it marked completed and its result delivered to the parent.
+
+`continueOrEndTask` therefore reports whether it continued or is still waiting,
+leaving the caller responsible for either completing a child or emitting the
+root task's `task_end`. This keeps child and parent session contexts separate.

@@ -93,6 +93,43 @@ describe("agent task message reducer", () => {
     expect(state.messages).toEqual([persisted]);
   });
 
+  it("registers a subagent run from callsubagent messages", () => {
+    const message = {
+      content: "Subagent is running",
+      customType: "callsubagent",
+      details: { agentId: "agent-child", session: { id: "session-child" } },
+      display: true,
+      id: "message-subagent",
+      role: "custom" as const,
+      timestamp: 2
+    };
+    const state = reduceAgentTaskState(createInitialAgentTaskState("task-1"), {
+      event: event(1, "message_start", { message }),
+      type: "event_received"
+    });
+
+    expect(state.runs).toEqual([
+      { agentId: "agent-child", sessionId: "session-child", status: "running" }
+    ]);
+  });
+
+  it("registers subagent runs when loading stored history", () => {
+    const state = reduceAgentTaskState(createInitialAgentTaskState("task-1"), {
+      messages: [{
+        content: "Subagent is running",
+        customType: "callsubagent",
+        details: { agentId: "agent-child", session: { id: "session-child" } },
+        display: true,
+        id: "message-subagent",
+        role: "custom",
+        timestamp: 2
+      }],
+      type: "history_loaded"
+    });
+
+    expect(state.runs).toHaveLength(1);
+  });
+
   it("queues approval requests without adding them to messages", () => {
     const approval = {
       agentId: "agent-1",

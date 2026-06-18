@@ -154,6 +154,24 @@ export function AgentTasksProvider({
     }
   }, [apiBaseUrl, fetcher, handleTaskStatus, workspaces]);
 
+  useEffect(() => {
+    for (const [taskId, state] of Object.entries(taskStates)) {
+      if (state.status !== "running") continue;
+      for (const run of state.runs) {
+        if (subscriptions.current.has(run.agentId)) continue;
+        startSubscription({
+          agentId: run.agentId,
+          apiBaseUrl,
+          fetcher,
+          onTaskStatus: handleTaskStatus,
+          setTaskStates,
+          subscriptions,
+          taskId
+        });
+      }
+    }
+  }, [apiBaseUrl, fetcher, handleTaskStatus, taskStates]);
+
   const startTask = useCallback(
     async (input: StartTaskInput) => {
       const result = await startAgentTask(apiBaseUrl, input, fetcher);

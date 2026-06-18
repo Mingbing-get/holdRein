@@ -18,24 +18,24 @@
 - Modify: `apps/api/src/db/migrate.ts`
 - Test: `apps/api/src/db/database.test.ts`
 
-- [ ] **Step 1: Write failing schema and cascade tests**
+- [x] **Step 1: Write failing schema and cascade tests**
 
 Assert that the schema exports `subagents`, migration creates the strict table
 and task index, invalid statuses are rejected, and deleting a task removes its
 subagent rows.
 
-- [ ] **Step 2: Run database tests and verify RED**
+- [x] **Step 2: Run database tests and verify RED**
 
 Run `pnpm exec vitest run apps/api/src/db/database.test.ts` and confirm failure
 because the table is absent.
 
-- [ ] **Step 3: Add the Drizzle model and migration SQL**
+- [x] **Step 3: Add the Drizzle model and migration SQL**
 
 Define `agentId`, `parentAgentId`, `taskId`, `status`, `createdAt`, and
 `updatedAt`; constrain status to `running | completed`, reference tasks with
 `ON DELETE CASCADE`, and index `taskId`.
 
-- [ ] **Step 4: Run database tests and verify GREEN**
+- [x] **Step 4: Run database tests and verify GREEN**
 
 Run the focused database test and expect all cases to pass.
 
@@ -45,21 +45,21 @@ Run the focused database test and expect all cases to pass.
 - Create: `apps/api/src/modules/agents/subagent-repository.ts`
 - Create: `apps/api/src/modules/agents/subagent-repository.test.ts`
 
-- [ ] **Step 1: Write failing repository contract tests**
+- [x] **Step 1: Write failing repository contract tests**
 
 Cover create/find, status update with timestamp, delete rollback, and identical
 behavior for in-memory and SQLite adapters.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run the new repository test and confirm the module/API is missing.
 
-- [ ] **Step 3: Implement the minimal repository**
+- [x] **Step 3: Implement the minimal repository**
 
 Expose explicit `create`, `delete`, `findByAgentId`, and `updateStatus`
 operations. Keep timestamps supplied by the runtime for deterministic tests.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 Run the repository test and expect both adapters to pass.
 
@@ -71,36 +71,35 @@ Run the repository test and expect both adapters to pass.
 - Modify: `apps/api/src/modules/agents/agent-runtime.test.ts`
 - Modify: `apps/api/src/modules/agents/default-agents-service.ts`
 
-- [ ] **Step 1: Extend the existing lifecycle test before implementation**
+- [x] **Step 1: Extend the existing lifecycle test before implementation**
 
 Assert `running` immediately after child creation, still `running` after a
 child continuation, `completed` after the terminal child end, and no duplicate
 parent continuation when the terminal event is processed again.
 
-- [ ] **Step 2: Add a startup rollback test**
+- [x] **Step 2: Add a startup rollback test**
 
 Force synchronous child harness creation to fail and assert that the newly
 created database row is deleted.
 
-- [ ] **Step 3: Run focused runtime tests and verify RED**
+- [x] **Step 3: Run focused runtime tests and verify RED**
 
 Run `pnpm exec vitest run apps/api/src/modules/agents/agent-runtime.test.ts`.
 
-- [ ] **Step 4: Inject and use `SubagentRepository`**
+- [x] **Step 4: Inject and use `SubagentRepository`**
 
 Generate the child ID before startup, create the running row, pass the ID into
 `startHarness`, and delete the row if synchronous startup fails. At terminal
 completion, persist `completed`, delete the entry from the runtime map, then
 resume the parent.
 
-- [ ] **Step 5: Wire the SQLite adapter in production**
+- [x] **Step 5: Wire the SQLite adapter in production**
 
 Create the workspace and subagent repositories from the same application
 database and pass the latter to `createAgentRuntime`.
 
-- [ ] **Step 6: Verify GREEN and regressions**
+- [x] **Step 6: Verify GREEN and regressions**
 
 Run API typecheck, database tests, repository tests, and all agents module
 tests. Run `git diff --check` and verify every edited file remains at or below
 500 lines.
-

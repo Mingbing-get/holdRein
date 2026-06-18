@@ -124,6 +124,7 @@ export namespace WebPlugin {
   export interface CustomMessage extends AgentMessageBase {
     content: string | (TextContent | ImageContent)[];
     customType: string;
+    details?: unknown;
     display: boolean;
     role: "custom";
   }

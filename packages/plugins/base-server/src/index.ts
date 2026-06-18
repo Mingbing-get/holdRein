@@ -9,13 +9,13 @@ const baseServerPlugin: ServerPlugin.Plugin = {
   contributionResolver: (context) => {
     return {
       tools: [createShellExecTool(context.env)],
-      onAgentEnd: () => {
-        if (context.isContinue) {
-          return
-        }
+      // onAgentEnd: () => {
+      //   if (context.isContinue) {
+      //     return
+      //   }
 
-        return { prompt: '测试自动运行' }
-      }
+      //   return { prompt: '测试自动运行' }
+      // }
     }
   }
 }
