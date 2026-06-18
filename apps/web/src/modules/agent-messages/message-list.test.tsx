@@ -10,6 +10,7 @@ import type { WebPlugin } from "@hold-rein/plugin-web";
 
 const agentTasksMock = vi.hoisted(() => ({
   activeTaskId: "task-1",
+  childMessages: {} as Record<string, WebPlugin.AgentMessage[]>,
   taskMessages: [] as WebPlugin.AgentMessage[]
 }));
 
@@ -21,6 +22,8 @@ vi.mock("../../app/app-workspace-context", () => ({
 
 vi.mock("./agent-tasks-context", () => ({
   useAgentTasks: () => ({
+    getSubagentMessages: (agentId: string) =>
+      agentTasksMock.childMessages[agentId] ?? [],
     getTaskState: (taskId: string) =>
       taskId === agentTasksMock.activeTaskId
         ? { messages: agentTasksMock.taskMessages }
@@ -38,6 +41,7 @@ describe("AgentMessageList", () => {
   afterEach(() => {
     cleanup();
     agentTasksMock.activeTaskId = "task-1";
+    agentTasksMock.childMessages = {};
     agentTasksMock.taskMessages = [];
   });
 
@@ -135,7 +139,7 @@ describe("AgentMessageList", () => {
       stopReason: "toolUse",
       timestamp: 1
     };
-    agentTasksMock.taskMessages = [
+    const messages: WebPlugin.AgentMessage[] = [
       assistantMessage,
       {
         content: [{ text: "Tests passed", type: "text" }],
@@ -148,7 +152,7 @@ describe("AgentMessageList", () => {
       }
     ];
 
-    render(<AgentMessageList messages={[assistantMessage]} />);
+    render(<AgentMessageList messages={messages} />);
 
     fireEvent.click(screen.getByText("run tool: bash"));
 
@@ -156,6 +160,63 @@ describe("AgentMessageList", () => {
     expect(screen.getByText(/"command": "pnpm test"/)).toBeInTheDocument();
     expect(screen.getByText("执行结果")).toBeInTheDocument();
     expect(screen.getByText("Tests passed")).toBeInTheDocument();
+  });
+
+  it("renders child messages inside a callsubagent message", () => {
+    agentTasksMock.childMessages["agent-child"] = [
+      {
+        api: "openai-responses",
+        content: [{ text: "Child answer", type: "text" }],
+        id: "child-answer",
+        model: "gpt-4.1",
+        provider: "openai",
+        role: "assistant",
+        stopReason: "stop",
+        timestamp: 2
+      }
+    ];
+
+    render(
+      <AgentMessageList
+        messages={[
+          {
+            content: "Subagent is running",
+            customType: "callsubagent",
+            details: { agentId: "agent-child" },
+            display: true,
+            id: "call-child",
+            role: "custom",
+            timestamp: 1
+          }
+        ]}
+      />
+    );
+
+    expect(screen.getByText("callsubagent")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("callsubagent"));
+    expect(screen.getByText("Child answer")).toBeInTheDocument();
+    expect(screen.queryByText("Subagent is running")).not.toBeInTheDocument();
+  });
+
+  it("keeps generic rendering for malformed callsubagent messages", () => {
+    render(
+      <AgentMessageList
+        messages={[
+          {
+            content: "Missing child identifier",
+            customType: "callsubagent",
+            details: {},
+            display: true,
+            id: "malformed-call",
+            role: "custom",
+            timestamp: 1
+          }
+        ]}
+      />
+    );
+
+    fireEvent.click(screen.getByText("callsubagent"));
+    expect(screen.getByText("Missing child identifier")).toBeInTheDocument();
   });
 
   it("styles Markdown with application theme variables", () => {

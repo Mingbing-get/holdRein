@@ -3,10 +3,10 @@ import { InfoCircleOutlined, RollbackOutlined, ToolOutlined } from "@ant-design/
 import { Bubble, Think } from "@ant-design/x";
 import "./message-list.css";
 
-import { useAppWorkspace } from "../../app/app-workspace-context";
 import { useAppPlugins } from '../../app/app-plugin';
-import { useAgentTasks } from "./agent-tasks-context";
+import { getCalledSubagentId } from "./agent-message-collection";
 import { MarkdownContent } from "./markdown-content";
+import { SubagentMessageList } from "./subagent-message-list";
 import { useCallback, useMemo } from "react";
 import type { WebPlugin } from '@hold-rein/plugin-web'
 
@@ -18,18 +18,24 @@ export function AgentMessageList({ messages }: { messages: WebPlugin.AgentMessag
       {messages
         .filter((message) => message.role !== "toolResult" && !isContinueSentinel(message))
         .map((message) => (
-          <AgentMessageItem key={message.id} message={message} />
+          <AgentMessageItem key={message.id} message={message} messages={messages} />
         ))}
     </Flex>
   );
 }
 
-function AgentMessageItem({ message }: { message: WebPlugin.AgentMessage }) {
+function AgentMessageItem({
+  message,
+  messages
+}: {
+  message: WebPlugin.AgentMessage;
+  messages: WebPlugin.AgentMessage[];
+}) {
   if (message.role === "user") {
     return <Bubble content={getText(message.content)} placement="end" />;
   }
   if (message.role === "assistant") {
-    return <AssistantMessageItem message={message} />;
+    return <AssistantMessageItem message={message} messages={messages} />;
   }
   if (message.role === "toolResult") {
     return null;
@@ -38,6 +44,7 @@ function AgentMessageItem({ message }: { message: WebPlugin.AgentMessage }) {
     return <Typography.Text code>{message.command}: {message.output}</Typography.Text>;
   }
   if (message.role === "custom") {
+    const subagentId = getCalledSubagentId(message);
     return message.display ? (
       <Think
         title={message.customType}
@@ -45,7 +52,11 @@ function AgentMessageItem({ message }: { message: WebPlugin.AgentMessage }) {
         defaultExpanded={false}
         blink
       >
-        {getText(message.content)}
+        {subagentId ? (
+          <SubagentMessageList agentId={subagentId} />
+        ) : (
+          getText(message.content)
+        )}
       </Think>
     ) : null;
   }
@@ -62,7 +73,13 @@ function AgentMessageItem({ message }: { message: WebPlugin.AgentMessage }) {
   )
 }
 
-function AssistantMessageItem({ message }: { message: WebPlugin.AssistantMessage }) {
+function AssistantMessageItem({
+  message,
+  messages
+}: {
+  message: WebPlugin.AssistantMessage;
+  messages: WebPlugin.AgentMessage[];
+}) {
   return (
     <Flex gap={8} vertical>
       {message.content.map((block, index) => {
@@ -78,26 +95,34 @@ function AssistantMessageItem({ message }: { message: WebPlugin.AssistantMessage
         if (block.type === "thinking") {
           return <Think key={index} title="思考过程">{block.thinking}</Think>;
         }
-        return <ToolCallMessageItem key={index} toolCall={block} />;
+        return (
+          <ToolCallMessageItem
+            key={index}
+            messages={messages}
+            toolCall={block}
+          />
+        );
       })}
       {message.errorMessage ? <Alert type="error" title="Agent 错误" description={message.errorMessage} /> : null}
     </Flex>
   );
 }
 
-function ToolCallMessageItem({ toolCall }: { toolCall: WebPlugin.ToolCall }) {
-  const {
-    state: { activeTaskId }
-  } = useAppWorkspace();
-  const { getTaskState } = useAgentTasks();
+function ToolCallMessageItem({
+  messages,
+  toolCall
+}: {
+  messages: WebPlugin.AgentMessage[];
+  toolCall: WebPlugin.ToolCall;
+}) {
   const { toolRenders } = useAppPlugins();
 
   const toolResult = useMemo(() => {
-    return getTaskState(activeTaskId)?.messages.find(
+    return messages.find(
       (message): message is WebPlugin.ToolResultMessage =>
         message.role === "toolResult" && message.toolCallId === toolCall.id
     )
-  }, [activeTaskId, getTaskState, toolCall.id]);
+  }, [messages, toolCall.id]);
 
   const toolRender = useMemo(() => {
     return toolRenders.find(item => item.toolName === toolCall.name)
