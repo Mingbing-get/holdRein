@@ -1,5 +1,5 @@
 import { Alert, Flex, Typography } from "antd";
-import { InfoCircleOutlined, RollbackOutlined, ToolOutlined } from "@ant-design/icons";
+import { BranchesOutlined, InfoCircleOutlined, RollbackOutlined, ToolOutlined } from "@ant-design/icons";
 import { Bubble, Think } from "@ant-design/x";
 import "./message-list.css";
 
@@ -45,6 +45,20 @@ function AgentMessageItem({
   }
   if (message.role === "custom") {
     const subagentId = getCalledSubagentId(message);
+
+    if (subagentId) {
+      return (
+        <Think
+          title={message.customType}
+          icon={<BranchesOutlined />}
+          defaultExpanded={false}
+          blink
+        >
+          <SubagentMessageList agentId={subagentId} />
+        </Think>
+      )
+    }
+
     return message.display ? (
       <Think
         title={message.customType}
@@ -52,11 +66,7 @@ function AgentMessageItem({
         defaultExpanded={false}
         blink
       >
-        {subagentId ? (
-          <SubagentMessageList agentId={subagentId} />
-        ) : (
-          getText(message.content)
-        )}
+        {getText(message.content)}
       </Think>
     ) : null;
   }

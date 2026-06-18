@@ -369,6 +369,9 @@ export function createAgentRuntime(
         if (completedSubagent) {
           completedSubagent.consumed = true;
           const prompt = formatSubagentResult(completedSubagent);
+          // 这里有问题，因为子agent结束时父agent可能还在运行，所以不能直接加入消息并再次启动父agent，应该先检查父agent的状态，
+          // 若父agent未在运行则执行以下逻辑，
+          // 若父agent正在运行则应该等一个父agent可插入消息的位置（例如下一轮工具执行完成后），插入消息即可，无需重启一个harness
           await appendVisibleCustomMessage({
             agentId: harnessAgentId,
             content: prompt,
