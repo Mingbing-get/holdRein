@@ -28,7 +28,7 @@ vi.mock("@ant-design/x", () => ({
   )
 }));
 
-vi.mock("./agent-tasks-context", () => ({
+vi.mock("../tasks-context", () => ({
   useAgentTasks: () => ({
     getSubagentMessages: (agentId: string) =>
       agentTasksMock.messages[agentId] ?? [],
@@ -36,7 +36,7 @@ vi.mock("./agent-tasks-context", () => ({
   })
 }));
 
-vi.mock("./message-list", () => ({
+vi.mock("../message-list", () => ({
   AgentMessageList: ({ messages }: { messages: WebPlugin.AgentMessage[] }) => (
     <div data-testid="messages">{messages.length}</div>
   )

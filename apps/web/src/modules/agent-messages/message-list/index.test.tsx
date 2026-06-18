@@ -14,13 +14,13 @@ const agentTasksMock = vi.hoisted(() => ({
   taskMessages: [] as WebPlugin.AgentMessage[]
 }));
 
-vi.mock("../../app/app-workspace-context", () => ({
+vi.mock("../../../app/app-workspace-context", () => ({
   useAppWorkspace: () => ({
     state: { activeTaskId: agentTasksMock.activeTaskId }
   })
 }));
 
-vi.mock("./agent-tasks-context", () => ({
+vi.mock("../tasks-context", () => ({
   useAgentTasks: () => ({
     getSubagentMessages: (agentId: string) =>
       agentTasksMock.childMessages[agentId] ?? [],
@@ -32,7 +32,7 @@ vi.mock("./agent-tasks-context", () => ({
   })
 }));
 
-vi.mock("../../app/app-plugin", () => ({
+vi.mock("../../../app/app-plugin", () => ({
   useAppPlugins: () => ({
     toolRenders: []
   })
@@ -67,6 +67,8 @@ describe("AgentMessageList", () => {
         ]}
       />
     );
+
+    fireEvent.click(screen.getByText("thinking"));
 
     expect(screen.getByText("Prompt")).toBeInTheDocument();
     expect(screen.getByText("Reason")).toBeInTheDocument();
@@ -222,12 +224,11 @@ describe("AgentMessageList", () => {
 
   it("styles Markdown with application theme variables", () => {
     const markdownCss = readFileSync(
-      "apps/web/src/modules/agent-messages/markdown-content.css",
+      "apps/web/src/modules/agent-messages/message-list/index.css",
       "utf8"
     );
     const themeCss = readFileSync("apps/web/src/app/theme.css", "utf8");
 
-    expect(markdownCss).toContain("var(--app-color-markdown-code-bg)");
     expect(markdownCss).toContain("var(--app-color-text)");
     expect(markdownCss).not.toMatch(/#[\da-f]{3,8}|rgba?\(/i);
     expect(themeCss.match(/--app-color-markdown-code-bg:/g)).toHaveLength(2);

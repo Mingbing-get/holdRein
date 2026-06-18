@@ -7,16 +7,8 @@ import { createAgentApprovalStore } from "../approval/store";
 import { createAgentEventBus } from "../event/event-bus";
 import { createAgentRuntime } from ".";
 import { createInMemorySubagentRepository } from "../subagent/repository";
-import {
-  createContribution,
-  createRunInput,
-  createRuntime,
-  createSessionRepo,
-  getHarnessTool as findHarnessTool,
-  subagentDetails,
-  subagentInput,
-  toolResultMessage
-} from "./test-utils";
+import { createContribution, createRunInput, createRuntime, createSessionRepo } from "./test-utils";
+import { getHarnessTool as findHarnessTool, subagentDetails, subagentInput, toolResultMessage } from "./test-utils";
 
 const prompt = vi.fn().mockResolvedValue(undefined);
 const sessionRepoConstructor = vi.fn();
@@ -25,14 +17,12 @@ const harnessConstructor = vi.fn();
 const harnessOn = vi.fn();
 const harnessInterrupt = vi.fn();
 const harnessSubscribers: ((event: { message?: unknown; type: string }) => unknown)[] = [];
-const resolveContributions = vi.hoisted(() =>
-  vi.fn().mockResolvedValue({
-    skillDirs: [],
-    skills: [],
-    systemPrompts: [],
-    tools: []
-  })
-);
+const resolveContributions = vi.hoisted(() => vi.fn().mockResolvedValue({
+  skillDirs: [],
+  skills: [],
+  systemPrompts: [],
+  tools: []
+}));
 
 vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
   const original = await importOriginal<Record<string, unknown>>();
@@ -72,7 +62,7 @@ vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
   };
 });
 
-vi.mock("../../plugin", () => ({
+vi.mock("../../../plugin", () => ({
   pluginRegistry: {
     resolveContributions
   }
@@ -99,10 +89,7 @@ describe("agent runtime sessions", () => {
     });
 
     expect(executionEnvConstructor).toHaveBeenCalledWith({ cwd: SESSIONS_DIR });
-    expect(sessionRepoConstructor).toHaveBeenCalledWith({
-      fs: expect.anything(),
-      sessionsRoot: SESSIONS_DIR
-    });
+    expect(sessionRepoConstructor).toHaveBeenCalledWith({ fs: expect.anything(), sessionsRoot: SESSIONS_DIR });
   });
 
   it("creates a session for a new task", async () => {
@@ -177,9 +164,7 @@ describe("agent runtime sessions", () => {
     });
 
     expect(open).toHaveBeenCalledOnce();
-    expect(messages).toEqual([
-      expect.objectContaining({ content: "Saved prompt for session-1", role: "user" })
-    ]);
+    expect(messages).toEqual([expect.objectContaining({ content: "Saved prompt for session-1", role: "user" })]);
   });
 
   it("interrupts a running harness by agent id", async () => {
@@ -198,19 +183,15 @@ describe("agent runtime sessions", () => {
     const approvalStore = createAgentApprovalStore();
     const { repo } = createSessionRepo();
     const eventBus = createAgentEventBus();
-    resolveContributions.mockResolvedValue(createContribution({
-      tools: [
-        {
-          description: "Apply the requested workspace change",
-          execute: vi.fn(),
-          label: "Workspace Patch",
-          name: "workspace_patch",
-          parameters: Type.Object({}),
-          beforeExecute: ({ requestApproval }: ServerPlugin.ToolBeforeExecuteOptions) =>
-            requestApproval("允许插件修改工作区？")
-        }
-      ]
-    }));
+    resolveContributions.mockResolvedValue(createContribution({ tools: [{
+      description: "Apply the requested workspace change",
+      execute: vi.fn(),
+      label: "Workspace Patch",
+      name: "workspace_patch",
+      parameters: Type.Object({}),
+      beforeExecute: ({ requestApproval }: ServerPlugin.ToolBeforeExecuteOptions) =>
+        requestApproval("允许插件修改工作区？")
+    }] }));
     const runtime = createAgentRuntime({
       approvalStore,
       eventBus,
@@ -271,12 +252,10 @@ describe("agent runtime sessions", () => {
   it("appends plugin continuation as a visible custom message and starts the next harness with an empty prompt", async () => {
     const { appendCustomMessageEntry, create, open, repo } = createSessionRepo();
     const eventBus = createAgentEventBus();
-    resolveContributions.mockResolvedValue(createContribution({
-      onAgentEnd: vi.fn().mockResolvedValue({
-        details: { source: "test-plugin" },
-        prompt: "Check whether another step is needed"
-      })
-    }));
+    resolveContributions.mockResolvedValue(createContribution({ onAgentEnd: vi.fn().mockResolvedValue({
+      details: { source: "test-plugin" },
+      prompt: "Check whether another step is needed"
+    }) }));
     const runtime = createRuntime(repo, eventBus);
 
     const result = await runtime.start(createRunInput());
@@ -380,9 +359,7 @@ describe("agent runtime sessions", () => {
     });
     const subagentTool = findHarnessTool(harnessConstructor, "call_subagent");
 
-    await expect(
-      subagentTool?.execute?.("tool-call-1", subagentInput())
-    ).resolves.toEqual({
+    await expect(subagentTool?.execute?.("tool-call-1", subagentInput())).resolves.toEqual({
       content: [{
         text: expect.stringContaining('Subagent "researcher" is running'),
         type: "text"
@@ -407,11 +384,7 @@ describe("agent runtime sessions", () => {
         sessionPath: "/sessions/session-2.jsonl"
       })
     );
-    expect(childRowsAtPrompt[0]).toEqual(
-      expect.objectContaining({
-        sessionId: "session-2"
-      })
-    );
+    expect(childRowsAtPrompt[0]).toEqual(expect.objectContaining({ sessionId: "session-2" }));
     expect(appendCustomMessageEntry).not.toHaveBeenCalled();
     expect(callMessages).toEqual([]);
 
@@ -461,8 +434,7 @@ describe("agent runtime sessions", () => {
       .rejects.toThrow("Child setup failed");
 
     expect(deleteSubagent).toHaveBeenCalledOnce();
-    expect(subagentRepository.findByAgentId(deleteSubagent.mock.calls[0]?.[0] ?? ""))
-      .toBeUndefined();
+    expect(subagentRepository.findByAgentId(deleteSubagent.mock.calls[0]?.[0] ?? "")).toBeUndefined();
   });
 
   it("continues the parent harness with a subagent result before ending the task", async () => {
