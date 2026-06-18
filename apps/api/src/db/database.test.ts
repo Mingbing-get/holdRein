@@ -24,7 +24,7 @@ describe("database", () => {
 
     migrateDatabase({ exec } as { exec: (sql: string) => void });
 
-    expect(exec).toHaveBeenCalledTimes(19);
+    expect(exec).toHaveBeenCalledTimes(22);
     expect(exec).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_model_providers")
@@ -88,6 +88,18 @@ describe("database", () => {
     expect(exec).toHaveBeenNthCalledWith(
       12,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS subagents")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      12,
+      expect.stringContaining("session_id TEXT")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      12,
+      expect.stringContaining("session_path TEXT")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      12,
+      expect.stringContaining("session_created_at TEXT")
     );
     expect(exec).toHaveBeenNthCalledWith(
       13,
@@ -195,16 +207,33 @@ describe("database", () => {
       ).toThrow();
       sqlite.prepare(`
         INSERT INTO subagents (
-          agent_id, parent_agent_id, task_id, status, created_at, updated_at
+          agent_id, parent_agent_id, task_id, status,
+          session_id, session_path, session_created_at,
+          created_at, updated_at
         ) VALUES (
-          'agent-child', 'agent-parent', 'task-1', 'running', 'now', 'now'
+          'agent-child', 'agent-parent', 'task-1', 'running',
+          'session-child', '/sessions/session-child.jsonl', 'created',
+          'now', 'now'
         )
       `).run();
+      expect(
+        sqlite.prepare(
+          "SELECT session_id, session_path, session_created_at FROM subagents WHERE agent_id = 'agent-child'"
+        ).get()
+      ).toEqual({
+        session_created_at: "created",
+        session_id: "session-child",
+        session_path: "/sessions/session-child.jsonl"
+      });
       expect(() => sqlite.prepare(`
         INSERT INTO subagents (
-          agent_id, parent_agent_id, task_id, status, created_at, updated_at
+          agent_id, parent_agent_id, task_id, status,
+          session_id, session_path, session_created_at,
+          created_at, updated_at
         ) VALUES (
-          'agent-invalid', 'agent-parent', 'task-1', 'failed', 'now', 'now'
+          'agent-invalid', 'agent-parent', 'task-1', 'failed',
+          'session-invalid', '/sessions/session-invalid.jsonl', 'created',
+          'now', 'now'
         )
       `).run()).toThrow();
       sqlite.prepare("DELETE FROM tasks WHERE id = 'task-1'").run();
@@ -275,6 +304,73 @@ describe("database", () => {
           )
           .get()
       ).toBeUndefined();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("upgrades legacy subagents with nullable session metadata columns", () => {
+    const sqlite = new Database(":memory:");
+
+    try {
+      sqlite.exec(`
+        CREATE TABLE workspaces (
+          id TEXT PRIMARY KEY NOT NULL,
+          name TEXT NOT NULL,
+          path TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        ) STRICT;
+        CREATE TABLE tasks (
+          id TEXT PRIMARY KEY NOT NULL,
+          workspace_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          initial_user_message TEXT NOT NULL,
+          last_model_provider_source TEXT NOT NULL,
+          last_model_provider TEXT NOT NULL,
+          last_model_name TEXT NOT NULL,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        ) STRICT;
+        CREATE TABLE subagents (
+          agent_id TEXT PRIMARY KEY NOT NULL,
+          parent_agent_id TEXT NOT NULL,
+          task_id TEXT NOT NULL,
+          status TEXT NOT NULL CHECK(status IN ('running', 'completed')),
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+        ) STRICT;
+        INSERT INTO workspaces (id, name, path, created_at, updated_at)
+        VALUES ('workspace-1', 'Workspace', '/tmp/workspace', 'now', 'now');
+        INSERT INTO tasks (
+          id, workspace_id, title, initial_user_message,
+          last_model_provider_source, last_model_provider, last_model_name,
+          created_at, updated_at
+        ) VALUES (
+          'task-1', 'workspace-1', 'Legacy', 'Prompt',
+          'built_in', 'openai', 'gpt-4.1', 'now', 'now'
+        );
+        INSERT INTO subagents (
+          agent_id, parent_agent_id, task_id, status, created_at, updated_at
+        ) VALUES (
+          'agent-child', 'agent-parent', 'task-1', 'running', 'now', 'now'
+        );
+      `);
+
+      migrateDatabase(sqlite);
+
+      expect(
+        sqlite
+          .prepare(
+            "SELECT session_id, session_path, session_created_at FROM subagents WHERE agent_id = 'agent-child'"
+          )
+          .get()
+      ).toEqual({
+        session_created_at: null,
+        session_id: null,
+        session_path: null
+      });
     } finally {
       sqlite.close();
     }

@@ -103,6 +103,9 @@ const CREATE_SUBAGENTS_TABLE_SQL = `
     parent_agent_id TEXT NOT NULL,
     task_id TEXT NOT NULL,
     status TEXT NOT NULL CHECK(status IN ('running', 'completed')),
+    session_id TEXT,
+    session_path TEXT,
+    session_created_at TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
@@ -134,6 +137,18 @@ const ADD_TASKS_STATUS_COLUMN_SQL = `
   ALTER TABLE tasks ADD COLUMN status TEXT NOT NULL DEFAULT 'completed' CHECK(status IN ('running', 'completed', 'error'))
 `;
 
+const ADD_SUBAGENTS_SESSION_ID_COLUMN_SQL = `
+  ALTER TABLE subagents ADD COLUMN session_id TEXT
+`;
+
+const ADD_SUBAGENTS_SESSION_PATH_COLUMN_SQL = `
+  ALTER TABLE subagents ADD COLUMN session_path TEXT
+`;
+
+const ADD_SUBAGENTS_SESSION_CREATED_AT_COLUMN_SQL = `
+  ALTER TABLE subagents ADD COLUMN session_created_at TEXT
+`;
+
 const DROP_TASK_MESSAGES_TABLE_SQL = `
   DROP TABLE IF EXISTS task_messages
 `;
@@ -163,6 +178,9 @@ export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
   addColumnIfMissing(sqlite, ADD_TASKS_SESSION_PATH_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_SESSION_CREATED_AT_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_STATUS_COLUMN_SQL);
+  addColumnIfMissing(sqlite, ADD_SUBAGENTS_SESSION_ID_COLUMN_SQL);
+  addColumnIfMissing(sqlite, ADD_SUBAGENTS_SESSION_PATH_COLUMN_SQL);
+  addColumnIfMissing(sqlite, ADD_SUBAGENTS_SESSION_CREATED_AT_COLUMN_SQL);
   sqlite.exec(DROP_TASK_MESSAGES_TABLE_SQL);
 }
 

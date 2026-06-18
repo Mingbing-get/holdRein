@@ -11,6 +11,7 @@ export interface SubagentRepository {
   create: (subagent: NewSubagentRow) => SubagentRow;
   delete: (agentId: string) => void;
   findByAgentId: (agentId: string) => SubagentRow | undefined;
+  findByTaskId: (taskId: string) => SubagentRow[];
   updateStatus: (
     agentId: string,
     status: SubagentRow["status"],
@@ -36,6 +37,8 @@ export function createInMemorySubagentRepository(
       rows.delete(agentId);
     },
     findByAgentId: (agentId) => rows.get(agentId),
+    findByTaskId: (taskId) =>
+      Array.from(rows.values()).filter((row) => row.taskId === taskId),
     updateStatus: (agentId, status, updatedAt) => {
       const existing = rows.get(agentId);
       if (!existing) return undefined;
@@ -67,6 +70,12 @@ export function createSqliteSubagentRepository(
         .from(subagents)
         .where(eq(subagents.agentId, agentId))
         .get(),
+    findByTaskId: (taskId) =>
+      database.db
+        .select()
+        .from(subagents)
+        .where(eq(subagents.taskId, taskId))
+        .all(),
     updateStatus: (agentId, status, updatedAt) => {
       database.db
         .update(subagents)

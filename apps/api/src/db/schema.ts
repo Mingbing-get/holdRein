@@ -117,6 +117,9 @@ export const subagents = sqliteTable(
     agentId: text("agent_id").primaryKey(),
     createdAt: text("created_at").notNull(),
     parentAgentId: text("parent_agent_id").notNull(),
+    sessionCreatedAt: text("session_created_at"),
+    sessionId: text("session_id"),
+    sessionPath: text("session_path"),
     status: text("status", { enum: ["running", "completed"] }).notNull(),
     taskId: text("task_id")
       .notNull()

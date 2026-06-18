@@ -29,12 +29,22 @@ describe.each([
       agentId: "agent-child",
       createdAt: "2026-06-18T00:00:00.000Z",
       parentAgentId: "agent-parent",
+      sessionCreatedAt: "2026-06-18T00:00:00.000Z",
+      sessionId: "session-child",
+      sessionPath: "/sessions/session-child.jsonl",
       status: "running",
       taskId: "task-1",
       updatedAt: "2026-06-18T00:00:00.000Z"
     });
 
-    expect(repository.findByAgentId("agent-child")?.status).toBe("running");
+    expect(repository.findByAgentId("agent-child")).toEqual(
+      expect.objectContaining({
+        sessionCreatedAt: "2026-06-18T00:00:00.000Z",
+        sessionId: "session-child",
+        sessionPath: "/sessions/session-child.jsonl",
+        status: "running"
+      })
+    );
     expect(
       repository.updateStatus(
         "agent-child",
@@ -49,6 +59,49 @@ describe.each([
     repository.delete("agent-child");
 
     expect(repository.findByAgentId("agent-child")).toBeUndefined();
+  });
+
+  it("finds subagents by task", () => {
+    const repository = createRepository() as SubagentRepository;
+
+    repository.create({
+      agentId: "agent-child-1",
+      createdAt: "created",
+      parentAgentId: "agent-parent",
+      sessionCreatedAt: "session-created-1",
+      sessionId: "session-child-1",
+      sessionPath: "/sessions/session-child-1.jsonl",
+      status: "running",
+      taskId: "task-1",
+      updatedAt: "created"
+    });
+    repository.create({
+      agentId: "agent-child-2",
+      createdAt: "created",
+      parentAgentId: "agent-child-1",
+      sessionCreatedAt: "session-created-2",
+      sessionId: "session-child-2",
+      sessionPath: "/sessions/session-child-2.jsonl",
+      status: "completed",
+      taskId: "task-1",
+      updatedAt: "created"
+    });
+    repository.create({
+      agentId: "agent-other",
+      createdAt: "created",
+      parentAgentId: "agent-parent",
+      sessionCreatedAt: "session-created-other",
+      sessionId: "session-other",
+      sessionPath: "/sessions/session-other.jsonl",
+      status: "running",
+      taskId: "task-other",
+      updatedAt: "created"
+    });
+
+    expect(repository.findByTaskId("task-1")).toEqual([
+      expect.objectContaining({ agentId: "agent-child-1" }),
+      expect.objectContaining({ agentId: "agent-child-2" })
+    ]);
   });
 });
 
@@ -66,6 +119,14 @@ function createSqliteFixture(): SubagentRepository {
       created_at, updated_at
     ) VALUES (
       'task-1', 'workspace-1', 'Task', 'Prompt',
+      'built_in', 'openai', 'gpt-4.1', 'now', 'now'
+    );
+    INSERT INTO tasks (
+      id, workspace_id, title, initial_user_message,
+      last_model_provider_source, last_model_provider, last_model_name,
+      created_at, updated_at
+    ) VALUES (
+      'task-other', 'workspace-1', 'Other Task', 'Prompt',
       'built_in', 'openai', 'gpt-4.1', 'now', 'now'
     );
   `);
