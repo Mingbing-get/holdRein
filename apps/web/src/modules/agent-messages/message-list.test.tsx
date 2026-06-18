@@ -192,8 +192,8 @@ describe("AgentMessageList", () => {
       />
     );
 
-    expect(screen.getByText("callsubagent")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("callsubagent"));
+    expect(screen.getByText("call subagent")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("call subagent"));
     expect(screen.getByText("Child answer")).toBeInTheDocument();
     expect(screen.queryByText("Subagent is running")).not.toBeInTheDocument();
   });

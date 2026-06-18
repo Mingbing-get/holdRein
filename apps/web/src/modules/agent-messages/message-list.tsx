@@ -48,14 +48,9 @@ function AgentMessageItem({
 
     if (subagentId) {
       return (
-        <Think
-          title={message.customType}
-          icon={<BranchesOutlined />}
-          defaultExpanded={false}
-          blink
-        >
-          <SubagentMessageList agentId={subagentId} />
-        </Think>
+        <SubagentMessageList
+          agentId={subagentId}
+        />
       )
     }
 
