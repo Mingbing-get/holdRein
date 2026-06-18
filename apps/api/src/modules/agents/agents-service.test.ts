@@ -8,6 +8,7 @@ import { createInMemoryWorkspaceRepository } from "../workspaces";
 import { createAgentApprovalStore } from "./agent-approval-store";
 import { createAgentEventBus } from "./agent-event-bus";
 import { createAgentsService } from "./agents-service";
+import { createInMemorySubagentRepository } from "./subagent-repository";
 
 const temporaryPaths: string[] = [];
 
@@ -453,7 +454,12 @@ describe("agents service", () => {
       titleGenerator: { generateTitle: vi.fn() }
     });
 
-    await expect(service.listTaskMessages({ taskId: "task-1" })).resolves.toHaveLength(1);
+    await expect(service.listTaskMessages({ taskId: "task-1" })).resolves.toEqual({
+      messages: [
+        { content: "Initial", id: "message-1", role: "user", timestamp: 1 }
+      ],
+      subagents: []
+    });
     expect(runtime.listMessages).toHaveBeenCalledWith({
       session: {
         createdAt: "created",
@@ -461,6 +467,161 @@ describe("agents service", () => {
         path: "/sessions/session-1.jsonl"
       },
       workspacePath: "/tmp/workspace"
+    });
+  });
+
+  it("loads task messages with every persisted subagent history", async () => {
+    const repository = createInMemoryWorkspaceRepository({
+      tasks: [
+        {
+          createdAt: "now",
+          id: "task-1",
+          initialUserMessage: "Initial",
+          lastContinuedAt: "now",
+          lastModelId: "gpt-4.1",
+          lastModelName: "gpt-4.1",
+          lastModelProvider: "openai",
+          lastModelProviderSource: "built_in",
+          sessionCreatedAt: "parent-created",
+          sessionId: "session-parent",
+          sessionPath: "/sessions/session-parent.jsonl",
+          status: "completed",
+          title: "Task",
+          updatedAt: "now",
+          workspaceId: "workspace-1"
+        }
+      ],
+      workspaces: [
+        {
+          createdAt: "now",
+          id: "workspace-1",
+          name: "workspace",
+          path: "/tmp/workspace",
+          updatedAt: "now"
+        }
+      ]
+    });
+    const subagentRepository = createInMemorySubagentRepository([
+      {
+        agentId: "agent-child",
+        createdAt: "now",
+        parentAgentId: "agent-parent",
+        sessionCreatedAt: "child-created",
+        sessionId: "session-child",
+        sessionPath: "/sessions/session-child.jsonl",
+        status: "completed",
+        taskId: "task-1",
+        updatedAt: "now"
+      },
+      {
+        agentId: "agent-grandchild",
+        createdAt: "now",
+        parentAgentId: "agent-child",
+        sessionCreatedAt: "grandchild-created",
+        sessionId: "session-grandchild",
+        sessionPath: "/sessions/session-grandchild.jsonl",
+        status: "running",
+        taskId: "task-1",
+        updatedAt: "now"
+      },
+      {
+        agentId: "agent-legacy",
+        createdAt: "now",
+        parentAgentId: "agent-parent",
+        sessionCreatedAt: null,
+        sessionId: null,
+        sessionPath: null,
+        status: "completed",
+        taskId: "task-1",
+        updatedAt: "now"
+      },
+      {
+        agentId: "agent-broken",
+        createdAt: "now",
+        parentAgentId: "agent-parent",
+        sessionCreatedAt: "broken-created",
+        sessionId: "session-broken",
+        sessionPath: "/sessions/session-broken.jsonl",
+        status: "completed",
+        taskId: "task-1",
+        updatedAt: "now"
+      }
+    ]);
+    const runtime = {
+      interrupt: vi.fn(),
+      listMessages: vi.fn(async ({ session }: { session: { id: string } }) => {
+        if (session.id === "session-broken") {
+          throw new Error("Cannot read child session");
+        }
+        return [
+          {
+            content: `History for ${session.id}`,
+            id: `message-${session.id}`,
+            role: "user",
+            timestamp: 1
+          }
+        ];
+      }),
+      start: vi.fn()
+    };
+    const service = createAgentsService({
+      approvalStore: createAgentApprovalStore(),
+      eventBus: createAgentEventBus(),
+      repository,
+      runtime,
+      subagentRepository,
+      titleGenerator: { generateTitle: vi.fn() }
+    });
+
+    await expect(service.listTaskMessages({ taskId: "task-1" })).resolves.toEqual({
+      messages: [
+        {
+          content: "History for session-parent",
+          id: "message-session-parent",
+          role: "user",
+          timestamp: 1
+        }
+      ],
+      subagents: [
+        {
+          agentId: "agent-child",
+          messages: [
+            {
+              content: "History for session-child",
+              id: "message-session-child",
+              role: "user",
+              timestamp: 1
+            }
+          ],
+          parentAgentId: "agent-parent",
+          status: "completed"
+        },
+        {
+          agentId: "agent-grandchild",
+          messages: [
+            {
+              content: "History for session-grandchild",
+              id: "message-session-grandchild",
+              role: "user",
+              timestamp: 1
+            }
+          ],
+          parentAgentId: "agent-child",
+          status: "running"
+        },
+        {
+          agentId: "agent-legacy",
+          messages: [],
+          parentAgentId: "agent-parent",
+          status: "completed"
+        },
+        {
+          agentId: "agent-broken",
+          messages: [],
+          parentAgentId: "agent-parent",
+          status: "completed"
+        }
+      ]
     });
   });
 

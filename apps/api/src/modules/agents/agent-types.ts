@@ -57,6 +57,18 @@ export interface AgentEventEnvelope {
   type: string;
 }
 
+export interface TaskSubagentHistory {
+  agentId: string;
+  messages: StoredAgentMessage[];
+  parentAgentId: string;
+  status: "running" | "completed";
+}
+
+export interface TaskMessageHistory {
+  messages: StoredAgentMessage[];
+  subagents: TaskSubagentHistory[];
+}
+
 export interface AgentEventSubscription {
   unsubscribe: () => void;
 }

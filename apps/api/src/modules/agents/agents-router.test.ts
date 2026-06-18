@@ -31,14 +31,24 @@ function createService(overrides: Partial<AgentsService> = {}): AgentsService {
       status: "deleted",
       taskId: "task-1"
     }),
-    listTaskMessages: vi.fn().mockResolvedValue([
-      {
-        content: [{ text: "History", type: "text" }],
-        id: "message-1",
-        role: "user",
-        timestamp: 1
-      }
-    ]),
+    listTaskMessages: vi.fn().mockResolvedValue({
+      messages: [
+        {
+          content: [{ text: "History", type: "text" }],
+          id: "message-1",
+          role: "user",
+          timestamp: 1
+        }
+      ],
+      subagents: [
+        {
+          agentId: "agent-child",
+          messages: [],
+          parentAgentId: "agent-1",
+          status: "completed"
+        }
+      ]
+    }),
     renameTask: vi.fn().mockResolvedValue({
       id: "task-1",
       title: "Renamed task"
@@ -142,9 +152,15 @@ describe("agent routes", () => {
       .get("/api/v1/agents/tasks/task-1/messages");
 
     expect(response.status).toBe(200);
-    expect(response.body.data[0]).toEqual(
+    expect(response.body.data.messages[0]).toEqual(
       expect.objectContaining({ id: "message-1", role: "user" })
     );
+    expect(response.body.data.subagents[0]).toEqual({
+      agentId: "agent-child",
+      messages: [],
+      parentAgentId: "agent-1",
+      status: "completed"
+    });
     expect(service.listTaskMessages).toHaveBeenCalledWith({ taskId: "task-1" });
   });
 

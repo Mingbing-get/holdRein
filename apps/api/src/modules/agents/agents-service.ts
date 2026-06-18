@@ -17,6 +17,7 @@ import {
 import { startTaskRun } from "./task-run-monitor";
 import type {
   AgentEventSubscription,
+  AgentSessionMetadata,
   ApprovalDecisionInput,
   ApprovalDecisionResult,
   StoredAgentMessage,
@@ -24,8 +25,13 @@ import type {
   StartAgentInput,
   StartAgentResult,
   SubscribeAgentEventsInput,
+  TaskMessageHistory,
   TaskTitleResult
 } from "./agent-types";
+import {
+  createInMemorySubagentRepository,
+  type SubagentRepository
+} from "./subagent-repository";
 
 export interface AgentsService {
   approveAgentAction: (
@@ -35,7 +41,7 @@ export interface AgentsService {
   getTaskTitle: (input: GetTaskTitleInput) => Promise<TaskTitleResult | null>;
   interruptTask: (input: GetTaskTitleInput) => Promise<InterruptTaskResult>;
   continueTask: (input: ContinueTaskInput) => Promise<StartAgentResult | null>;
-  listTaskMessages: (input: GetTaskTitleInput) => Promise<StoredAgentMessage[]>;
+  listTaskMessages: (input: GetTaskTitleInput) => Promise<TaskMessageHistory>;
   renameTask: (input: RenameTaskInput) => Promise<TaskTitleResult | null>;
   startAgent: (input: StartAgentInput) => Promise<StartAgentResult>;
   subscribeToAgentEvents: (
@@ -71,6 +77,7 @@ export interface CreateAgentsServiceOptions {
   now?: () => Date;
   repository: WorkspaceRepository;
   runtime: AgentRuntime;
+  subagentRepository?: SubagentRepository;
   titleGenerator: TaskTitleGenerator;
 }
 
@@ -79,6 +86,8 @@ export function createAgentsService(
 ): AgentsService {
   const titleJobs = new Map<string, Promise<TaskTitleResult>>();
   const now = options.now ?? (() => new Date());
+  const subagentRepository =
+    options.subagentRepository ?? createInMemorySubagentRepository();
 
   return {
     approveAgentAction: async (input) => {
@@ -200,15 +209,29 @@ export function createAgentsService(
     },
     listTaskMessages: async ({ taskId }) => {
       const task = options.repository.findTaskById(taskId);
-      if (!task) return [];
+      if (!task) return emptyTaskMessageHistory();
       const workspace = options.repository.findWorkspaceById(task.workspaceId);
       const session = getTaskSession(task);
-      if (!workspace || !session) return [];
+      if (!workspace || !session) return emptyTaskMessageHistory();
 
-      return options.runtime.listMessages({
+      const messages = await options.runtime.listMessages({
         session,
         workspacePath: workspace.path
       });
+      const subagents = await Promise.all(
+        subagentRepository.findByTaskId(taskId).map(async (subagent) => ({
+          agentId: subagent.agentId,
+          messages: await loadSubagentMessages({
+            runtime: options.runtime,
+            subagent,
+            workspacePath: workspace.path
+          }),
+          parentAgentId: subagent.parentAgentId,
+          status: subagent.status
+        }))
+      );
+
+      return { messages, subagents };
     },
     renameTask: async ({ taskId, title }) =>
       renameTask(
@@ -276,6 +299,46 @@ export function createAgentsService(
     },
     subscribeToAgentEvents: (input, listener) =>
       options.eventBus.subscribe(input, listener)
+  };
+}
+
+function emptyTaskMessageHistory(): TaskMessageHistory {
+  return { messages: [], subagents: [] };
+}
+
+async function loadSubagentMessages(input: {
+  runtime: AgentRuntime;
+  subagent: ReturnType<SubagentRepository["findByTaskId"]>[number];
+  workspacePath: string;
+}): Promise<StoredAgentMessage[]> {
+  const session = getSubagentSession(input.subagent);
+  if (!session) return [];
+
+  try {
+    return await input.runtime.listMessages({
+      session,
+      workspacePath: input.workspacePath
+    });
+  } catch {
+    return [];
+  }
+}
+
+function getSubagentSession(
+  subagent: ReturnType<SubagentRepository["findByTaskId"]>[number]
+): AgentSessionMetadata | undefined {
+  if (
+    !subagent.sessionCreatedAt ||
+    !subagent.sessionId ||
+    !subagent.sessionPath
+  ) {
+    return undefined;
+  }
+
+  return {
+    createdAt: subagent.sessionCreatedAt,
+    id: subagent.sessionId,
+    path: subagent.sessionPath
   };
 }
 

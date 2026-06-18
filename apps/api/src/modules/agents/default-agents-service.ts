@@ -28,6 +28,7 @@ export function getDefaultAgentsService(): AgentsService {
     const getCustomModel = createCustomModelLookup(modelProvidersService);
     migrateDatabase(database.sqlite);
     const repository = createSqliteWorkspaceRepository(database);
+    const subagentRepository = createSqliteSubagentRepository(database);
 
     const runtime = createAgentRuntime({
       approvalStore,
@@ -36,7 +37,7 @@ export function getDefaultAgentsService(): AgentsService {
         modelProvidersService.getConfiguredModelForProvider(provider, modelId)
           ?.apiKey,
       getCustomModel,
-      subagentRepository: createSqliteSubagentRepository(database)
+      subagentRepository
     });
 
     service = createAgentsService({
@@ -46,6 +47,7 @@ export function getDefaultAgentsService(): AgentsService {
       modelProvidersService,
       repository,
       runtime,
+      subagentRepository,
       titleGenerator: createDefaultTaskTitleGenerator({ getCustomModel })
     });
   }
