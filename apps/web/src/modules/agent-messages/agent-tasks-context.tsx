@@ -16,10 +16,13 @@ import {
   decideAgentApproval,
   fetchTaskMessages,
   fetchTaskTitle,
-  startAgentTask,
-  subscribeToAgentEvents
+  startAgentTask
 } from "./agent-message-api";
 import type { AgentMessageFetcher } from "./agent-message-api";
+import {
+  getAgentEventMessage,
+  startAgentEventSubscription
+} from "./agent-event-subscription";
 import {
   createInitialAgentTaskState,
   reduceAgentTaskState
@@ -152,7 +155,7 @@ export function AgentTasksProvider({
           { event, type: "event_received" }
         )
       }));
-      const message = getEventMessage(event);
+      const message = getAgentEventMessage(event);
       if (message) {
         setSubagentMessagesById((current) =>
           discoverSubagents(current, [message])
@@ -192,7 +195,7 @@ export function AgentTasksProvider({
         continue;
       }
 
-      startSubscription({
+      startAgentEventSubscription({
         agentId: task.activeAgentId,
         apiBaseUrl,
         fetcher,
@@ -212,7 +215,7 @@ export function AgentTasksProvider({
   useEffect(() => {
     for (const agentId of Object.keys(subagentMessagesById)) {
       if (subscriptions.current.has(agentId)) continue;
-      startSubscription({
+      startAgentEventSubscription({
         agentId,
         apiBaseUrl,
         fetcher,
@@ -244,7 +247,7 @@ export function AgentTasksProvider({
         )
       }));
 
-      startSubscription({
+      startAgentEventSubscription({
         agentId: result.agentId,
         apiBaseUrl,
         fetcher,
@@ -280,7 +283,7 @@ export function AgentTasksProvider({
           { prompt: input.prompt, type: "prompt_submitted" }
         )
       }));
-      startSubscription({
+      startAgentEventSubscription({
         agentId: result.agentId,
         apiBaseUrl,
         fetcher,
@@ -404,41 +407,4 @@ function getActiveAgentId(
   return workspaces
     .flatMap((workspace) => workspace.tasks)
     .find((task) => task.id === taskId)?.activeAgentId;
-}
-
-function startSubscription(input: {
-  agentId: string;
-  apiBaseUrl: string;
-  fetcher: AgentMessageFetcher;
-  onError: (error: unknown) => void;
-  onEvent: (event: AgentEventEnvelope) => void;
-  subscriptions: React.RefObject<Map<string, AbortController>>;
-}): void {
-  const controller = new AbortController();
-  input.subscriptions.current.set(input.agentId, controller);
-
-  void subscribeToAgentEvents(
-    input.apiBaseUrl,
-    { agentId: input.agentId, signal: controller.signal },
-    input.onEvent,
-    input.fetcher
-  )
-    .catch((error: unknown) => {
-      if (controller.signal.aborted) return;
-      input.onError(error);
-    })
-    .finally(() => {
-      input.subscriptions.current.delete(input.agentId);
-    });
-}
-
-function getEventMessage(
-  event: AgentEventEnvelope
-): WebPlugin.AgentMessage | undefined {
-  if (event.type !== "message_start" && event.type !== "message_end") {
-    return undefined;
-  }
-  const payload = event.payload;
-  if (!payload || typeof payload !== "object") return undefined;
-  return (payload as { message?: WebPlugin.AgentMessage }).message;
 }
