@@ -67,6 +67,7 @@ export namespace ServerPlugin {
   export interface AgentContinuation {
     readonly details?: unknown;
     readonly prompt: string;
+    readonly useSubagent?: boolean;
   }
 
   export type ToolBeforeExecuteResult = ToolCallResult | undefined;

@@ -67,7 +67,7 @@ vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
   };
 });
 
-vi.mock("../../plugin", () => ({
+vi.mock("../../../plugin", () => ({
   pluginRegistry: {
     resolveContributions
   }
@@ -178,6 +178,75 @@ describe("agent runtime subagent calls", () => {
     expect(prompt).toHaveBeenCalledTimes(2);
     expect(result.agentId).toMatch(/^agent_/);
     resolveParentPrompt?.();
+  });
+
+  it("starts plugin continuation prompts in a subagent when requested", async () => {
+    const { appendCustomMessageEntry, create, repo } = createSessionRepo();
+    const eventBus = createAgentEventBus();
+    const subagentRepository = createInMemorySubagentRepository();
+    resolveContributions.mockResolvedValue(createContribution({
+      onAgentEnd: vi.fn().mockResolvedValue({
+        details: { source: "test-plugin" },
+        prompt: "Run this follow-up separately",
+        useSubagent: true
+      })
+    }));
+    const runtime = createRuntime(repo, eventBus, subagentRepository);
+
+    const result = await runtime.start(createRunInput());
+    const callMessages: { content?: string; customType?: string; details?: unknown }[] = [];
+    eventBus.subscribe({ agentId: result.agentId }, (event) => {
+      if (event.type !== "message_start") return;
+      const payload = event.payload as {
+        message?: { content?: string; customType?: string; details?: unknown };
+      };
+      if (payload.message?.customType) {
+        callMessages.push(payload.message);
+      }
+    });
+    await harnessSubscribers[0]?.({ type: "agent_end" });
+
+    const childRows = subagentRepository.findByTaskId("task-1");
+    expect(childRows).toHaveLength(1);
+    expect(childRows[0]).toEqual(expect.objectContaining({
+      parentAgentId: result.agentId,
+      sessionId: "session-2",
+      status: "running"
+    }));
+    expect(appendCustomMessageEntry).toHaveBeenCalledWith(
+      "callsubagent",
+      'Subagent "subagent" is running.',
+      true,
+      expect.objectContaining({
+        agentName: "subagent",
+        parentAgentId: result.agentId,
+        session: expect.objectContaining({ id: "session-2" }),
+        taskId: "task-1"
+      })
+    );
+    expect(appendCustomMessageEntry).not.toHaveBeenCalledWith(
+      "agent_continuation",
+      expect.anything(),
+      true,
+      expect.anything()
+    );
+    expect(callMessages).toEqual([
+      expect.objectContaining({
+        content: 'Subagent "subagent" is running.',
+        customType: "callsubagent",
+        details: expect.objectContaining({
+          agentName: "subagent",
+          parentAgentId: result.agentId,
+          session: expect.objectContaining({ id: "session-2" }),
+          taskId: "task-1"
+        })
+      })
+    ]);
+    expect(create).toHaveBeenCalledTimes(2);
+    expect(prompt).toHaveBeenNthCalledWith(2, "Run this follow-up separately");
+    expect(harnessConstructor.mock.calls[1]?.[0]).toEqual(expect.objectContaining({
+      activeToolNames: expect.arrayContaining(["call_subagent"])
+    }));
   });
 
   it("adds a revoke tool to the parent harness after a subagent completes", async () => {

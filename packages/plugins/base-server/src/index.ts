@@ -10,11 +10,11 @@ const baseServerPlugin: ServerPlugin.Plugin = {
     return {
       tools: [createShellExecTool(context.env)],
       // onAgentEnd: () => {
-      //   if (context.isContinue) {
+      //   if (context.isContinue || context.agentName !== 'main') {
       //     return
       //   }
 
-      //   return { prompt: '测试自动运行' }
+      //   return { prompt: '测试自动运行', useSubagent: true }
       // }
     }
   }
