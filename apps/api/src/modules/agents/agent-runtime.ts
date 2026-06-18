@@ -9,9 +9,10 @@ import { toStoredAgentMessage } from "./agent-message-storage";
 import { resolveAgentModel, type AgentModelLookup } from "./agent-model-resolver";
 import { type AgentRunResult, type AgentSessionMetadata, type StoredAgentMessage, type RunAgentInput } from "./agent-types";
 import { appendVisibleCustomMessage } from "./agent-runtime-messages";
-import { runToolBeforeExecute } from "./agent-tool-approval";
-import { createCallSubagentTool, extractAssistantText, formatSubagentResult, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "./agent-subagents";
+import { addPendingSubagentResult, appendSubagentResult, flushPendingSubagentResults } from "./agent-runtime-subagent-results";
 import { createSessionRepo, getEnvApiKey, getSkillDirs, interruptHarness, toAgentSessionMetadata } from "./agent-runtime-support";
+import { runToolBeforeExecute } from "./agent-tool-approval";
+import { createCallSubagentTool, extractAssistantText, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "./agent-subagents";
 import {
   createInMemorySubagentRepository,
   type SubagentRepository
@@ -21,7 +22,6 @@ import { pluginRegistry } from '../../plugin'
 const AGENT_CONTINUATION_CUSTOM_TYPE = "agent_continuation";
 const AGENT_CONTINUE_PROMPT = "";
 const CALL_SUBAGENT_CUSTOM_TYPE = "callsubagent";
-const SUBAGENT_RESULT_CUSTOM_TYPE = "subagent_result";
 
 export interface AgentRuntime {
   interrupt: (agentId: string) => Promise<boolean>;
@@ -99,12 +99,11 @@ export function createAgentRuntime(
         throw new Error("Unknown model");
       }
 
+      const pendingSubagentResults = new Map<string, Set<string>>();
+
       const createHarness = async (harnessOptions: CreateHarnessOptions) => {
         let activeMessageId: string | undefined;
-        const pendingVisibleMessages = new Map<
-          string,
-          PendingVisibleCustomMessage[]
-        >();
+        const pendingVisibleMessages = new Map<string, PendingVisibleCustomMessage[]>();
         const pluginContext: ServerPlugin.RuntimeContext = {
           agentName: harnessOptions.agentName ?? "main",
           env,
@@ -283,6 +282,13 @@ export function createAgentRuntime(
                 }
                 pendingVisibleMessages.delete(event.message.toolCallId);
               }
+              await flushPendingSubagentResults({
+                agentId: harnessOptions.agentId,
+                eventBus: options.eventBus,
+                pendingSubagentResults,
+                session: harnessOptions.session,
+                subagents
+              });
             }
             return;
           }
@@ -339,45 +345,39 @@ export function createAgentRuntime(
         if (continued) return;
 
         subagent.status = "completed";
-        subagentRepository.updateStatus(
-          subagent.agentId,
-          "completed",
-          new Date().toISOString()
-        );
+        subagentRepository.updateStatus(subagent.agentId, "completed", new Date().toISOString());
         await continueOrEndTask(
           subagent.parentAgentId,
           subagent.parentAgentName,
           subagent.parentSession,
-          undefined
+          undefined,
+          { deferIfRunning: true }
         );
-        subagents.delete(subagent.agentId);
+        if (subagent.consumed) {
+          subagents.delete(subagent.agentId);
+        }
       };
 
       const continueOrEndTask = async (
         harnessAgentId: string,
         harnessAgentName: string | undefined,
         harnessSession: HarnessSession,
-        contribution: ServerPlugin.Contribution | undefined
+        contribution: ServerPlugin.Contribution | undefined,
+        continueOptions: { deferIfRunning?: boolean } = {}
       ): Promise<boolean> => {
         const currentSubagent = subagents.get(harnessAgentId);
-        const completedSubagent = getNextCompletedSubagent(
-          subagents,
-          harnessAgentId
-        );
+        const completedSubagent = getNextCompletedSubagent(subagents, harnessAgentId);
         if (completedSubagent) {
-          completedSubagent.consumed = true;
-          const prompt = formatSubagentResult(completedSubagent);
-          await appendVisibleCustomMessage({
+          if (continueOptions.deferIfRunning && runningAgents.has(harnessAgentId)) {
+            addPendingSubagentResult(pendingSubagentResults, harnessAgentId, completedSubagent.agentId);
+            return true;
+          }
+          const prompt = await appendSubagentResult({
             agentId: harnessAgentId,
-            content: prompt,
-            customType: SUBAGENT_RESULT_CUSTOM_TYPE,
-            details: {
-              agentId: completedSubagent.agentId,
-              agentName: completedSubagent.agentName,
-              session: completedSubagent.session
-            },
             eventBus: options.eventBus,
-            session: harnessSession
+            pendingSubagentResults,
+            session: harnessSession,
+            subagent: completedSubagent
           });
           await startHarness(AGENT_CONTINUE_PROMPT, {
             agentId: harnessAgentId,

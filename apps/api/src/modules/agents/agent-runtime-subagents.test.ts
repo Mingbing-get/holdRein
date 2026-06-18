@@ -8,6 +8,7 @@ import {
   createRuntime,
   createSessionRepo,
   getHarnessTool,
+  subagentInput,
   toolResultMessage
 } from "./agent-runtime-test-utils";
 
@@ -106,5 +107,58 @@ describe("agent runtime subagent calls", () => {
       'Subagent "researcher" is running.',
       'Subagent "reviewer" is running.'
     ]);
+  });
+
+  it("defers completed subagent results while the parent harness is running", async () => {
+    const { appendCustomMessageEntry, repo } = createSessionRepo();
+    const eventBus = createAgentEventBus();
+    const subagentRepository = createInMemorySubagentRepository();
+    const runtime = createRuntime(repo, eventBus, subagentRepository);
+    let resolveParentPrompt: (() => void) | undefined;
+    prompt.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      resolveParentPrompt = resolve;
+    }));
+    const result = await runtime.start(createRunInput());
+    const subagentTool = getHarnessTool(harnessConstructor, "call_subagent");
+    const callResult = await subagentTool?.execute?.(
+      "tool-call-1",
+      subagentInput()
+    ) as { details?: { agentId?: string } } | undefined;
+    const childAgentId = callResult?.details?.agentId ?? "";
+
+    await harnessSubscribers[1]?.({
+      message: {
+        content: [{ text: "The auth module is isolated.", type: "text" }],
+        role: "assistant",
+        timestamp: 2
+      },
+      type: "message_end"
+    });
+    await harnessSubscribers[1]?.({ type: "agent_end" });
+
+    expect(appendCustomMessageEntry).not.toHaveBeenCalledWith(
+      "subagent_result",
+      expect.anything(),
+      true,
+      expect.anything()
+    );
+    expect(prompt).toHaveBeenCalledTimes(2);
+    expect(subagentRepository.findByAgentId(childAgentId)?.status)
+      .toBe("completed");
+
+    await harnessSubscribers[0]?.({
+      message: toolResultMessage("tool-call-1"),
+      type: "message_end"
+    });
+
+    expect(appendCustomMessageEntry).toHaveBeenCalledWith(
+      "subagent_result",
+      expect.stringContaining("The auth module is isolated."),
+      true,
+      expect.objectContaining({ agentId: childAgentId, agentName: "researcher" })
+    );
+    expect(prompt).toHaveBeenCalledTimes(2);
+    expect(result.agentId).toMatch(/^agent_/);
+    resolveParentPrompt?.();
   });
 });
