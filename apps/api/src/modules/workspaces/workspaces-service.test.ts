@@ -114,7 +114,11 @@ describe("workspaces service navigation", () => {
     });
     const activeTaskRuns = createActiveTaskRunRegistry();
     activeTaskRuns.register("task-one", "agent-one");
-    const service = createWorkspacesService({ activeTaskRuns, repository });
+    const service = createWorkspacesService({
+      activeTaskRuns,
+      now: () => new Date("2026-06-11T01:00:00.000Z"),
+      repository
+    });
 
     expect(
       service.listRecentWorkspaceTasks().workspaces[0]?.tasks[0]
@@ -152,7 +156,11 @@ describe("workspaces service navigation", () => {
     });
     const activeTaskRuns = createActiveTaskRunRegistry();
     activeTaskRuns.markStarting("task-one");
-    const service = createWorkspacesService({ activeTaskRuns, repository });
+    const service = createWorkspacesService({
+      activeTaskRuns,
+      now: () => new Date("2026-06-11T01:00:00.000Z"),
+      repository
+    });
 
     expect(
       service.listRecentWorkspaceTasks().workspaces[0]?.tasks[0]
