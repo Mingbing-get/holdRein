@@ -1,4 +1,3 @@
-import type { JsonlSessionRepoApi } from "@earendil-works/pi-agent-core";
 import { Type } from "@earendil-works/pi-ai";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServerPlugin } from "@hold-rein/plugin-server";

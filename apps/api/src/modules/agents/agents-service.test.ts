@@ -557,7 +557,7 @@ describe("agents service", () => {
           {
             content: `History for ${session.id}`,
             id: `message-${session.id}`,
-            role: "user",
+            role: "user" as const,
             timestamp: 1
           }
         ];
