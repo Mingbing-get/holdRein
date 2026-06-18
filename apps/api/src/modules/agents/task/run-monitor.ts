@@ -2,7 +2,7 @@ import type { TaskRow } from "../../../db";
 import type { WorkspaceRepository } from "../../workspaces/workspace-repository";
 import type { ActiveTaskRunRegistry } from "./active-run-registry";
 import type { AgentEventBus } from "../event/event-bus";
-import type { AgentRuntime } from "../runtime";
+import type { AgentRuntime } from "../runtime/type";
 import type { AgentEventSubscription } from "../agent-types";
 
 export async function startTaskRun(input: {

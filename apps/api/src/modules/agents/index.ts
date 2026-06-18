@@ -8,7 +8,8 @@ export {
   type AgentApprovalStore
 } from "./approval/store";
 export { createAgentEventBus, type AgentEventBus } from "./event/event-bus";
-export { createAgentRuntime, type AgentRuntime } from "./runtime";
+export { createAgentRuntime } from "./runtime";
+export { type AgentRuntime } from './runtime/type';
 export {
   createAgentsRouter,
   type CreateAgentsRouterOptions

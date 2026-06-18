@@ -1,0 +1,44 @@
+import type { AgentHarness, JsonlSessionRepoApi } from "@earendil-works/pi-agent-core/node";
+import type { AgentRunResult, AgentSessionMetadata, StoredAgentMessage, RunAgentInput } from "../agent-types";
+import type { AgentApprovalStore } from "../approval/store";
+import type { AgentEventBus } from "../event/event-bus";
+import type { AgentModelLookup } from '../model/resolver'
+import type { SubagentRepository } from "../subagent/repository";
+
+export interface AgentRuntime {
+  interrupt: (agentId: string) => Promise<boolean>;
+  listMessages: (input: { session: AgentSessionMetadata; workspacePath: string }) => Promise<StoredAgentMessage[]>;
+  start: (input: RunAgentInput) => Promise<AgentRunResult>;
+}
+
+export interface CreateAgentRuntimeOptions {
+  approvalStore: AgentApprovalStore;
+  eventBus: AgentEventBus;
+  getApiKey?: (provider: string, modelId: string) => Promise<string | undefined>;
+  getCustomModel?: AgentModelLookup;
+  sessionRepo?: JsonlSessionRepoApi;
+  skillDirs?: string[];
+  subagentRepository?: SubagentRepository;
+}
+
+export interface RunningAgent { harness: AgentHarness; sessionId: string }
+
+export type HarnessSession = Awaited<ReturnType<JsonlSessionRepoApi["create"]>>;
+
+export interface StartHarnessOptions {
+  agentId?: string;
+  agentName?: string;
+  isContinue: boolean;
+  parentAgentId?: string;
+  pluginPrompt: string;
+  session?: HarnessSession;
+}
+
+export type CreateHarnessOptions = StartHarnessOptions & {
+  agentId: string;
+  session: HarnessSession;
+};
+
+export interface PendingVisibleCustomMessage { content: string; customType: string; details?: unknown }
+
+export interface StartHarnessResult { agentId: string; harnessSession: HarnessSession; session: AgentSessionMetadata }

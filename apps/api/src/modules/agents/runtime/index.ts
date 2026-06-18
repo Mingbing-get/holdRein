@@ -1,13 +1,9 @@
-/* eslint-disable max-lines */
 import { randomUUID } from "node:crypto";
 
-import { AgentHarness, NodeExecutionEnv, formatSkillsForSystemPrompt, loadSkills, type JsonlSessionRepoApi } from "@earendil-works/pi-agent-core/node";
+import { AgentHarness, NodeExecutionEnv, formatSkillsForSystemPrompt, loadSkills } from "@earendil-works/pi-agent-core/node";
 import type { ServerPlugin } from '@hold-rein/plugin-server'
-import type { AgentApprovalStore } from "../approval/store";
-import type { AgentEventBus } from "../event/event-bus";
 import { toStoredAgentMessage } from "../message/storage";
-import { resolveAgentModel, type AgentModelLookup } from "../model/resolver";
-import { type AgentRunResult, type AgentSessionMetadata, type StoredAgentMessage, type RunAgentInput } from "../agent-types";
+import { resolveAgentModel } from "../model/resolver";
 import { appendVisibleCustomMessage } from "./messages";
 import { addPendingSubagentResult, appendSubagentResult, flushPendingSubagentResults } from "./subagent-results";
 import { createSessionRepo, getEnvApiKey, getSkillDirs, interruptHarness, toAgentSessionMetadata } from "./support";
@@ -15,48 +11,14 @@ import { runToolBeforeExecute } from "../approval/tool-approval";
 import { createCallSubagentTool, extractAssistantText, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "../subagent";
 import {
   createInMemorySubagentRepository,
-  type SubagentRepository
 } from "../subagent/repository";
 import { pluginRegistry } from '../../../plugin'
+
+import type { AgentRuntime, CreateAgentRuntimeOptions, RunningAgent, HarnessSession, CreateHarnessOptions, PendingVisibleCustomMessage, StartHarnessOptions, StartHarnessResult } from './type'
 
 const AGENT_CONTINUATION_CUSTOM_TYPE = "agent_continuation";
 const AGENT_CONTINUE_PROMPT = "";
 const CALL_SUBAGENT_CUSTOM_TYPE = "callsubagent";
-
-export interface AgentRuntime {
-  interrupt: (agentId: string) => Promise<boolean>;
-  listMessages: (input: { session: AgentSessionMetadata; workspacePath: string }) => Promise<StoredAgentMessage[]>;
-  start: (input: RunAgentInput) => Promise<AgentRunResult>;
-}
-
-export interface CreateAgentRuntimeOptions {
-  approvalStore: AgentApprovalStore;
-  eventBus: AgentEventBus;
-  getApiKey?: (provider: string, modelId: string) => Promise<string | undefined>;
-  getCustomModel?: AgentModelLookup;
-  sessionRepo?: JsonlSessionRepoApi;
-  skillDirs?: string[];
-  subagentRepository?: SubagentRepository;
-}
-
-interface RunningAgent { harness: AgentHarness; sessionId: string }
-
-type HarnessSession = Awaited<ReturnType<JsonlSessionRepoApi["create"]>>;
-
-interface StartHarnessOptions {
-  agentId?: string;
-  agentName?: string;
-  isContinue: boolean;
-  parentAgentId?: string;
-  pluginPrompt: string;
-  session?: HarnessSession;
-}
-
-type CreateHarnessOptions = StartHarnessOptions & { agentId: string; session: HarnessSession };
-
-interface PendingVisibleCustomMessage { content: string; customType: string; details?: unknown }
-
-interface StartHarnessResult { agentId: string; harnessSession: HarnessSession; session: AgentSessionMetadata }
 
 export function createAgentRuntime(
   options: CreateAgentRuntimeOptions

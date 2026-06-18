@@ -8,7 +8,7 @@ import type { WorkspaceRepository } from "../../workspaces/workspace-repository"
 import type { AgentApprovalStore } from "../approval/store";
 import type { ActiveTaskRunRegistry } from "../task/active-run-registry";
 import type { AgentEventBus, AgentEventListener } from "../event/event-bus";
-import type { AgentRuntime } from "../runtime";
+import type { AgentRuntime } from "../runtime/type";
 import type { TaskTitleGenerator } from "../task/title-generator";
 import {
   deleteTask,

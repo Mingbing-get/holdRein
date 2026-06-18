@@ -1,6 +1,6 @@
 import { unlink } from "node:fs/promises";
 
-import type { AgentRuntime } from "../runtime";
+import type { AgentRuntime } from "../runtime/type";
 import type { SubagentRepository } from "./repository";
 
 export async function interruptRunningSubagents(input: {
