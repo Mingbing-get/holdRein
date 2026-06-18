@@ -1,10 +1,9 @@
 import type {
   AgentEventEnvelope,
   AgentTaskState,
-  PendingApproval,
-  ThinkingContent,
-  TextContent
+  PendingApproval
 } from "./agent-message-types";
+import { reduceAgentMessages } from "./agent-message-collection";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
 export type AgentTaskAction =
@@ -20,7 +19,6 @@ export function createInitialAgentTaskState(taskId: string): AgentTaskState {
     lastSequence: 0,
     messages: [],
     pendingApprovals: [],
-    runs: [],
     status: "idle",
     taskId
   };
@@ -46,7 +44,7 @@ export function reduceAgentTaskState(
     };
   }
   if (action.type === "history_loaded") {
-    return registerSubagentRuns({ ...state, messages: action.messages }, action.messages);
+    return { ...state, messages: action.messages };
   }
   if (action.type === "subscription_failed") {
     return { ...state, error: action.message, status: "error" };
@@ -81,22 +79,15 @@ export function reduceAgentTaskState(
       pendingApprovals: [...next.pendingApprovals, approval]
     };
   }
-  if (action.event.type === "message_start") {
-    const message = payload?.message as WebPlugin.AgentMessage | undefined;
-    return message
-      ? registerSubagentRuns(upsertMessage(next, message), [message])
-      : next;
-  }
-  if (action.event.type === "message_delta") {
-    const messageId = payload?.messageId;
-    const delta = getRecord(payload?.delta);
-    return typeof messageId === "string" && delta
-      ? mergeAssistantDelta(next, messageId, delta)
-      : next;
-  }
-  if (action.event.type === "message_end") {
-    const message = payload?.message as WebPlugin.AgentMessage | undefined;
-    return message ? upsertMessage(next, message) : next;
+  if (
+    action.event.type === "message_start" ||
+    action.event.type === "message_delta" ||
+    action.event.type === "message_end"
+  ) {
+    return {
+      ...next,
+      messages: reduceAgentMessages(state.messages, action.event)
+    };
   }
   if (action.event.type === "agent_error") {
     const message = typeof payload?.message === "string" ? payload.message : "Agent run failed";
@@ -106,112 +97,6 @@ export function reduceAgentTaskState(
     return { ...next, status: "completed" };
   }
   return next;
-}
-
-function upsertMessage(state: AgentTaskState, message: WebPlugin.AgentMessage): AgentTaskState {
-  const index = state.messages.findIndex((candidate) => candidate.id === message.id);
-  if (index === -1) {
-    const optimisticIndex =
-      message.role === "user"
-        ? state.messages.findIndex(
-            (candidate) =>
-              candidate.role === "user" &&
-              candidate.id.startsWith("prompt-") &&
-              getMessageText(candidate) === getMessageText(message)
-          )
-        : -1;
-    if (optimisticIndex === -1) {
-      return { ...state, messages: [...state.messages, message] };
-    }
-    const messages = [...state.messages];
-    messages[optimisticIndex] = message;
-    return { ...state, messages };
-  }
-  const messages = [...state.messages];
-  messages[index] = message;
-  return { ...state, messages };
-}
-
-function registerSubagentRuns(
-  state: AgentTaskState,
-  messages: WebPlugin.AgentMessage[]
-): AgentTaskState {
-  const runs = messages.flatMap(getSubagentRun);
-  if (!runs.length) return state;
-
-  const nextRuns = [...state.runs];
-  for (const run of runs) {
-    if (!nextRuns.some((candidate) => candidate.agentId === run.agentId)) {
-      nextRuns.push(run);
-    }
-  }
-
-  return nextRuns.length === state.runs.length
-    ? state
-    : { ...state, runs: nextRuns, status: "running" };
-}
-
-function getSubagentRun(message: WebPlugin.AgentMessage) {
-  if (message.role !== "custom" || message.customType !== "callsubagent") {
-    return [];
-  }
-  const details = getRecord(message.details);
-  const session = getRecord(details?.session);
-
-  return typeof details?.agentId === "string" && typeof session?.id === "string"
-    ? [{ agentId: details.agentId, sessionId: session.id, status: "running" as const }]
-    : [];
-}
-
-function getMessageText(message: WebPlugin.AgentMessage): string {
-  if (!("content" in message)) return "";
-  if (typeof message.content === "string") return message.content;
-  return message.content
-    .filter((block) => block.type === "text")
-    .map((block) => ("text" in block ? block.text : ""))
-    .join("");
-}
-
-function mergeAssistantDelta(
-  state: AgentTaskState,
-  messageId: string,
-  delta: Record<string, unknown>
-): AgentTaskState {
-  const index = state.messages.findIndex((message) => message.id === messageId);
-  const message = state.messages[index];
-  if (!message || message.role !== "assistant") return state;
-  const contentIndex = typeof delta.contentIndex === "number" ? delta.contentIndex : 0;
-  const content = [...message.content];
-  const type = delta.type;
-
-  if (type === "text_start") content[contentIndex] = { text: "", type: "text" };
-  if (type === "thinking_start") {
-    content[contentIndex] = { thinking: "", type: "thinking" };
-  }
-  if (type === "text_delta" && typeof delta.delta === "string") {
-    content[contentIndex] = appendText(content[contentIndex], delta.delta);
-  }
-  if (type === "thinking_delta" && typeof delta.delta === "string") {
-    content[contentIndex] = appendThinking(content[contentIndex], delta.delta);
-  }
-
-  const messages = [...state.messages];
-  messages[index] = { ...message, content };
-  return { ...state, messages };
-}
-
-function appendText(value: WebPlugin.AssistantMessage["content"][number] | undefined, delta: string): TextContent {
-  return { text: (value?.type === "text" ? value.text : "") + delta, type: "text" };
-}
-
-function appendThinking(
-  value: WebPlugin.AssistantMessage["content"][number] | undefined,
-  delta: string
-): ThinkingContent {
-  return {
-    thinking: (value?.type === "thinking" ? value.thinking : "") + delta,
-    type: "thinking"
-  };
 }
 
 function getRecord(value: unknown): Record<string, unknown> | undefined {

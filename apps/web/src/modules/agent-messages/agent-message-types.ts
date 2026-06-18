@@ -35,12 +35,6 @@ export interface AgentEventEnvelope {
   type: string;
 }
 
-export interface AgentRun {
-  agentId: string;
-  sessionId: string;
-  status: "running";
-}
-
 export interface PendingApproval {
   agentId: string;
   approvalId: string;
@@ -66,10 +60,11 @@ export interface AgentTaskState {
   lastSequence: number;
   messages: WebPlugin.AgentMessage[];
   pendingApprovals: PendingApproval[];
-  runs: AgentRun[];
   status: "idle" | "running" | "completed" | "error";
   taskId: string;
 }
+
+export type SubagentMessagesById = Record<string, WebPlugin.AgentMessage[]>;
 
 export interface StartTaskInput {
   modelId: string;

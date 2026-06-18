@@ -93,7 +93,7 @@ describe("agent task message reducer", () => {
     expect(state.messages).toEqual([persisted]);
   });
 
-  it("registers a subagent run from callsubagent messages", () => {
+  it("keeps callsubagent messages without adding child runs", () => {
     const message = {
       content: "Subagent is running",
       customType: "callsubagent",
@@ -108,12 +108,11 @@ describe("agent task message reducer", () => {
       type: "event_received"
     });
 
-    expect(state.runs).toEqual([
-      { agentId: "agent-child", sessionId: "session-child", status: "running" }
-    ]);
+    expect(state.messages).toEqual([message]);
+    expect(state).not.toHaveProperty("runs");
   });
 
-  it("registers subagent runs when loading stored history", () => {
+  it("loads callsubagent history without adding child runs", () => {
     const state = reduceAgentTaskState(createInitialAgentTaskState("task-1"), {
       messages: [{
         content: "Subagent is running",
@@ -127,7 +126,8 @@ describe("agent task message reducer", () => {
       type: "history_loaded"
     });
 
-    expect(state.runs).toHaveLength(1);
+    expect(state.messages).toHaveLength(1);
+    expect(state).not.toHaveProperty("runs");
   });
 
   it("queues approval requests without adding them to messages", () => {
