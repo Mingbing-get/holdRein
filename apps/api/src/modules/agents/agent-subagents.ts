@@ -1,4 +1,4 @@
-import { Type } from "@earendil-works/pi-ai";
+import { Type, type Static } from "@earendil-works/pi-ai";
 import type { ServerPlugin } from "@hold-rein/plugin-server";
 
 import type { AgentSessionMetadata } from "./agent-types";
@@ -16,6 +16,43 @@ export interface SubagentRun<ParentSession> {
   status: "running" | "completed";
 }
 
+const callSubagentParameters = Type.Object({
+  agentName: Type.Optional(
+    Type.String({
+      description: "Short display name for the child agent."
+    })
+  ),
+  prompt: Type.Optional(
+    Type.String({
+      description: "Task prompt for the child agent."
+    })
+  ),
+  subagents: Type.Optional(
+    Type.Array(
+      Type.Object({
+        agentName: Type.Optional(
+          Type.String({
+            description: "Short display name for this child agent."
+          })
+        ),
+        prompt: Type.String({
+          description: "Task prompt for this child agent."
+        })
+      }),
+      {
+        description: "Child agents to start in parallel."
+      }
+    )
+  )
+});
+
+type CallSubagentParameters = Static<typeof callSubagentParameters>;
+
+interface CallSubagentRequest {
+  agentName: string;
+  prompt: string;
+}
+
 export function createCallSubagentTool(input: {
   startSubagent: (input: {
     agentName: string;
@@ -31,35 +68,67 @@ export function createCallSubagentTool(input: {
     executionMode: "parallel",
     label: "Call Subagent",
     name: "call_subagent",
-    parameters: Type.Object({
-      agentName: Type.String({
-        description: "Short display name for the child agent."
-      }),
-      prompt: Type.String({
-        description: "Task prompt for the child agent."
-      })
-    }),
+    parameters: callSubagentParameters,
     async execute(toolCallId, rawParams) {
-      const params = rawParams as Partial<{
-        agentName: unknown;
-        prompt: unknown;
-      }>;
-      const agentName =
-        typeof params.agentName === "string" && params.agentName.trim()
-          ? params.agentName.trim()
-          : "subagent";
-      const prompt =
-        typeof params.prompt === "string" && params.prompt.trim()
-          ? params.prompt.trim()
-          : "";
+      const requests = parseCallSubagentRequests(
+        rawParams as Partial<CallSubagentParameters>
+      );
+      const results = await Promise.all(
+        requests.map(({ agentName, prompt }) =>
+          input.startSubagent({ agentName, prompt, toolCallId })
+        )
+      );
 
-      if (!prompt) {
-        throw new Error("call_subagent requires a prompt");
+      if (results.length === 1) {
+        const result = results[0];
+        if (!result) throw new Error("call_subagent failed to start");
+        return result;
       }
 
-      return input.startSubagent({ agentName, prompt, toolCallId });
+      return {
+        content: [
+          {
+            text: results
+              .flatMap((result) => result.content.map((block) => block.text))
+              .join("\n"),
+            type: "text" as const
+          }
+        ],
+        details: {
+          subagents: results.map((result) => result.details)
+        }
+      };
     }
   };
+}
+
+function parseCallSubagentRequests(
+  params: Partial<CallSubagentParameters>
+): CallSubagentRequest[] {
+  const rawSubagents = Array.isArray(params.subagents) ? params.subagents : [];
+  const requests = rawSubagents.length
+    ? rawSubagents.map((subagent) => ({
+        agentName: subagent.agentName,
+        prompt: subagent.prompt
+      }))
+    : [{ agentName: params.agentName, prompt: params.prompt }];
+
+  return requests.map((request) => {
+    const agentName =
+      typeof request.agentName === "string" && request.agentName.trim()
+        ? request.agentName.trim()
+        : "subagent";
+    const prompt =
+      typeof request.prompt === "string" && request.prompt.trim()
+        ? request.prompt.trim()
+        : "";
+
+    if (!prompt) {
+      throw new Error("call_subagent requires a prompt");
+    }
+
+    return { agentName, prompt };
+  });
 }
 
 export function getNextCompletedSubagent<ParentSession>(

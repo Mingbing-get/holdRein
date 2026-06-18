@@ -103,7 +103,7 @@ export function createAgentRuntime(
         let activeMessageId: string | undefined;
         const pendingVisibleMessages = new Map<
           string,
-          PendingVisibleCustomMessage
+          PendingVisibleCustomMessage[]
         >();
         const pluginContext: ServerPlugin.RuntimeContext = {
           agentName: harnessOptions.agentName ?? "main",
@@ -180,11 +180,13 @@ export function createAgentRuntime(
                 session: started.session,
                 status: "running"
               });
-              pendingVisibleMessages.set(toolCallId, {
+              const pendingMessages = pendingVisibleMessages.get(toolCallId) ?? [];
+              pendingMessages.push({
                 content: `Subagent "${agentName}" is running.`,
                 customType: CALL_SUBAGENT_CUSTOM_TYPE,
                 details
               });
+              pendingVisibleMessages.set(toolCallId, pendingMessages);
 
               return {
                 content: [
@@ -267,16 +269,18 @@ export function createAgentRuntime(
             });
             activeMessageId = undefined;
             if (event.message.role === "toolResult") {
-              const pendingMessage = pendingVisibleMessages.get(
+              const pendingMessages = pendingVisibleMessages.get(
                 event.message.toolCallId
               );
-              if (pendingMessage) {
-                await appendVisibleCustomMessage({
-                  agentId: harnessOptions.agentId,
-                  ...pendingMessage,
-                  eventBus: options.eventBus,
-                  session: harnessOptions.session
-                });
+              if (pendingMessages) {
+                for (const pendingMessage of pendingMessages) {
+                  await appendVisibleCustomMessage({
+                    agentId: harnessOptions.agentId,
+                    ...pendingMessage,
+                    eventBus: options.eventBus,
+                    session: harnessOptions.session
+                  });
+                }
                 pendingVisibleMessages.delete(event.message.toolCallId);
               }
             }
@@ -363,9 +367,6 @@ export function createAgentRuntime(
         if (completedSubagent) {
           completedSubagent.consumed = true;
           const prompt = formatSubagentResult(completedSubagent);
-          // 这里有问题，因为子agent结束时父agent可能还在运行，所以不能直接加入消息并再次启动父agent，应该先检查父agent的状态，
-          // 若父agent未在运行则执行以下逻辑，
-          // 若父agent正在运行则应该等一个父agent可插入消息的位置（例如下一轮工具执行完成后），插入消息即可，无需重启一个harness
           await appendVisibleCustomMessage({
             agentId: harnessAgentId,
             content: prompt,
