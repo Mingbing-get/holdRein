@@ -98,7 +98,10 @@ export interface StartedTask {
   workspaceId: string;
 }
 
-export interface StartTaskResult extends AgentRun {
+export interface StartTaskResult {
+  agentId: string;
+  sessionId: string;
+  status: "running";
   task: StartedTask;
   workspace: StartedWorkspace;
 }
