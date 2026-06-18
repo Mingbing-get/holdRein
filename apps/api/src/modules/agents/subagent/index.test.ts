@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createCallSubagentTool } from ".";
+import { createCallSubagentTool, createRevokeSubagentTool } from ".";
 
 describe("call subagent tool", () => {
   it("starts every requested subagent concurrently", async () => {
@@ -50,5 +50,44 @@ describe("call subagent tool", () => {
         subagents: [{ agentName: "researcher" }, { agentName: "reviewer" }]
       }
     });
+  });
+});
+
+describe("revoke subagent tool", () => {
+  it("continues an existing subagent with the required prompt", async () => {
+    const continueSubagent = vi.fn().mockResolvedValue({
+      content: [{ text: "Subagent resumed", type: "text" }],
+      details: { agentId: "agent_child" }
+    });
+    const tool = createRevokeSubagentTool({ continueSubagent });
+
+    await expect(
+      tool.execute?.("tool-call-1", {
+        agentId: " agent_child ",
+        prompt: " Check the follow-up "
+      })
+    ).resolves.toEqual({
+      content: [{ text: "Subagent resumed", type: "text" }],
+      details: { agentId: "agent_child" }
+    });
+
+    expect(continueSubagent).toHaveBeenCalledWith({
+      agentId: "agent_child",
+      prompt: "Check the follow-up",
+      toolCallId: "tool-call-1"
+    });
+  });
+
+  it("requires an existing subagent id and prompt", async () => {
+    const tool = createRevokeSubagentTool({
+      continueSubagent: vi.fn()
+    });
+
+    await expect(tool.execute?.("tool-call-1", { agentId: "", prompt: "" }))
+      .rejects.toThrow("revoke_subagent requires an agentId");
+    await expect(tool.execute?.("tool-call-1", {
+      agentId: "agent_child",
+      prompt: ""
+    })).rejects.toThrow("revoke_subagent requires a prompt");
   });
 });

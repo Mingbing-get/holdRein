@@ -1,4 +1,5 @@
 import type { AgentHarness, JsonlSessionRepoApi } from "@earendil-works/pi-agent-core/node";
+import type { AppDatabase } from "../../../db";
 import type { AgentRunResult, AgentSessionMetadata, StoredAgentMessage, RunAgentInput } from "../agent-types";
 import type { AgentApprovalStore } from "../approval/store";
 import type { AgentEventBus } from "../event/event-bus";
@@ -18,7 +19,8 @@ export interface CreateAgentRuntimeOptions {
   getCustomModel?: AgentModelLookup;
   sessionRepo?: JsonlSessionRepoApi;
   skillDirs?: string[];
-  subagentRepository?: SubagentRepository;
+  subagentDatabase?: AppDatabase;
+  subagentRepository: SubagentRepository;
 }
 
 export interface RunningAgent { harness: AgentHarness; sessionId: string }

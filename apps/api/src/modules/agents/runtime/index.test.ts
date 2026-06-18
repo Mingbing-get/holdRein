@@ -85,7 +85,8 @@ describe("agent runtime sessions", () => {
   it("configures default session storage with the central sessions directory", () => {
     createAgentRuntime({
       approvalStore: createAgentApprovalStore(),
-      eventBus: createAgentEventBus()
+      eventBus: createAgentEventBus(),
+      subagentRepository: createInMemorySubagentRepository()
     });
 
     expect(executionEnvConstructor).toHaveBeenCalledWith({ cwd: SESSIONS_DIR });
@@ -195,7 +196,8 @@ describe("agent runtime sessions", () => {
     const runtime = createAgentRuntime({
       approvalStore,
       eventBus,
-      sessionRepo: repo
+      sessionRepo: repo,
+      subagentRepository: createInMemorySubagentRepository()
     });
 
     const result = await runtime.start(createRunInput());
@@ -236,7 +238,8 @@ describe("agent runtime sessions", () => {
     const runtime = createAgentRuntime({
       approvalStore: createAgentApprovalStore(),
       eventBus,
-      sessionRepo: repo
+      sessionRepo: repo,
+      subagentRepository: createInMemorySubagentRepository()
     });
     const result = await runtime.start(createRunInput());
     const eventTypes: string[] = [];

@@ -48,6 +48,17 @@ const callSubagentParameters = Type.Object({
 
 type CallSubagentParameters = Static<typeof callSubagentParameters>;
 
+const revokeSubagentParameters = Type.Object({
+  agentId: Type.String({
+    description: "Existing completed child agent id to continue."
+  }),
+  prompt: Type.String({
+    description: "Follow-up prompt for the child agent."
+  })
+});
+
+type RevokeSubagentParameters = Static<typeof revokeSubagentParameters>;
+
 interface CallSubagentRequest {
   agentName: string;
   prompt: string;
@@ -102,6 +113,32 @@ export function createCallSubagentTool(input: {
   };
 }
 
+export function createRevokeSubagentTool(input: {
+  continueSubagent: (input: {
+    agentId: string;
+    prompt: string;
+    toolCallId: string;
+  }) => Promise<{
+    content: { text: string; type: "text" }[];
+    details: unknown;
+  }>;
+}): ServerPlugin.PluginTool {
+  return {
+    description: "Continue an existing completed child agent with a follow-up prompt.",
+    executionMode: "parallel",
+    label: "Revoke Subagent",
+    name: "revoke_subagent",
+    parameters: revokeSubagentParameters,
+    async execute(toolCallId, rawParams) {
+      const { agentId, prompt } = parseRevokeSubagentRequest(
+        rawParams as Partial<RevokeSubagentParameters>
+      );
+
+      return input.continueSubagent({ agentId, prompt, toolCallId });
+    }
+  };
+}
+
 function parseCallSubagentRequests(
   params: Partial<CallSubagentParameters>
 ): CallSubagentRequest[] {
@@ -129,6 +166,28 @@ function parseCallSubagentRequests(
 
     return { agentName, prompt };
   });
+}
+
+function parseRevokeSubagentRequest(
+  params: Partial<RevokeSubagentParameters>
+): { agentId: string; prompt: string } {
+  const agentId =
+    typeof params.agentId === "string" && params.agentId.trim()
+      ? params.agentId.trim()
+      : "";
+  const prompt =
+    typeof params.prompt === "string" && params.prompt.trim()
+      ? params.prompt.trim()
+      : "";
+
+  if (!agentId) {
+    throw new Error("revoke_subagent requires an agentId");
+  }
+  if (!prompt) {
+    throw new Error("revoke_subagent requires a prompt");
+  }
+
+  return { agentId, prompt };
 }
 
 export function getNextCompletedSubagent<ParentSession>(

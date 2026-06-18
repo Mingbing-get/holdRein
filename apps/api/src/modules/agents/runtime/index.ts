@@ -6,28 +6,26 @@ import { toStoredAgentMessage } from "../message/storage";
 import { resolveAgentModel } from "../model/resolver";
 import { appendVisibleCustomMessage } from "./messages";
 import { addPendingSubagentResult, appendSubagentResult, flushPendingSubagentResults } from "./subagent-results";
+import { createRuntimeRevokeSubagentTool, createRuntimeSubagentTools } from "./subagent-tools";
 import { createSessionRepo, getEnvApiKey, getSkillDirs, interruptHarness, toAgentSessionMetadata } from "./support";
 import { runToolBeforeExecute } from "../approval/tool-approval";
-import { createCallSubagentTool, extractAssistantText, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "../subagent";
-import {
-  createInMemorySubagentRepository,
-} from "../subagent/repository";
+import { extractAssistantText, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "../subagent";
 import { pluginRegistry } from '../../../plugin'
 
 import type { AgentRuntime, CreateAgentRuntimeOptions, RunningAgent, HarnessSession, CreateHarnessOptions, PendingVisibleCustomMessage, StartHarnessOptions, StartHarnessResult } from './type'
 
 const AGENT_CONTINUATION_CUSTOM_TYPE = "agent_continuation";
 const AGENT_CONTINUE_PROMPT = "";
-const CALL_SUBAGENT_CUSTOM_TYPE = "callsubagent";
 
 export function createAgentRuntime(
   options: CreateAgentRuntimeOptions
 ): AgentRuntime {
   const runningAgents = new Map<string, RunningAgent>();
   const sessionRepo = options.sessionRepo ?? createSessionRepo();
-  const subagentRepository =
-    options.subagentRepository ?? createInMemorySubagentRepository();
+  const subagentRepository = options.subagentRepository;
   const subagents = new Map<string, SubagentRun<HarnessSession>>();
+  const harnessSessions = new Map<string, HarnessSession>();
+  const harnessTools = new Map<string, ServerPlugin.PluginTool[]>();
 
   return {
     interrupt: async (agentId) => {
@@ -83,84 +81,27 @@ export function createAgentRuntime(
         const { skills: loadedSkills } = await loadSkills(env, skillDirs);
         const skills = [...loadedSkills, ...(contribution.skills || [])];
 
-        const tools = [
-          ...(contribution.tools || []),
-          createCallSubagentTool({
-            startSubagent: async ({ agentName, prompt, toolCallId }) => {
-              const agentId = `agent_${randomUUID()}`;
-              const createdAt = new Date().toISOString();
-              const childSession = await sessionRepo.create({
-                cwd: input.workspacePath
-              });
-              const childSessionMetadata = toAgentSessionMetadata(
-                await childSession.getMetadata()
-              );
-              subagentRepository.create({
-                agentId,
-                createdAt,
-                parentAgentId: harnessOptions.agentId,
-                sessionCreatedAt: childSessionMetadata.createdAt,
-                sessionId: childSessionMetadata.id,
-                sessionPath: childSessionMetadata.path,
-                status: "running",
-                taskId: input.taskId,
-                updatedAt: createdAt
-              });
-              let started: StartHarnessResult;
-              try {
-                started = await startHarness(prompt, {
-                  agentId,
-                  agentName,
-                  isContinue: false,
-                  parentAgentId: harnessOptions.agentId,
-                  pluginPrompt: prompt,
-                  session: childSession
-                });
-              } catch (error) {
-                subagentRepository.delete(agentId);
-                throw error;
-              }
-              const details = {
-                agentId: started.agentId,
-                agentName,
-                parentAgentId: harnessOptions.agentId,
-                session: started.session,
-                taskId: input.taskId
-              };
-              subagents.set(started.agentId, {
-                agentId: started.agentId,
-                agentName,
-                agentSession: started.harnessSession,
-                consumed: false,
-                lastAssistantText: "",
-                parentAgentId: harnessOptions.agentId,
-                ...(harnessOptions.agentName === undefined
-                  ? {}
-                  : { parentAgentName: harnessOptions.agentName }),
-                parentSession: harnessOptions.session,
-                session: started.session,
-                status: "running"
-              });
-              const pendingMessages = pendingVisibleMessages.get(toolCallId) ?? [];
-              pendingMessages.push({
-                content: `Subagent "${agentName}" is running.`,
-                customType: CALL_SUBAGENT_CUSTOM_TYPE,
-                details
-              });
-              pendingVisibleMessages.set(toolCallId, pendingMessages);
-
-              return {
-                content: [
-                  {
-                    text: `Subagent "${agentName}" is running. agentId=${started.agentId}`,
-                    type: "text" as const
-                  }
-                ],
-                details
-              };
-            }
-          })
-        ];
+        const tools = await createRuntimeSubagentTools({
+          contributionTools: contribution.tools || [],
+          eventBus: options.eventBus,
+          parentAgentId: harnessOptions.agentId,
+          ...(harnessOptions.agentName === undefined
+            ? {}
+            : { parentAgentName: harnessOptions.agentName }),
+          parentSession: harnessOptions.session,
+          pendingVisibleMessages,
+          sessionRepo,
+          startHarness,
+          persistedSubagentRepository: subagentRepository,
+          ...(options.subagentDatabase === undefined
+            ? {}
+            : { subagentDatabase: options.subagentDatabase }),
+          subagents,
+          taskId: input.taskId,
+          workspacePath: input.workspacePath
+        });
+        harnessSessions.set(harnessOptions.agentId, harnessOptions.session);
+        harnessTools.set(harnessOptions.agentId, tools);
 
         const harness = new AgentHarness({
           activeToolNames: tools.map(tool => tool.name),
@@ -308,6 +249,7 @@ export function createAgentRuntime(
 
         subagent.status = "completed";
         subagentRepository.updateStatus(subagent.agentId, "completed", new Date().toISOString());
+        await addRevokeToolToHarness(subagent.parentAgentId);
         await continueOrEndTask(
           subagent.parentAgentId,
           subagent.parentAgentName,
@@ -315,11 +257,30 @@ export function createAgentRuntime(
           undefined,
           { deferIfRunning: true }
         );
-        if (subagent.consumed) {
-          subagents.delete(subagent.agentId);
-        }
       };
-
+      const addRevokeToolToHarness = async (agentId: string) => {
+        const tools = harnessTools.get(agentId);
+        const parentSession = harnessSessions.get(agentId);
+        if (!tools || !parentSession || tools.some((tool) => tool.name === "revoke_subagent")) {
+          return;
+        }
+        const tool = createRuntimeRevokeSubagentTool({
+          eventBus: options.eventBus,
+          parentAgentId: agentId,
+          parentSession,
+          sessionRepo,
+          startHarness,
+          persistedSubagentRepository: subagentRepository,
+          ...(options.subagentDatabase === undefined
+            ? {}
+            : { subagentDatabase: options.subagentDatabase }),
+          subagents,
+          taskId: input.taskId,
+          workspacePath: input.workspacePath
+        });
+        tools.push(tool);
+        await runningAgents.get(agentId)?.harness.setTools?.(tools, tools.map((item) => item.name));
+      };
       const continueOrEndTask = async (
         harnessAgentId: string,
         harnessAgentName: string | undefined,

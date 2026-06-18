@@ -107,6 +107,24 @@ describe("AgentTasksProvider", () => {
     ));
   });
 
+  it("subscribes to a resumed subagent without rendering a task message", async () => {
+    const fetcher = createResumedSubagentFetcher();
+
+    render(
+      <AppWorkspaceProvider>
+        <AgentTasksProvider apiBaseUrl="" fetcher={fetcher}>
+          <StartTaskProbe />
+        </AgentTasksProvider>
+      </AppWorkspaceProvider>
+    );
+
+    await waitFor(() => expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/agents/agent-child-resumed/events",
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    ));
+    expect(screen.getByTestId("task-message-kinds")).toHaveTextContent("user");
+  });
+
   it("submits and removes a pending approval", async () => {
     const fetcher = createApprovalFetcher();
 
@@ -431,6 +449,25 @@ function createSubagentFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn>
       if (url.includes("agent-1/events")) {
         controller.enqueue(encoder.encode(
           '{"agentId":"agent-1","payload":{"message":{"content":"Subagent is running","customType":"callsubagent","details":{"agentId":"agent-child","session":{"id":"session-child"}},"display":true,"id":"message-subagent","role":"custom","timestamp":1}},"sequence":1,"timestamp":"now","type":"message_start"}\n'
+        ));
+      }
+    });
+  }) as AgentMessageFetcher & ReturnType<typeof vi.fn>;
+}
+
+function createResumedSubagentFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
+  const encoder = new TextEncoder();
+
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.endsWith("/api/v1/agents/start")) {
+      return jsonResponse(startResult());
+    }
+    if (url.endsWith("/title")) return jsonResponse({ id: "task-1", title: "Project inspection" });
+    return streamResponse((controller) => {
+      if (url.includes("agent-1/events")) {
+        controller.enqueue(encoder.encode(
+          '{"agentId":"agent-1","payload":{"agentId":"agent-child-resumed","parentAgentId":"agent-1","session":{"id":"session-child"},"taskId":"task-1"},"sequence":1,"timestamp":"now","type":"subagent_resumed"}\n'
         ));
       }
     });

@@ -6,6 +6,7 @@ import type {
 import type { ServerPlugin } from "@hold-rein/plugin-server";
 import { vi } from "vitest";
 
+import type { AppDatabase } from "../../../db";
 import { createAgentApprovalStore } from "../approval/store";
 import { createAgentEventBus } from "../event/event-bus";
 import { createAgentRuntime } from ".";
@@ -51,14 +52,14 @@ export function toolResultMessage(toolCallId: string) {
 export function createSessionRepo() {
   const appendCustomMessageEntry = vi.fn();
   let sessionNumber = 0;
-  const createSession = (id: string) => ({
+  const createSession = (id: string, metadata?: JsonlSessionMetadata) => ({
     appendCustomMessageEntry,
     buildContext: vi.fn().mockResolvedValue({
       messages: [{ content: `Saved prompt for ${id}`, role: "user", timestamp: 1 }],
       model: null,
       thinkingLevel: "off"
     }),
-    getMetadata: vi.fn().mockResolvedValue({
+    getMetadata: vi.fn().mockResolvedValue(metadata ?? {
       createdAt: "2026-06-11T00:00:00.000Z",
       cwd: "/tmp/workspace",
       id,
@@ -69,7 +70,9 @@ export function createSessionRepo() {
     sessionNumber += 1;
     return createSession(`session-${sessionNumber}`);
   });
-  const open = vi.fn().mockResolvedValue(createSession("session-1"));
+  const open = vi.fn().mockImplementation(async (metadata: JsonlSessionMetadata) =>
+    createSession(metadata.id, metadata)
+  );
   const repo = {
     create,
     delete: vi.fn(),
@@ -100,12 +103,14 @@ export function getHarnessTool(
 export function createRuntime(
   sessionRepo: JsonlSessionRepoApi,
   eventBus = createAgentEventBus(),
-  subagentRepository: SubagentRepository = createInMemorySubagentRepository()
+  subagentRepository: SubagentRepository = createInMemorySubagentRepository(),
+  subagentDatabase?: AppDatabase
 ) {
   return createAgentRuntime({
     approvalStore: createAgentApprovalStore(),
     eventBus,
     sessionRepo,
+    ...(subagentDatabase === undefined ? {} : { subagentDatabase }),
     subagentRepository
   });
 }

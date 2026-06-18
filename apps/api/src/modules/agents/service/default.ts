@@ -37,6 +37,7 @@ export function getDefaultAgentsService(): AgentsService {
         modelProvidersService.getConfiguredModelForProvider(provider, modelId)
           ?.apiKey,
       getCustomModel,
+      subagentDatabase: database,
       subagentRepository
     });
 

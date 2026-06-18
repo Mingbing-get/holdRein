@@ -74,3 +74,36 @@ export function reduceSubagentEvent(
     existing.taskId
   );
 }
+
+export function reduceSubagentResumeEvent(
+  current: SubagentStatesById,
+  event: AgentEventEnvelope,
+  taskId: string
+): SubagentStatesById {
+  if (event.type !== "subagent_resumed") return current;
+  const payload = getRecord(event.payload);
+  if (typeof payload?.agentId !== "string") return current;
+  const existing = current[payload.agentId];
+
+  return {
+    ...current,
+    [payload.agentId]: {
+      messages: existing?.messages ?? [],
+      parentAgentId:
+        typeof payload.parentAgentId === "string"
+          ? payload.parentAgentId
+          : existing?.parentAgentId ?? "",
+      status: "running",
+      taskId:
+        typeof payload.taskId === "string"
+          ? payload.taskId
+          : existing?.taskId ?? taskId
+    }
+  };
+}
+
+function getRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : undefined;
+}

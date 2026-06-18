@@ -28,11 +28,7 @@ import {
   createInitialAgentTaskState,
   reduceAgentTaskState
 } from "../reducer";
-import {
-  discoverSubagents,
-  initializeSubagentsFromHistory,
-  reduceSubagentEvent
-} from "../subagent-message/store";
+import { discoverSubagents, initializeSubagentsFromHistory, reduceSubagentEvent, reduceSubagentResumeEvent } from "../subagent-message/store";
 import type {
   AgentEventEnvelope,
   AgentTaskState,
@@ -176,6 +172,9 @@ export function AgentTasksProvider({
         setSubagentMessagesById((current) =>
           discoverSubagents(current, [message], taskId)
         );
+      }
+      if (event.type === "subagent_resumed") {
+        setSubagentMessagesById((current) => reduceSubagentResumeEvent(current, event, taskId));
       }
       if (event.type === "task_end") handleTaskStatus(taskId, "completed");
       if (event.type === "agent_error") handleTaskStatus(taskId, "error");

@@ -1,7 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { createDatabase, migrateDatabase, type AppDatabase } from "../../../db";
 import { createAgentEventBus } from "../event/event-bus";
-import { createInMemorySubagentRepository } from "../subagent/repository";
+import {
+  createInMemorySubagentRepository,
+  createSqliteSubagentRepository
+} from "../subagent/repository";
 import {
   createContribution,
   createRunInput,
@@ -15,7 +23,9 @@ import {
 const prompt = vi.fn().mockResolvedValue(undefined);
 const harnessConstructor = vi.fn();
 const harnessOn = vi.fn();
+const harnessSetTools = vi.fn();
 const harnessSubscribers: ((event: { message?: unknown; type: string }) => unknown)[] = [];
+const tempDirectories: string[] = [];
 const resolveContributions = vi.hoisted(() =>
   vi.fn().mockResolvedValue({
     skillDirs: [],
@@ -24,6 +34,12 @@ const resolveContributions = vi.hoisted(() =>
     tools: []
   })
 );
+
+afterEach(() => {
+  for (const directory of tempDirectories.splice(0)) {
+    rmSync(directory, { force: true, recursive: true });
+  }
+});
 
 vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
   const original = await importOriginal<Record<string, unknown>>();
@@ -34,6 +50,7 @@ vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
       interrupt = vi.fn();
       on = harnessOn;
       prompt = prompt;
+      setTools = harnessSetTools;
       subscribe = vi.fn((listener: (event: { type: string }) => unknown) => {
         harnessSubscribers.push(listener);
         return vi.fn();
@@ -60,6 +77,7 @@ describe("agent runtime subagent calls", () => {
   beforeEach(() => {
     harnessConstructor.mockClear();
     harnessOn.mockClear();
+    harnessSetTools.mockClear();
     harnessSubscribers.length = 0;
     prompt.mockClear();
     prompt.mockResolvedValue(undefined);
@@ -161,4 +179,203 @@ describe("agent runtime subagent calls", () => {
     expect(result.agentId).toMatch(/^agent_/);
     resolveParentPrompt?.();
   });
+
+  it("adds a revoke tool to the parent harness after a subagent completes", async () => {
+    const { repo } = createSessionRepo();
+    const eventBus = createAgentEventBus();
+    const { database, subagentRepository } = createSubagentDatabaseFixture();
+    const runtime = createRuntime(repo, eventBus, subagentRepository, database);
+    let resolveParentPrompt: (() => void) | undefined;
+    prompt.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      resolveParentPrompt = resolve;
+    }));
+    const result = await runtime.start(createRunInput());
+    const parentOptions = harnessConstructor.mock.calls[0]?.[0] as {
+      tools?: { execute?: (toolCallId: string, input: unknown) => unknown; name: string }[];
+    };
+    expect(parentOptions.tools?.map((tool) => tool.name)).toEqual([
+      "call_subagent"
+    ]);
+    const subagentTool = getHarnessTool(harnessConstructor, "call_subagent");
+    const callResult = await subagentTool?.execute?.(
+      "tool-call-1",
+      subagentInput()
+    ) as { details?: { agentId?: string } } | undefined;
+    const childAgentId = callResult?.details?.agentId ?? "";
+
+    await harnessSubscribers[1]?.({
+      message: {
+        content: [{ text: "First pass complete.", type: "text" }],
+        role: "assistant",
+        timestamp: 2
+      },
+      type: "message_end"
+    });
+    await harnessSubscribers[1]?.({ type: "agent_end" });
+    await harnessSubscribers[1]?.({ type: "agent_end" });
+
+    const revokeTool = parentOptions.tools?.find(
+      (tool) => tool.name === "revoke_subagent"
+    );
+    expect(revokeTool).toBeDefined();
+    expect(harnessSetTools).toHaveBeenCalledTimes(1);
+    expect(harnessSetTools).toHaveBeenCalledWith(
+      expect.arrayContaining([expect.objectContaining({ name: "revoke_subagent" })]),
+      expect.arrayContaining(["call_subagent", "revoke_subagent"])
+    );
+
+    await expect(revokeTool?.execute?.("tool-call-2", {
+      agentId: "agent_missing",
+      prompt: "Try again"
+    })).rejects.toThrow("Unknown completed subagent: agent_missing");
+    await expect(revokeTool?.execute?.("tool-call-3", {
+      agentId: childAgentId,
+      prompt: "Inspect one more case"
+    })).resolves.toEqual({
+      content: [{
+        text: `Subagent "researcher" was revoked. agentId=${childAgentId}`,
+        type: "text"
+      }],
+      details: expect.objectContaining({
+        agentId: childAgentId,
+        parentAgentId: result.agentId
+      })
+    });
+    expect(prompt).toHaveBeenLastCalledWith("Inspect one more case");
+    expect(subagentRepository.findByAgentId(childAgentId)?.status)
+      .toBe("running");
+    resolveParentPrompt?.();
+  });
+
+  it("adds a revoke tool for restored parent sessions with call subagent history", async () => {
+    const { open, repo } = createSessionRepo();
+    const runtime = createRuntime(repo);
+    open.mockResolvedValueOnce({
+      appendCustomMessageEntry: vi.fn(),
+      buildContext: vi.fn().mockResolvedValue({
+        messages: [{
+          content: 'Subagent "researcher" is running.',
+          customType: "callsubagent",
+          details: { agentId: "agent-child" },
+          display: true,
+          role: "custom",
+          timestamp: 1
+        }],
+        model: null,
+        thinkingLevel: "off"
+      }),
+      getMetadata: vi.fn().mockResolvedValue({
+        createdAt: "2026-06-11T00:00:00.000Z",
+        cwd: "/tmp/workspace",
+        id: "session-parent",
+        path: "/sessions/session-parent.jsonl"
+      })
+    } as never);
+
+    await runtime.start({
+      ...createRunInput(),
+      session: {
+        createdAt: "2026-06-11T00:00:00.000Z",
+        id: "session-parent",
+        path: "/sessions/session-parent.jsonl"
+      }
+    });
+
+    const parentOptions = harnessConstructor.mock.calls[0]?.[0] as {
+      activeToolNames?: string[];
+      tools?: { name: string }[];
+    };
+    expect(parentOptions.tools?.map((tool) => tool.name)).toContain(
+      "revoke_subagent"
+    );
+    expect(parentOptions.activeToolNames).toContain("revoke_subagent");
+  });
+
+  it("revokes a completed subagent from persisted session metadata and emits a resubscribe event", async () => {
+    const { appendCustomMessageEntry, open, repo } = createSessionRepo();
+    const eventBus = createAgentEventBus();
+    const { database, subagentRepository } = createSubagentDatabaseFixture();
+    const runtime = createRuntime(repo, eventBus, subagentRepository, database);
+    const result = await runtime.start(createRunInput());
+    const parentEvents: { payload?: unknown; type: string }[] = [];
+    eventBus.subscribe({ agentId: result.agentId }, (event) => {
+      parentEvents.push({ payload: event.payload, type: event.type });
+    });
+    const parentOptions = harnessConstructor.mock.calls[0]?.[0] as {
+      tools?: { execute?: (toolCallId: string, input: unknown) => unknown; name: string }[];
+    };
+    const subagentTool = getHarnessTool(harnessConstructor, "call_subagent");
+    const callResult = await subagentTool?.execute?.(
+      "tool-call-1",
+      subagentInput()
+    ) as { details?: { agentId?: string } } | undefined;
+    const childAgentId = callResult?.details?.agentId ?? "";
+
+    await harnessSubscribers[1]?.({
+      message: {
+        content: [{ text: "First pass complete.", type: "text" }],
+        role: "assistant",
+        timestamp: 2
+      },
+      type: "message_end"
+    });
+    await harnessSubscribers[1]?.({ type: "agent_end" });
+    await harnessSubscribers[0]?.({
+      message: toolResultMessage("tool-call-1"),
+      type: "message_end"
+    });
+    const appendCountBeforeRevoke = appendCustomMessageEntry.mock.calls.length;
+    const revokeTool = parentOptions.tools?.find(
+      (tool) => tool.name === "revoke_subagent"
+    );
+
+    await revokeTool?.execute?.("tool-call-2", {
+      agentId: childAgentId,
+      prompt: "Inspect one more case"
+    });
+
+    expect(open).toHaveBeenCalledWith({
+      createdAt: "2026-06-11T00:00:00.000Z",
+      cwd: "/tmp/workspace",
+      id: "session-2",
+      path: "/sessions/session-2.jsonl"
+    });
+    expect(appendCustomMessageEntry).toHaveBeenCalledTimes(appendCountBeforeRevoke);
+    expect(parentEvents).toContainEqual({
+      type: "subagent_resumed",
+      payload: expect.objectContaining({
+        agentId: childAgentId,
+        parentAgentId: result.agentId,
+        session: expect.objectContaining({ id: "session-2" }),
+        taskId: "task-1"
+      })
+    });
+  });
 });
+
+function createSubagentDatabaseFixture(): {
+  database: AppDatabase;
+  subagentRepository: ReturnType<typeof createSqliteSubagentRepository>;
+} {
+  const directory = mkdtempSync(join(tmpdir(), "hold-rein-runtime-subagents-"));
+  tempDirectories.push(directory);
+  const database = createDatabase(join(directory, "test.sqlite"));
+  migrateDatabase(database.sqlite);
+  database.sqlite.exec(`
+    INSERT INTO workspaces (id, name, path, created_at, updated_at)
+    VALUES ('workspace-1', 'Workspace', '/tmp/workspace', 'now', 'now');
+    INSERT INTO tasks (
+      id, workspace_id, title, initial_user_message,
+      last_model_provider_source, last_model_provider, last_model_name,
+      created_at, updated_at
+    ) VALUES (
+      'task-1', 'workspace-1', 'Task', 'Prompt',
+      'built_in', 'openai', 'gpt-4.1', 'now', 'now'
+    );
+  `);
+
+  return {
+    database,
+    subagentRepository: createSqliteSubagentRepository(database)
+  };
+}
