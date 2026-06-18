@@ -8,6 +8,7 @@ import type {
   TaskMessageHistory,
   TaskTitleResult
 } from "./agent-message-types";
+import type { WebPlugin } from "@hold-rein/plugin-web";
 
 interface ApiResponse<T> {
   code: number;
@@ -52,10 +53,11 @@ export async function fetchTaskMessages(
   taskId: string,
   fetcher: AgentMessageFetcher = fetch
 ): Promise<TaskMessageHistory> {
-  return requestData<TaskMessageHistory>(
+  const history = await requestData<TaskMessageHistory | WebPlugin.AgentMessage[]>(
     fetcher,
     `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/agents/tasks/${encodeURIComponent(taskId)}/messages`
   );
+  return normalizeTaskMessageHistory(history);
 }
 
 export async function continueAgentTask(
@@ -168,4 +170,17 @@ async function requestData<T>(
 
 function normalizeApiBaseUrl(apiBaseUrl: string): string {
   return apiBaseUrl.replace(/\/$/, "");
+}
+
+function normalizeTaskMessageHistory(
+  history: TaskMessageHistory | WebPlugin.AgentMessage[]
+): TaskMessageHistory {
+  if (Array.isArray(history)) {
+    return { messages: history, subagents: [] };
+  }
+
+  return {
+    messages: Array.isArray(history.messages) ? history.messages : [],
+    subagents: Array.isArray(history.subagents) ? history.subagents : []
+  };
 }
