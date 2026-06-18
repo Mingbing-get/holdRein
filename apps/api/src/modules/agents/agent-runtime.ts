@@ -25,10 +25,7 @@ const SUBAGENT_RESULT_CUSTOM_TYPE = "subagent_result";
 
 export interface AgentRuntime {
   interrupt: (agentId: string) => Promise<boolean>;
-  listMessages: (input: {
-    session: AgentSessionMetadata;
-    workspacePath: string;
-  }) => Promise<StoredAgentMessage[]>;
+  listMessages: (input: { session: AgentSessionMetadata; workspacePath: string }) => Promise<StoredAgentMessage[]>;
   start: (input: RunAgentInput) => Promise<AgentRunResult>;
 }
 
@@ -42,10 +39,7 @@ export interface CreateAgentRuntimeOptions {
   subagentRepository?: SubagentRepository;
 }
 
-interface RunningAgent {
-  harness: AgentHarness;
-  sessionId: string;
-}
+interface RunningAgent { harness: AgentHarness; sessionId: string }
 
 type HarnessSession = Awaited<ReturnType<JsonlSessionRepoApi["create"]>>;
 
@@ -58,22 +52,11 @@ interface StartHarnessOptions {
   session?: HarnessSession;
 }
 
-type CreateHarnessOptions = StartHarnessOptions & {
-  agentId: string;
-  session: HarnessSession;
-};
+type CreateHarnessOptions = StartHarnessOptions & { agentId: string; session: HarnessSession };
 
-interface PendingVisibleCustomMessage {
-  content: string;
-  customType: string;
-  details?: unknown;
-}
+interface PendingVisibleCustomMessage { content: string; customType: string; details?: unknown }
 
-interface StartHarnessResult {
-  agentId: string;
-  harnessSession: HarnessSession;
-  session: AgentSessionMetadata;
-}
+interface StartHarnessResult { agentId: string; harnessSession: HarnessSession; session: AgentSessionMetadata }
 
 export function createAgentRuntime(
   options: CreateAgentRuntimeOptions

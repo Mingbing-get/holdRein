@@ -1,7 +1,6 @@
 import {
   ArrowLeftOutlined,
-  ExperimentOutlined,
-  SettingOutlined
+  ExperimentOutlined
 } from "@ant-design/icons";
 import { Button, Typography } from "antd";
 
