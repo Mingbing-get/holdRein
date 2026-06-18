@@ -5,9 +5,9 @@ import type {
   InterruptTaskResult,
   StartTaskInput,
   StartTaskResult,
+  TaskMessageHistory,
   TaskTitleResult
 } from "./agent-message-types";
-import type { WebPlugin } from "@hold-rein/plugin-web";
 
 interface ApiResponse<T> {
   code: number;
@@ -51,8 +51,8 @@ export async function fetchTaskMessages(
   apiBaseUrl: string,
   taskId: string,
   fetcher: AgentMessageFetcher = fetch
-): Promise<WebPlugin.AgentMessage[]> {
-  return requestData<WebPlugin.AgentMessage[]>(
+): Promise<TaskMessageHistory> {
+  return requestData<TaskMessageHistory>(
     fetcher,
     `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/agents/tasks/${encodeURIComponent(taskId)}/messages`
   );

@@ -72,7 +72,19 @@ describe("agent message API", () => {
       .mockResolvedValueOnce({
         json: async () => ({
           code: 0,
-          data: [{ content: "History", id: "message-1", role: "user", timestamp: 1 }],
+          data: {
+            messages: [
+              { content: "History", id: "message-1", role: "user", timestamp: 1 }
+            ],
+            subagents: [
+              {
+                agentId: "agent-child",
+                messages: [],
+                parentAgentId: "agent-1",
+                status: "completed"
+              }
+            ]
+          },
           msg: "ok"
         }),
         ok: true
@@ -86,7 +98,19 @@ describe("agent message API", () => {
         ok: true
       });
 
-    await expect(fetchTaskMessages("", "task-1", fetcher)).resolves.toHaveLength(1);
+    await expect(fetchTaskMessages("", "task-1", fetcher)).resolves.toEqual({
+      messages: [
+        { content: "History", id: "message-1", role: "user", timestamp: 1 }
+      ],
+      subagents: [
+        {
+          agentId: "agent-child",
+          messages: [],
+          parentAgentId: "agent-1",
+          status: "completed"
+        }
+      ]
+    });
     await continueAgentTask(
       "",
       "task-1",

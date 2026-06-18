@@ -399,7 +399,7 @@ function createResumedTaskFetcher(
     const url = String(input);
 
     if (url.endsWith("/messages")) {
-      return jsonResponse([]);
+      return jsonResponse({ messages: [], subagents: [] });
     }
 
     return new Response(
@@ -455,7 +455,7 @@ function createApprovalFetcher(
       });
     }
     if (url.endsWith("/messages")) {
-      return jsonResponse([]);
+      return jsonResponse({ messages: [], subagents: [] });
     }
     return new Response(
       new ReadableStream({
@@ -478,7 +478,7 @@ function createCancelFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
     const url = String(input);
 
     if (url.endsWith("/messages")) {
-      return jsonResponse([]);
+      return jsonResponse({ messages: [], subagents: [] });
     }
     if (url.endsWith("/interrupt")) {
       return jsonResponse({

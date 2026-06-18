@@ -73,8 +73,8 @@ describe("AgentTasksProvider subagent messages", () => {
     );
   });
 
-  it("discovers a child from stored parent history", async () => {
-    const fetcher = createHistoryFetcher();
+  it("restores completed child history without subscribing to it", async () => {
+    const fetcher = createHistoryFetcher("completed");
 
     render(
       <AppWorkspaceProvider>
@@ -87,6 +87,29 @@ describe("AgentTasksProvider subagent messages", () => {
     await waitFor(() => {
       expect(screen.getByTestId("history-child-messages")).toHaveTextContent(
         "Restored child answer"
+      );
+    });
+    expect(
+      fetcher.mock.calls.some(([input]) =>
+        String(input).endsWith("/api/v1/agents/agent-history-child/events")
+      )
+    ).toBe(false);
+  });
+
+  it("subscribes to running children restored from task history", async () => {
+    const fetcher = createHistoryFetcher("running");
+
+    render(
+      <AppWorkspaceProvider>
+        <AgentTasksProvider apiBaseUrl="" fetcher={fetcher}>
+          <HistoryProbe />
+        </AgentTasksProvider>
+      </AppWorkspaceProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("history-child-messages")).toHaveTextContent(
+        "Restored child answer,Live child answer"
       );
     });
     expect(fetcher).toHaveBeenCalledWith(
@@ -271,30 +294,52 @@ function createSubagentFetcher(
   }) as AgentMessageFetcher & ReturnType<typeof vi.fn>;
 }
 
-function createHistoryFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
+function createHistoryFetcher(
+  status: "completed" | "running"
+): AgentMessageFetcher & ReturnType<typeof vi.fn> {
   const encoder = new TextEncoder();
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input);
     if (url.endsWith("/api/v1/agents/tasks/task-history/messages")) {
-      return jsonResponse([
-        {
-          content: "Subagent is running",
-          customType: "callsubagent",
-          details: { agentId: "agent-history-child" },
-          display: true,
-          id: "message-history-child-call",
-          role: "custom",
-          timestamp: 1
-        }
-      ]);
+      return jsonResponse({
+        messages: [
+          {
+            content: "Subagent is running",
+            customType: "callsubagent",
+            details: { agentId: "agent-history-child" },
+            display: true,
+            id: "message-history-child-call",
+            role: "custom",
+            timestamp: 1
+          }
+        ],
+        subagents: [
+          {
+            agentId: "agent-history-child",
+            messages: [
+              assistantEvent("agent-history-child", "Restored child answer")
+                .payload.message
+            ],
+            parentAgentId: "agent-parent",
+            status
+          }
+        ]
+      });
     }
     return streamResponse((controller) => {
       if (url.includes("agent-history-child/events")) {
         controller.enqueue(
           encoder.encode(
-            `${JSON.stringify(
-              assistantEvent("agent-history-child", "Restored child answer")
-            )}\n`
+            `${JSON.stringify({
+              ...assistantEvent("agent-history-child", "Live child answer"),
+              payload: {
+                message: {
+                  ...assistantEvent("agent-history-child", "Live child answer")
+                    .payload.message,
+                  id: "message-agent-history-child-live"
+                }
+              }
+            })}\n`
           )
         );
       }

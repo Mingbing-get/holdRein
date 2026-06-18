@@ -27,14 +27,18 @@ import {
   createInitialAgentTaskState,
   reduceAgentTaskState
 } from "./agent-message-reducer";
-import { discoverSubagents, reduceSubagentEvent } from "./subagent-message-store";
+import {
+  discoverSubagents,
+  initializeSubagentsFromHistory,
+  reduceSubagentEvent
+} from "./subagent-message-store";
 import type {
   AgentEventEnvelope,
   AgentTaskState,
   ContinueTaskInput,
   PendingApproval,
   StartTaskInput,
-  SubagentMessagesById
+  SubagentStatesById
 } from "./agent-message-types";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
@@ -79,7 +83,7 @@ export function AgentTasksProvider({
     {}
   );
   const [subagentMessagesById, setSubagentMessagesById] =
-    useState<SubagentMessagesById>({});
+    useState<SubagentStatesById>({});
   const subscriptions = useRef(new Map<string, AbortController>());
   const loadedTaskIds = useRef(new Set<string>());
   const activeTaskIdRef = useRef(activeTaskId);
@@ -118,15 +122,18 @@ export function AgentTasksProvider({
     loadedTaskIds.current.add(activeTaskId);
 
     void fetchTaskMessages(apiBaseUrl, activeTaskId, fetcher)
-      .then((messages) => {
+      .then((history) => {
         setSubagentMessagesById((current) =>
-          discoverSubagents(current, messages)
+          discoverSubagents(
+            initializeSubagentsFromHistory(current, history.subagents),
+            history.messages
+          )
         );
         setTaskStates((current) => ({
           ...current,
           [activeTaskId]: reduceAgentTaskState(
             current[activeTaskId] ?? createInitialAgentTaskState(activeTaskId),
-            { messages, type: "history_loaded" }
+            { messages: history.messages, type: "history_loaded" }
           )
         }));
       })
@@ -213,7 +220,8 @@ export function AgentTasksProvider({
   ]);
 
   useEffect(() => {
-    for (const agentId of Object.keys(subagentMessagesById)) {
+    for (const [agentId, subagent] of Object.entries(subagentMessagesById)) {
+      if (subagent.status !== "running") continue;
       if (subscriptions.current.has(agentId)) continue;
       startAgentEventSubscription({
         agentId,
@@ -365,7 +373,7 @@ export function AgentTasksProvider({
       decideApproval,
       getPendingApproval: (taskId) => taskStates[taskId]?.pendingApprovals[0],
       getSubagentMessages: (agentId) =>
-        subagentMessagesById[agentId] ?? EMPTY_MESSAGES,
+        subagentMessagesById[agentId]?.messages ?? EMPTY_MESSAGES,
       getTaskState: (taskId) => taskStates[taskId],
       hasPendingApproval: (taskId) =>
         Boolean(taskStates[taskId]?.pendingApprovals.length),

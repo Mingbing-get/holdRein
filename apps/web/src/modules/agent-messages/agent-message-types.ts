@@ -64,7 +64,25 @@ export interface AgentTaskState {
   taskId: string;
 }
 
-export type SubagentMessagesById = Record<string, WebPlugin.AgentMessage[]>;
+export interface TaskSubagentHistory {
+  agentId: string;
+  messages: WebPlugin.AgentMessage[];
+  parentAgentId: string;
+  status: "running" | "completed";
+}
+
+export interface TaskMessageHistory {
+  messages: WebPlugin.AgentMessage[];
+  subagents: TaskSubagentHistory[];
+}
+
+export interface SubagentState {
+  messages: WebPlugin.AgentMessage[];
+  parentAgentId: string;
+  status: "running" | "completed";
+}
+
+export type SubagentStatesById = Record<string, SubagentState>;
 
 export interface StartTaskInput {
   modelId: string;
