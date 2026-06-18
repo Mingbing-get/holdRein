@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   discoverSubagents,
   initializeSubagentsFromHistory,
-  reduceSubagentEvent
+  reduceSubagentEvent,
+  reduceSubagentResumeEvent
 } from "./store";
 import type { TaskSubagentHistory } from "../agent-message-types";
 
@@ -83,6 +84,50 @@ describe("subagent message store", () => {
       }
     });
   });
+
+  it("appends resume payload messages and marks the child running", () => {
+    const current = initializeSubagentsFromHistory(
+      {},
+      [
+        {
+          agentId: "agent-child",
+          messages: [assistantMessage("message-child", "Finished child")],
+          parentAgentId: "agent-parent",
+          status: "completed"
+        }
+      ],
+      "task-1"
+    );
+
+    expect(
+      reduceSubagentResumeEvent(
+        current,
+        {
+          agentId: "agent-parent",
+          payload: {
+            agentId: "agent-child",
+            messages: [userMessage("message-resume", "Resume child")],
+            parentAgentId: "agent-parent",
+            taskId: "task-1"
+          },
+          sequence: 2,
+          timestamp: "now",
+          type: "subagent_resumed"
+        },
+        "task-1"
+      )
+    ).toEqual({
+      "agent-child": {
+        messages: [
+          assistantMessage("message-child", "Finished child"),
+          userMessage("message-resume", "Resume child")
+        ],
+        parentAgentId: "agent-parent",
+        status: "running",
+        taskId: "task-1"
+      }
+    });
+  });
 });
 
 function assistantMessage(id: string, text: string) {
@@ -107,5 +152,14 @@ function callSubagentMessage(agentId: string) {
     id: `message-${agentId}`,
     role: "custom" as const,
     timestamp: 1
+  };
+}
+
+function userMessage(id: string, text: string) {
+  return {
+    content: [{ text, type: "text" as const }],
+    id,
+    role: "user" as const,
+    timestamp: 2
   };
 }

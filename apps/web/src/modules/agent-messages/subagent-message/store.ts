@@ -84,26 +84,47 @@ export function reduceSubagentResumeEvent(
   const payload = getRecord(event.payload);
   if (typeof payload?.agentId !== "string") return current;
   const existing = current[payload.agentId];
-
-  return {
-    ...current,
-    [payload.agentId]: {
-      messages: existing?.messages ?? [],
-      parentAgentId:
-        typeof payload.parentAgentId === "string"
-          ? payload.parentAgentId
-          : existing?.parentAgentId ?? "",
-      status: "running",
-      taskId:
-        typeof payload.taskId === "string"
-          ? payload.taskId
-          : existing?.taskId ?? taskId
-    }
+  const messages = [
+    ...(existing?.messages ?? []),
+    ...getPayloadMessages(payload)
+  ];
+  const resolvedTaskId =
+    typeof payload.taskId === "string"
+      ? payload.taskId
+      : existing?.taskId ?? taskId;
+  const nextState = {
+    messages,
+    parentAgentId:
+      typeof payload.parentAgentId === "string"
+        ? payload.parentAgentId
+        : existing?.parentAgentId ?? "",
+    status: "running" as const,
+    taskId: resolvedTaskId
   };
+
+  return discoverSubagents(
+    { ...current, [payload.agentId]: nextState },
+    messages,
+    resolvedTaskId
+  );
 }
 
 function getRecord(value: unknown): Record<string, unknown> | undefined {
   return value && typeof value === "object"
     ? (value as Record<string, unknown>)
     : undefined;
+}
+
+function getPayloadMessages(
+  payload: Record<string, unknown>
+): WebPlugin.AgentMessage[] {
+  if (Array.isArray(payload.messages)) {
+    return payload.messages.filter(isAgentMessage);
+  }
+  return isAgentMessage(payload.message) ? [payload.message] : [];
+}
+
+function isAgentMessage(value: unknown): value is WebPlugin.AgentMessage {
+  const message = getRecord(value);
+  return typeof message?.id === "string" && typeof message.role === "string";
 }
