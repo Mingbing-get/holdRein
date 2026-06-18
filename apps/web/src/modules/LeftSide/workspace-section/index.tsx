@@ -1,16 +1,23 @@
 import { useState } from "react";
-import { App, Input, Modal } from "antd";
+import { App, Button, Input, Modal } from "antd";
 
 import { useAppUi } from "../../../app/app-ui-context";
 import { useAppWorkspace } from "../../../app/app-workspace-context";
 import { useAgentTasks } from "../../agent-messages";
-import { deleteTask, deleteWorkspace, renameTask } from "../workspace-nav-api";
+import {
+  deleteTask,
+  deleteWorkspace,
+  fetchWorkspaceTaskPage,
+  renameTask
+} from "../workspace-nav-api";
 import type {
   WorkspaceSummary,
   WorkspaceTaskSummary
 } from "../workspace-nav-types";
 import { WorkspaceHeading } from "./workspace-heading";
 import { getTaskVisibleTitle, WorkspaceTask } from "./workspace-task";
+
+const WORKSPACE_TASK_PAGE_SIZE = 20;
 
 export interface WorkspaceSectionProps {
   apiBaseUrl: string;
@@ -34,6 +41,7 @@ export function WorkspaceSection({
     removeWorkspace,
     setActiveTaskId,
     setActiveWorkspaceId,
+    setWorkspaces,
     startNewConversation,
     updateTaskTitle
   } = useAppWorkspace();
@@ -41,8 +49,12 @@ export function WorkspaceSection({
     null
   );
   const [editingTitle, setEditingTitle] = useState("");
+  const [isLoadingMoreTasks, setIsLoadingMoreTasks] = useState(false);
   const [workspaceCollapsed, setWorkspaceCollapsed] = useState(false);
   const isActiveWorkspace = workspace.id === activeWorkspaceId;
+  const lastTask = workspace.tasks.at(-1);
+  const canLoadMoreTasks =
+    !collapsed && !workspaceCollapsed && workspace.hasMore && Boolean(lastTask);
 
   const confirmDeleteWorkspace = () => {
     modal.confirm({
@@ -106,6 +118,41 @@ export function WorkspaceSection({
     }
   };
 
+  const loadMoreTasks = async () => {
+    if (!lastTask || isLoadingMoreTasks) {
+      return;
+    }
+
+    setIsLoadingMoreTasks(true);
+
+    try {
+      const result = await fetchWorkspaceTaskPage(
+        apiBaseUrl,
+        workspace.id,
+        lastTask.lastContinuedAt,
+        WORKSPACE_TASK_PAGE_SIZE
+      );
+
+      setWorkspaces((currentWorkspaces) =>
+        currentWorkspaces.map((currentWorkspace) =>
+          currentWorkspace.id === workspace.id
+            ? {
+                ...currentWorkspace,
+                hasMore: result.hasMore,
+                tasks: [...currentWorkspace.tasks, ...result.tasks]
+              }
+            : currentWorkspace
+        )
+      );
+    } catch (error) {
+      void message.error(
+        error instanceof Error ? error.message : "加载更多任务失败"
+      );
+    } finally {
+      setIsLoadingMoreTasks(false);
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {!collapsed ? (
@@ -144,6 +191,24 @@ export function WorkspaceSection({
             task={task}
           />
         ))}
+      {canLoadMoreTasks ? (
+        <Button
+          block
+          loading={isLoadingMoreTasks}
+          onClick={() => void loadMoreTasks()}
+          size="small"
+          style={{
+            color: "var(--app-color-text-tertiary)",
+            fontSize: 12,
+            height: 28,
+            justifyContent: "flex-start",
+            paddingLeft: 20
+          }}
+          type="text"
+        >
+          加载更多
+        </Button>
+      ) : null}
       <Modal
         cancelText="取消"
         okText="确定"

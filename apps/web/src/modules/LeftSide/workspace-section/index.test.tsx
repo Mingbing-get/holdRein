@@ -10,11 +10,15 @@ import {
   AppWorkspaceProvider,
   useAppWorkspace
 } from "../../../app/app-workspace-context";
-import type { WorkspaceSummary } from "../workspace-nav-types";
+import type {
+  WorkspaceSummary,
+  WorkspaceTaskSummary
+} from "../workspace-nav-types";
 import { WorkspaceSection } from ".";
 
 const deleteWorkspaceMock = vi.fn();
 const deleteTaskMock = vi.fn();
+const fetchWorkspaceTaskPageMock = vi.fn();
 const renameTaskMock = vi.fn();
 
 vi.mock("../../agent-messages", () => ({
@@ -27,6 +31,8 @@ vi.mock("../../agent-messages", () => ({
 vi.mock("../workspace-nav-api", () => ({
   deleteTask: (...args: unknown[]) => deleteTaskMock(...args),
   deleteWorkspace: (...args: unknown[]) => deleteWorkspaceMock(...args),
+  fetchWorkspaceTaskPage: (...args: unknown[]) =>
+    fetchWorkspaceTaskPageMock(...args),
   renameTask: (...args: unknown[]) => renameTaskMock(...args)
 }));
 
@@ -86,6 +92,7 @@ describe("WorkspaceSection", () => {
     cleanup();
     deleteTaskMock.mockReset();
     deleteWorkspaceMock.mockReset();
+    fetchWorkspaceTaskPageMock.mockReset();
     renameTaskMock.mockReset();
   });
 
@@ -305,7 +312,63 @@ describe("WorkspaceSection", () => {
     expect(await screen.findByText("Task is running")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-task-task-real-1")).toBeInTheDocument();
   });
+
+  it("loads the next 20 workspace tasks when the workspace has more tasks", async () => {
+    const nextTask = createWorkspaceTask({
+      id: "task-real-2",
+      lastContinuedAt: "2026-06-07T08:00:00.000Z",
+      title: "下一页任务"
+    });
+    fetchWorkspaceTaskPageMock.mockResolvedValue({
+      hasMore: false,
+      tasks: [nextTask],
+      workspaceId: "workspace-real"
+    });
+    renderWorkspaceSection({ collapsed: false });
+
+    const loadMoreButton = screen.getByRole("button", { name: "加载更多" });
+
+    expect(loadMoreButton).toHaveStyle({
+      color: "var(--app-color-text-tertiary)",
+      justifyContent: "flex-start"
+    });
+
+    fireEvent.click(loadMoreButton);
+
+    await waitFor(() => {
+      expect(fetchWorkspaceTaskPageMock).toHaveBeenCalledWith(
+        "http://localhost:4000",
+        "workspace-real",
+        "2026-06-08T08:00:00.000Z",
+        20
+      );
+    });
+    expect(screen.getByTestId("task-ids")).toHaveTextContent(
+      "task-real-1,task-real-2"
+    );
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("button", { name: "加载更多" })
+      ).not.toBeInTheDocument();
+    });
+  });
 });
+
+function createWorkspaceTask(
+  overrides: Partial<WorkspaceTaskSummary>
+): WorkspaceTaskSummary {
+  return {
+    id: "task-real-extra",
+    initialUserMessage: "继续加载任务",
+    lastContinuedAt: "2026-06-07T08:00:00.000Z",
+    lastModelName: "gpt-4.1",
+    lastModelProvider: "openai",
+    lastModelProviderSource: "built_in",
+    status: "completed",
+    title: "更多任务",
+    ...overrides
+  };
+}
 
 function openDeleteAction(): void {
   fireEvent.mouseEnter(screen.getByTestId("workspace-heading-workspace-real"));

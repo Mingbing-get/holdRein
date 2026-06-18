@@ -22,6 +22,12 @@ export interface WorkspaceNavigationResponse {
   workspaces: WorkspaceSummary[];
 }
 
+export interface WorkspaceTaskPageResponse {
+  hasMore: boolean;
+  tasks: WorkspaceTaskSummary[];
+  workspaceId: string;
+}
+
 export interface ApiResponse<T> {
   code: number;
   data: T;

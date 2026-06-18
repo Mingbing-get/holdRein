@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   deleteTask,
   deleteWorkspace,
+  fetchWorkspaceTaskPage,
   renameTask
 } from "./workspace-nav-api";
 
@@ -81,6 +82,38 @@ describe("workspace navigation API", () => {
     expect(fetcher).toHaveBeenCalledWith(
       "http://localhost:4000/api/v1/agents/tasks/task%2Fone",
       { method: "DELETE" }
+    );
+  });
+
+  it("fetches an encoded workspace task page after a cursor", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      json: async () => ({
+        code: 0,
+        data: {
+          hasMore: false,
+          tasks: [],
+          workspaceId: "workspace/one"
+        },
+        msg: "ok"
+      }),
+      ok: true
+    });
+
+    await expect(
+      fetchWorkspaceTaskPage(
+        "http://localhost:4000/",
+        "workspace/one",
+        "2026-06-08T08:00:00.000Z",
+        20,
+        fetcher
+      )
+    ).resolves.toEqual({
+      hasMore: false,
+      tasks: [],
+      workspaceId: "workspace/one"
+    });
+    expect(fetcher).toHaveBeenCalledWith(
+      "http://localhost:4000/api/v1/workspaces/workspace%2Fone/tasks?afterLastContinuedAt=2026-06-08T08%3A00%3A00.000Z&limit=20"
     );
   });
 });

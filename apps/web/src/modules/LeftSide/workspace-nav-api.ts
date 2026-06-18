@@ -1,6 +1,7 @@
 import type {
   ApiResponse,
-  WorkspaceNavigationResponse
+  WorkspaceNavigationResponse,
+  WorkspaceTaskPageResponse
 } from "./workspace-nav-types";
 
 export type WorkspaceNavigationFetcher = (
@@ -57,6 +58,31 @@ export async function fetchWorkspaceNavigation(
   return payload.data;
 }
 
+export async function fetchWorkspaceTaskPage(
+  apiBaseUrl: string,
+  workspaceId: string,
+  afterLastContinuedAt: string,
+  limit: number,
+  fetcher: WorkspaceNavigationFetcher = fetch
+): Promise<WorkspaceTaskPageResponse> {
+  const response = await fetcher(
+    createWorkspaceTaskPageUrl(
+      apiBaseUrl,
+      workspaceId,
+      afterLastContinuedAt,
+      limit
+    )
+  );
+  const payload =
+    (await response.json()) as ApiResponse<WorkspaceTaskPageResponse | null>;
+
+  if (!response.ok || !payload.data) {
+    throw new Error(payload.msg || "Failed to load workspace tasks");
+  }
+
+  return payload.data;
+}
+
 export async function renameTask(
   apiBaseUrl: string,
   taskId: string,
@@ -78,6 +104,20 @@ export async function renameTask(
 
 export function createWorkspaceNavigationUrl(apiBaseUrl: string): string {
   return `${apiBaseUrl.replace(/\/$/, "")}/api/v1/workspaces/recent-tasks`;
+}
+
+function createWorkspaceTaskPageUrl(
+  apiBaseUrl: string,
+  workspaceId: string,
+  afterLastContinuedAt: string,
+  limit: number
+): string {
+  const params = new URLSearchParams({
+    afterLastContinuedAt,
+    limit: String(limit)
+  });
+
+  return `${apiBaseUrl.replace(/\/$/, "")}/api/v1/workspaces/${encodeURIComponent(workspaceId)}/tasks?${params.toString()}`;
 }
 
 async function requestTaskMutation<T>(
