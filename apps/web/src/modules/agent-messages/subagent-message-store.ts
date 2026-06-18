@@ -11,7 +11,8 @@ import type { WebPlugin } from "@hold-rein/plugin-web";
 
 export function initializeSubagentsFromHistory(
   current: SubagentStatesById,
-  subagents: TaskSubagentHistory[]
+  subagents: TaskSubagentHistory[],
+  taskId: string
 ): SubagentStatesById {
   if (!subagents.length) return current;
 
@@ -20,7 +21,8 @@ export function initializeSubagentsFromHistory(
     next[subagent.agentId] = {
       messages: subagent.messages,
       parentAgentId: subagent.parentAgentId,
-      status: subagent.status
+      status: subagent.status,
+      taskId
     };
   }
   return next;
@@ -28,7 +30,8 @@ export function initializeSubagentsFromHistory(
 
 export function discoverSubagents(
   current: SubagentStatesById,
-  messages: WebPlugin.AgentMessage[]
+  messages: WebPlugin.AgentMessage[],
+  taskId: string
 ): SubagentStatesById {
   const missingAgentIds = getCalledSubagentIds(messages).filter(
     (agentId) => !(agentId in current)
@@ -40,7 +43,8 @@ export function discoverSubagents(
     next[agentId] = {
       messages: [],
       parentAgentId: "",
-      status: "running"
+      status: "running",
+      taskId
     };
   }
   return next;
@@ -54,7 +58,8 @@ export function reduceSubagentEvent(
   const existing = current[agentId] ?? {
     messages: [],
     parentAgentId: "",
-    status: "running" as const
+    status: "running" as const,
+    taskId: ""
   };
   const messages = reduceAgentMessages(existing.messages, event);
   const nextState = {
@@ -63,5 +68,9 @@ export function reduceSubagentEvent(
     status: event.type === "agent_end" ? "completed" as const : existing.status
   };
 
-  return discoverSubagents({ ...current, [agentId]: nextState }, messages);
+  return discoverSubagents(
+    { ...current, [agentId]: nextState },
+    messages,
+    existing.taskId
+  );
 }

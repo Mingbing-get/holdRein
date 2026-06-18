@@ -80,6 +80,7 @@ export interface SubagentState {
   messages: WebPlugin.AgentMessage[];
   parentAgentId: string;
   status: "running" | "completed";
+  taskId: string;
 }
 
 export type SubagentStatesById = Record<string, SubagentState>;

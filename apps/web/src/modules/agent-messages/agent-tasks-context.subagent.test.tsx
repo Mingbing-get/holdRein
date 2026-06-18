@@ -11,6 +11,7 @@ import {
 } from "../../app/app-workspace-context";
 import type { AgentMessageFetcher } from "./agent-message-api";
 import { AgentTasksProvider, useAgentTasks } from "./agent-tasks-context";
+import { createSubagentApprovalFetcher } from "./agent-tasks-context-subagent-test-utils";
 import {
   jsonResponse,
   startResult,
@@ -123,6 +124,36 @@ describe("AgentTasksProvider subagent messages", () => {
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });
+
+  it("queues child approval requests on the parent task", async () => {
+    const fetcher = createSubagentApprovalFetcher();
+
+    render(
+      <AppWorkspaceProvider>
+        <AgentTasksProvider apiBaseUrl="" fetcher={fetcher}>
+          <SubagentApprovalProbe />
+        </AgentTasksProvider>
+      </AppWorkspaceProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("pending-approval")).toHaveTextContent(
+        "approval-child"
+      );
+    });
+
+    screen.getByRole("button", { name: "approve" }).click();
+
+    await waitFor(() => {
+      expect(fetcher).toHaveBeenCalledWith(
+        "/api/v1/agents/agent-child/approvals/approval-child",
+        expect.objectContaining({
+          body: JSON.stringify({ approved: true }),
+          method: "POST"
+        })
+      );
+    });
+  });
 });
 
 function SubagentProbe() {
@@ -206,6 +237,36 @@ function HistoryProbe() {
       <span data-testid="history-child-status">
         {getSubagentStatus("agent-history-child")}
       </span>
+    </>
+  );
+}
+
+function SubagentApprovalProbe() {
+  const { decideApproval, getPendingApproval, startTask } = useAgentTasks();
+
+  useEffect(() => {
+    void startTask({
+      modelId: "gpt-4.1",
+      prompt: "Inspect the project",
+      provider: "openai",
+      workspacePath: "/workspace"
+    });
+  }, [startTask]);
+
+  const approval = getPendingApproval("task-1");
+
+  return (
+    <>
+      <span data-testid="pending-approval">
+        {approval?.approvalId ?? "none"}
+      </span>
+      <button
+        onClick={() =>
+          void decideApproval("task-1", "approval-child", true)
+        }
+      >
+        approve
+      </button>
     </>
   );
 }

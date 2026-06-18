@@ -10,6 +10,7 @@ import {
 import type { PropsWithChildren } from "react";
 
 import { useAppWorkspace } from "../../app/app-workspace-context";
+import { getActiveAgentId } from "./agent-task-workspace-utils";
 import {
   cancelAgentTask,
   continueAgentTask,
@@ -128,8 +129,13 @@ export function AgentTasksProvider({
       .then((history) => {
         setSubagentMessagesById((current) =>
           discoverSubagents(
-            initializeSubagentsFromHistory(current, history.subagents),
-            history.messages
+            initializeSubagentsFromHistory(
+              current,
+              history.subagents,
+              activeTaskId
+            ),
+            history.messages,
+            activeTaskId
           )
         );
         setTaskStates((current) => ({
@@ -168,7 +174,7 @@ export function AgentTasksProvider({
       const message = getAgentEventMessage(event);
       if (message) {
         setSubagentMessagesById((current) =>
-          discoverSubagents(current, [message])
+          discoverSubagents(current, [message], taskId)
         );
       }
       if (event.type === "task_end") handleTaskStatus(taskId, "completed");
@@ -231,10 +237,21 @@ export function AgentTasksProvider({
         apiBaseUrl,
         fetcher,
         onError: () => undefined,
-        onEvent: (event) =>
+        onEvent: (event) => {
           setSubagentMessagesById((current) =>
             reduceSubagentEvent(current, agentId, event)
-          ),
+          );
+          if (event.type === "approval_requested" && subagent.taskId) {
+            setTaskStates((current) => ({
+              ...current,
+              [subagent.taskId]: reduceAgentTaskState(
+                current[subagent.taskId] ??
+                  createInitialAgentTaskState(subagent.taskId),
+                { event, type: "event_received" }
+              )
+            }));
+          }
+        },
         subscriptions
       });
     }
@@ -410,13 +427,4 @@ export function useAgentTasks(): AgentTasksContextValue {
   }
 
   return value;
-}
-
-function getActiveAgentId(
-  workspaces: ReturnType<typeof useAppWorkspace>["state"]["workspaces"],
-  taskId: string
-): string | undefined {
-  return workspaces
-    .flatMap((workspace) => workspace.tasks)
-    .find((task) => task.id === taskId)?.activeAgentId;
 }

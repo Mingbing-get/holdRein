@@ -18,42 +18,54 @@ describe("subagent message store", () => {
       }
     ];
 
-    expect(initializeSubagentsFromHistory({}, history)).toEqual({
+    expect(initializeSubagentsFromHistory({}, history, "task-1")).toEqual({
       "agent-child": {
         messages: [assistantMessage("message-child", "Restored child")],
         parentAgentId: "agent-parent",
-        status: "completed"
+        status: "completed",
+        taskId: "task-1"
       }
     });
   });
 
   it("preserves restored completed state when rediscovering the same child", () => {
-    const current = initializeSubagentsFromHistory({}, [
-      {
-        agentId: "agent-child",
-        messages: [assistantMessage("message-child", "Restored child")],
-        parentAgentId: "agent-parent",
-        status: "completed"
-      }
-    ]);
+    const current = initializeSubagentsFromHistory(
+      {},
+      [
+        {
+          agentId: "agent-child",
+          messages: [assistantMessage("message-child", "Restored child")],
+          parentAgentId: "agent-parent",
+          status: "completed"
+        }
+      ],
+      "task-1"
+    );
 
-    expect(discoverSubagents(current, [callSubagentMessage("agent-child")]))
-      .toBe(current);
+    expect(
+      discoverSubagents(current, [callSubagentMessage("agent-child")], "task-1")
+    ).toBe(current);
   });
 
   it("discovers live children as running records", () => {
-    expect(discoverSubagents({}, [callSubagentMessage("agent-child")]))
-      .toEqual({
+    expect(
+      discoverSubagents({}, [callSubagentMessage("agent-child")], "task-1")
+    ).toEqual({
         "agent-child": {
           messages: [],
           parentAgentId: "",
-          status: "running"
+          status: "running",
+          taskId: "task-1"
         }
       });
   });
 
   it("marks child records completed on terminal events", () => {
-    const current = discoverSubagents({}, [callSubagentMessage("agent-child")]);
+    const current = discoverSubagents(
+      {},
+      [callSubagentMessage("agent-child")],
+      "task-1"
+    );
 
     expect(
       reduceSubagentEvent(current, "agent-child", {
@@ -66,7 +78,8 @@ describe("subagent message store", () => {
       "agent-child": {
         messages: [],
         parentAgentId: "",
-        status: "completed"
+        status: "completed",
+        taskId: "task-1"
       }
     });
   });
