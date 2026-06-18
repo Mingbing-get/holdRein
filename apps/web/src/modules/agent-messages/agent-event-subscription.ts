@@ -1,7 +1,7 @@
 import {
   subscribeToAgentEvents,
   type AgentMessageFetcher
-} from "./agent-message-api";
+} from "./api";
 import type { AgentEventEnvelope } from "./agent-message-types";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 import type { RefObject } from "react";

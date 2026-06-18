@@ -5,10 +5,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AppWorkspaceProvider, useAppWorkspace } from "../../app/app-workspace-context";
-import type { AgentMessageFetcher } from "./agent-message-api";
-import { AgentTasksProvider, useAgentTasks } from "./agent-tasks-context";
-import { jsonResponse, startResult, streamResponse } from "./agent-tasks-context-test-utils";
+import { AppWorkspaceProvider, useAppWorkspace } from "../../../app/app-workspace-context";
+import type { AgentMessageFetcher } from "../api";
+import { AgentTasksProvider, useAgentTasks } from ".";
+import { jsonResponse, startResult, streamResponse } from "./test-utils";
 
 describe("AgentTasksProvider", () => {
   afterEach(() => {

@@ -2,7 +2,7 @@ import type {
   AgentEventEnvelope,
   ThinkingContent,
   TextContent
-} from "./agent-message-types";
+} from "../agent-message-types";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
 export function reduceAgentMessages(

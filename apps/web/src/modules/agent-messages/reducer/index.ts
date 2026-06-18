@@ -2,8 +2,8 @@ import type {
   AgentEventEnvelope,
   AgentTaskState,
   PendingApproval
-} from "./agent-message-types";
-import { reduceAgentMessages } from "./agent-message-collection";
+} from "../agent-message-types";
+import { reduceAgentMessages } from "../collection";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
 export type AgentTaskAction =

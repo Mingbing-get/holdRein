@@ -1,11 +1,11 @@
 import { vi } from "vitest";
 
-import type { AgentMessageFetcher } from "./agent-message-api";
+import type { AgentMessageFetcher } from "../api";
 import {
   jsonResponse,
   startResult,
   streamResponse
-} from "./agent-tasks-context-test-utils";
+} from "./test-utils";
 
 export function createSubagentApprovalFetcher(): AgentMessageFetcher &
   ReturnType<typeof vi.fn> {

@@ -1,12 +1,12 @@
 import {
   getCalledSubagentIds,
   reduceAgentMessages
-} from "./agent-message-collection";
+} from "../collection";
 import type {
   AgentEventEnvelope,
   SubagentStatesById,
   TaskSubagentHistory
-} from "./agent-message-types";
+} from "../agent-message-types";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
 export function initializeSubagentsFromHistory(

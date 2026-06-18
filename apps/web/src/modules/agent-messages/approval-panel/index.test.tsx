@@ -5,8 +5,8 @@ import { App } from "antd";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import type { PendingApproval } from "./agent-message-types";
-import { ApprovalPanel } from "./approval-panel";
+import type { PendingApproval } from "../agent-message-types";
+import { ApprovalPanel } from ".";
 
 const approval: PendingApproval = {
   agentId: "agent-1",

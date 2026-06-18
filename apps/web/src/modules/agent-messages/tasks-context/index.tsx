@@ -9,8 +9,8 @@ import {
 } from "react";
 import type { PropsWithChildren } from "react";
 
-import { useAppWorkspace } from "../../app/app-workspace-context";
-import { getActiveAgentId } from "./agent-task-workspace-utils";
+import { useAppWorkspace } from "../../../app/app-workspace-context";
+import { getActiveAgentId } from "../agent-task-workspace-utils";
 import {
   cancelAgentTask,
   continueAgentTask,
@@ -18,21 +18,21 @@ import {
   fetchTaskMessages,
   fetchTaskTitle,
   startAgentTask
-} from "./agent-message-api";
-import type { AgentMessageFetcher } from "./agent-message-api";
+} from "../api";
+import type { AgentMessageFetcher } from "../api";
 import {
   getAgentEventMessage,
   startAgentEventSubscription
-} from "./agent-event-subscription";
+} from "../agent-event-subscription";
 import {
   createInitialAgentTaskState,
   reduceAgentTaskState
-} from "./agent-message-reducer";
+} from "../reducer";
 import {
   discoverSubagents,
   initializeSubagentsFromHistory,
   reduceSubagentEvent
-} from "./subagent-message-store";
+} from "../subagent-message/store";
 import type {
   AgentEventEnvelope,
   AgentTaskState,
@@ -40,7 +40,7 @@ import type {
   PendingApproval,
   StartTaskInput,
   SubagentStatesById
-} from "./agent-message-types";
+} from "../agent-message-types";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
 const EMPTY_MESSAGES: WebPlugin.AgentMessage[] = [];

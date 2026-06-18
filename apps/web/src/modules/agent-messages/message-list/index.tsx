@@ -1,12 +1,12 @@
 import { Alert, Flex, Typography } from "antd";
 import { InfoCircleOutlined, RollbackOutlined, ToolOutlined } from "@ant-design/icons";
 import { Bubble, Think } from "@ant-design/x";
-import "./message-list.css";
+import "./index.css";
 
-import { useAppPlugins } from '../../app/app-plugin';
-import { getCalledSubagentId } from "./agent-message-collection";
-import { MarkdownContent } from "./markdown-content";
-import { SubagentMessageList } from "./subagent-message-list";
+import { useAppPlugins } from '../../../app/app-plugin';
+import { getCalledSubagentId } from "../collection";
+import { MarkdownContent } from "../markdown-content";
+import { SubagentMessageList } from "../subagent-message";
 import { useCallback, useMemo } from "react";
 import type { WebPlugin } from '@hold-rein/plugin-web'
 

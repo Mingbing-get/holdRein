@@ -8,15 +8,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AppWorkspaceProvider,
   useAppWorkspace
-} from "../../app/app-workspace-context";
-import type { AgentMessageFetcher } from "./agent-message-api";
-import { AgentTasksProvider, useAgentTasks } from "./agent-tasks-context";
-import { createSubagentApprovalFetcher } from "./agent-tasks-context-subagent-test-utils";
+} from "../../../app/app-workspace-context";
+import type { AgentMessageFetcher } from "../api";
+import { AgentTasksProvider, useAgentTasks } from ".";
+import { createSubagentApprovalFetcher } from "./subagent-test-utils";
 import {
   jsonResponse,
   startResult,
   streamResponse
-} from "./agent-tasks-context-test-utils";
+} from "./test-utils";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
 describe("AgentTasksProvider subagent messages", () => {

@@ -8,7 +8,7 @@ import {
   fetchTaskTitle,
   startAgentTask,
   subscribeToAgentEvents
-} from "./agent-message-api";
+} from ".";
 
 describe("agent message API", () => {
   it("starts an agent task with the selected workspace and model", async () => {

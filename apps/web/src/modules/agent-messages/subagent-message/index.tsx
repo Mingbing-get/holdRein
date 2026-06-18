@@ -2,8 +2,8 @@ import { BranchesOutlined } from "@ant-design/icons";
 import { Think } from "@ant-design/x";
 import { useMemo } from "react";
 
-import { useAgentTasks } from "./agent-tasks-context";
-import { AgentMessageList } from "./message-list";
+import { useAgentTasks } from "../tasks-context";
+import { AgentMessageList } from "../message-list";
 
 export interface SubagentMessageListProps {
   agentId: string;

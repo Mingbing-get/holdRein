@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   createInitialAgentTaskState,
   reduceAgentTaskState
-} from "./agent-message-reducer";
+} from ".";
 
 const assistant = {
   api: "openai-responses",

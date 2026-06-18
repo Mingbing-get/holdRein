@@ -4,8 +4,8 @@ import {
   getCalledSubagentId,
   getCalledSubagentIds,
   reduceAgentMessages
-} from "./agent-message-collection";
-import type { AgentEventEnvelope } from "./agent-message-types";
+} from ".";
+import type { AgentEventEnvelope } from "../agent-message-types";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
 const assistant: WebPlugin.AssistantMessage = {

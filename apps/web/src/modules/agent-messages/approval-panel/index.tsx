@@ -1,7 +1,7 @@
 import { App, Button, Flex, Input, Typography } from "antd";
 import { useState } from "react";
 
-import type { PendingApproval } from "./agent-message-types";
+import type { PendingApproval } from "../agent-message-types";
 
 export interface ApprovalPanelProps {
   approval: PendingApproval;

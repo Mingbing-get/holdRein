@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AgentMessageList } from "./message-list";
+import { AgentMessageList } from ".";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
 const agentTasksMock = vi.hoisted(() => ({

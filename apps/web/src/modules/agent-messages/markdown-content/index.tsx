@@ -1,7 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import "./markdown-content.css";
+import "./index.css";
 
 export interface MarkdownContentProps {
   children: string;

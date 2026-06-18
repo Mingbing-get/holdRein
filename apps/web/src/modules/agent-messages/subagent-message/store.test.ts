@@ -4,8 +4,8 @@ import {
   discoverSubagents,
   initializeSubagentsFromHistory,
   reduceSubagentEvent
-} from "./subagent-message-store";
-import type { TaskSubagentHistory } from "./agent-message-types";
+} from "./store";
+import type { TaskSubagentHistory } from "../agent-message-types";
 
 describe("subagent message store", () => {
   it("initializes restored subagent messages and statuses from task history", () => {

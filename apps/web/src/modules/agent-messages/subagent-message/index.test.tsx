@@ -5,7 +5,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import type { PropsWithChildren } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { SubagentMessageList } from "./subagent-message-list";
+import { SubagentMessageList } from "./index";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
 const agentTasksMock = vi.hoisted(() => ({
