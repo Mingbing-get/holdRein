@@ -54,6 +54,9 @@ export interface AgentTasksContextValue {
     reason?: string
   ) => Promise<void>;
   getSubagentMessages: (agentId: string) => WebPlugin.AgentMessage[];
+  getSubagentStatus: (
+    agentId: string
+  ) => SubagentStatesById[string]["status"] | undefined;
   getPendingApproval: (taskId: string) => PendingApproval | undefined;
   getTaskState: (taskId: string) => AgentTaskState | undefined;
   hasPendingApproval: (taskId: string) => boolean;
@@ -374,6 +377,7 @@ export function AgentTasksProvider({
       getPendingApproval: (taskId) => taskStates[taskId]?.pendingApprovals[0],
       getSubagentMessages: (agentId) =>
         subagentMessagesById[agentId]?.messages ?? EMPTY_MESSAGES,
+      getSubagentStatus: (agentId) => subagentMessagesById[agentId]?.status,
       getTaskState: (taskId) => taskStates[taskId],
       hasPendingApproval: (taskId) =>
         Boolean(taskStates[taskId]?.pendingApprovals.length),

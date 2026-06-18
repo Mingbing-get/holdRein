@@ -98,7 +98,15 @@ function AssistantMessageItem({
           );
         }
         if (block.type === "thinking") {
-          return <Think key={index} title="思考过程">{block.thinking}</Think>;
+          return (
+            <Think
+              key={index}
+              title="thinking"
+              defaultExpanded={false}
+            >
+              {block.thinking}
+            </Think>
+          );
         }
         return (
           <ToolCallMessageItem

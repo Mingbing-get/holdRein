@@ -24,6 +24,7 @@ vi.mock("./agent-tasks-context", () => ({
   useAgentTasks: () => ({
     getSubagentMessages: (agentId: string) =>
       agentTasksMock.childMessages[agentId] ?? [],
+    getSubagentStatus: () => undefined,
     getTaskState: (taskId: string) =>
       taskId === agentTasksMock.activeTaskId
         ? { messages: agentTasksMock.taskMessages }

@@ -88,6 +88,9 @@ describe("AgentTasksProvider subagent messages", () => {
       expect(screen.getByTestId("history-child-messages")).toHaveTextContent(
         "Restored child answer"
       );
+      expect(screen.getByTestId("history-child-status")).toHaveTextContent(
+        "completed"
+      );
     });
     expect(
       fetcher.mock.calls.some(([input]) =>
@@ -110,6 +113,9 @@ describe("AgentTasksProvider subagent messages", () => {
     await waitFor(() => {
       expect(screen.getByTestId("history-child-messages")).toHaveTextContent(
         "Restored child answer,Live child answer"
+      );
+      expect(screen.getByTestId("history-child-status")).toHaveTextContent(
+        "running"
       );
     });
     expect(fetcher).toHaveBeenCalledWith(
@@ -165,7 +171,7 @@ function SubagentProbe() {
 function HistoryProbe() {
   const { setActiveTaskId, setActiveWorkspaceId, setWorkspaces } =
     useAppWorkspace();
-  const { getSubagentMessages } = useAgentTasks();
+  const { getSubagentMessages, getSubagentStatus } = useAgentTasks();
 
   useEffect(() => {
     setWorkspaces([
@@ -193,9 +199,14 @@ function HistoryProbe() {
   }, [setActiveTaskId, setActiveWorkspaceId, setWorkspaces]);
 
   return (
-    <span data-testid="history-child-messages">
-      {getAssistantText(getSubagentMessages("agent-history-child"))}
-    </span>
+    <>
+      <span data-testid="history-child-messages">
+        {getAssistantText(getSubagentMessages("agent-history-child"))}
+      </span>
+      <span data-testid="history-child-status">
+        {getSubagentStatus("agent-history-child")}
+      </span>
+    </>
   );
 }
 
