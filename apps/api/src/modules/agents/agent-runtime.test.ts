@@ -363,7 +363,14 @@ describe("agent runtime sessions", () => {
   it("starts a subagent tool and records immutable call metadata without status", async () => {
     const { appendCustomMessageEntry, repo } = createSessionRepo();
     const eventBus = createAgentEventBus();
-    const runtime = createRuntime(repo, eventBus);
+    const subagentRepository = createInMemorySubagentRepository();
+    const childRowsAtPrompt: unknown[] = [];
+    prompt.mockImplementation(async () => {
+      if (prompt.mock.calls.length === 2) {
+        childRowsAtPrompt.push(subagentRepository.findByTaskId("task-1")[0]);
+      }
+    });
+    const runtime = createRuntime(repo, eventBus, subagentRepository);
 
     const result = await runtime.start(createRunInput());
     const callMessages: { role: unknown; type: string }[] = [];
@@ -393,6 +400,19 @@ describe("agent runtime sessions", () => {
     });
 
     expect(prompt).toHaveBeenNthCalledWith(2, "Inspect the auth module");
+    const childRows = subagentRepository.findByTaskId("task-1");
+    expect(childRows[0]).toEqual(
+      expect.objectContaining({
+        sessionCreatedAt: "2026-06-11T00:00:00.000Z",
+        sessionId: "session-2",
+        sessionPath: "/sessions/session-2.jsonl"
+      })
+    );
+    expect(childRowsAtPrompt[0]).toEqual(
+      expect.objectContaining({
+        sessionId: "session-2"
+      })
+    );
     expect(appendCustomMessageEntry).not.toHaveBeenCalled();
     expect(callMessages).toEqual([]);
 

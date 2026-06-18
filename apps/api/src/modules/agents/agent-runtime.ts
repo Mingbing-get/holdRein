@@ -144,10 +144,19 @@ export function createAgentRuntime(
             startSubagent: async ({ agentName, prompt, toolCallId }) => {
               const agentId = `agent_${randomUUID()}`;
               const createdAt = new Date().toISOString();
+              const childSession = await sessionRepo.create({
+                cwd: input.workspacePath
+              });
+              const childSessionMetadata = toAgentSessionMetadata(
+                await childSession.getMetadata()
+              );
               subagentRepository.create({
                 agentId,
                 createdAt,
                 parentAgentId: harnessOptions.agentId,
+                sessionCreatedAt: childSessionMetadata.createdAt,
+                sessionId: childSessionMetadata.id,
+                sessionPath: childSessionMetadata.path,
                 status: "running",
                 taskId: input.taskId,
                 updatedAt: createdAt
@@ -159,7 +168,8 @@ export function createAgentRuntime(
                   agentName,
                   isContinue: false,
                   parentAgentId: harnessOptions.agentId,
-                  pluginPrompt: prompt
+                  pluginPrompt: prompt,
+                  session: childSession
                 });
               } catch (error) {
                 subagentRepository.delete(agentId);
