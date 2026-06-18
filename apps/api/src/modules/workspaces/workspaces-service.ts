@@ -1,6 +1,6 @@
 import { unlink } from "node:fs/promises";
 
-import type { ActiveTaskRunRegistry } from "../agents/active-task-run-registry";
+import type { ActiveTaskRunRegistry } from "../agents/task/active-run-registry";
 import type {
   RecentWorkspaceTasksResult,
   WorkspaceNavigationTaskRow,

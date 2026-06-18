@@ -103,6 +103,7 @@ function AssistantMessageItem({
               key={index}
               title="thinking"
               defaultExpanded={false}
+              blink
             >
               {block.thinking}
             </Think>

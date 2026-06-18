@@ -2,7 +2,7 @@ import { loadApiEnv } from "../../config/env";
 import { DB_FILE } from "../../config/const";
 import { createDatabase, migrateDatabase } from "../../db";
 import { createSqliteWorkspaceRepository } from "./workspace-repository";
-import { getDefaultActiveTaskRunRegistry } from "../agents/active-task-run-registry";
+import { getDefaultActiveTaskRunRegistry } from "../agents/task/active-run-registry";
 import {
   createWorkspacesService,
   type WorkspacesService

@@ -10,7 +10,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { TaskRow, WorkspaceRow } from "../../db";
-import { createActiveTaskRunRegistry } from "../agents/active-task-run-registry";
+import { createActiveTaskRunRegistry } from "../agents/task/active-run-registry";
 import { createInMemoryWorkspaceRepository } from "./workspace-repository";
 import { createWorkspacesService } from "./workspaces-service";
 

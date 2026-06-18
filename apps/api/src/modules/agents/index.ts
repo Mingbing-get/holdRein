@@ -2,22 +2,22 @@ export {
   createActiveTaskRunRegistry,
   getDefaultActiveTaskRunRegistry,
   type ActiveTaskRunRegistry
-} from "./active-task-run-registry";
+} from "./task/active-run-registry";
 export {
   createAgentApprovalStore,
   type AgentApprovalStore
-} from "./agent-approval-store";
-export { createAgentEventBus, type AgentEventBus } from "./agent-event-bus";
-export { createAgentRuntime, type AgentRuntime } from "./agent-runtime";
+} from "./approval/store";
+export { createAgentEventBus, type AgentEventBus } from "./event/event-bus";
+export { createAgentRuntime, type AgentRuntime } from "./runtime";
 export {
   createAgentsRouter,
   type CreateAgentsRouterOptions
-} from "./agents-router";
+} from "./router";
 export {
   createAgentsService,
   type AgentsService
-} from "./agents-service";
-export { getDefaultAgentsService } from "./default-agents-service";
+} from "./service";
+export { getDefaultAgentsService } from "./service/default";
 export type {
   AgentEventEnvelope,
   AgentEventSubscription,
