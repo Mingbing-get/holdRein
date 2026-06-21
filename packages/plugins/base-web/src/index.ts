@@ -1,4 +1,5 @@
 import type { WebPlugin } from '@hold-rein/plugin-web'
+import { shellExecTool } from './tools'
 
 const baseWebPlugin: WebPlugin.Plugin = {
   id: '__base',
@@ -10,12 +11,9 @@ const baseWebPlugin: WebPlugin.Plugin = {
     //     Render: () => '11111'
     //   }
     // ],
-    // toolRenders: [
-    //   {
-    //     toolName: 'shell_exec',
-    //     Render: () => '1212'
-    //   }
-    // ],
+    toolRenders: [
+      shellExecTool
+    ],
     // senderSuggestions: [
     //   {
     //     trigger: '/',

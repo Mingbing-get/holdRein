@@ -21,7 +21,7 @@ export function SubagentMessageList({ agentId }: SubagentMessageListProps) {
 
   return (
     <Think
-      title="call subagent"
+      title="调用子智能体"
       icon={<BranchesOutlined />}
       defaultExpanded={false}
       loading={status === "running"}

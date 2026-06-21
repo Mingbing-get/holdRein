@@ -13,6 +13,7 @@ import {
   type TurnFooterStatus
 } from "../use-turn-footer-message-groups";
 import type { WebPlugin } from '@hold-rein/plugin-web'
+import { customTypeMap } from "../consts";
 
 const AGENT_CONTINUE_PROMPT = "";
 
@@ -102,7 +103,7 @@ function AgentMessageItem({
 
     return message.display ? (
       <Think
-        title={message.customType}
+        title={customTypeMap[message.customType] || message.customType}
         icon={<RollbackOutlined />}
         defaultExpanded={false}
         blink
@@ -147,7 +148,7 @@ function AssistantMessageItem({
           return (
             <Think
               key={index}
-              title="thinking"
+              title="思考"
               defaultExpanded={false}
               blink
             >

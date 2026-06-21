@@ -71,7 +71,7 @@ describe("AgentMessageList", () => {
       />
     );
 
-    fireEvent.click(screen.getByText("thinking"));
+    fireEvent.click(screen.getByText("思考"));
 
     expect(screen.getByText("Prompt")).toBeInTheDocument();
     expect(screen.getByText("Reason")).toBeInTheDocument();
@@ -361,8 +361,8 @@ describe("AgentMessageList", () => {
       />
     );
 
-    expect(screen.getByText("call subagent")).toBeInTheDocument();
-    fireEvent.click(screen.getByText("call subagent"));
+    expect(screen.getByText("调用子智能体")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("调用子智能体"));
     expect(screen.getByText("Child answer")).toBeInTheDocument();
     expect(screen.queryByText("Subagent is running")).not.toBeInTheDocument();
   });
