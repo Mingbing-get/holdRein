@@ -7,21 +7,49 @@ import { useAppPlugins } from '../../../app/app-plugin';
 import { getCalledSubagentId } from "../collection";
 import { MarkdownContent } from "../markdown-content";
 import { SubagentMessageList } from "../subagent-message";
-import { useCallback, useMemo } from "react";
+import { Fragment, useCallback, useMemo } from "react";
+import {
+  useTurnFooterMessageGroups,
+  type TurnFooterStatus
+} from "../use-turn-footer-message-groups";
 import type { WebPlugin } from '@hold-rein/plugin-web'
 
 const AGENT_CONTINUE_PROMPT = "";
 
-export function AgentMessageList({ messages }: { messages: WebPlugin.AgentMessage[] }) {
+export interface AgentMessageListProps {
+  messages: WebPlugin.AgentMessage[];
+  status?: TurnFooterStatus;
+}
+
+export function AgentMessageList({ messages, status }: AgentMessageListProps) {
+  const footerSourceMessages = useMemo(
+    () => messages.filter((message) => !isContinueSentinel(message)),
+    [messages]
+  );
+  const visibleMessages = useMemo(
+    () => footerSourceMessages.filter((message) => message.role !== "toolResult"),
+    [footerSourceMessages]
+  );
+  const footerGroups = useTurnFooterMessageGroups(footerSourceMessages, status);
+  const footerAssistantIds = useMemo(
+    () => new Set(footerGroups.map((group) => group.beforeAssistantId)),
+    [footerGroups]
+  );
+
   return (
     <Flex data-testid="agent-message-list" gap={12} vertical>
-      {messages
-        .filter((message) => message.role !== "toolResult" && !isContinueSentinel(message))
-        .map((message) => (
-          <AgentMessageItem key={message.id} message={message} messages={messages} />
-        ))}
+      {visibleMessages.map((message) => (
+        <Fragment key={message.id}>
+          <AgentMessageItem message={message} messages={messages} />
+          {footerAssistantIds.has(message.id) ? <AgentTurnFooter /> : null}
+        </Fragment>
+      ))}
     </Flex>
   );
+}
+
+function AgentTurnFooter() {
+  return <div>footer example</div>;
 }
 
 function AgentMessageItem({

@@ -16,17 +16,18 @@ export function SubagentMessageList({ agentId }: SubagentMessageListProps) {
     () => getSubagentMessages(agentId),
     [agentId, getSubagentMessages]
   );
-  const isRunning = getSubagentStatus(agentId) === "running";
+
+  const status = useMemo(() => getSubagentStatus(agentId), [agentId, getSubagentStatus]);
 
   return (
     <Think
       title="call subagent"
       icon={<BranchesOutlined />}
       defaultExpanded={false}
-      loading={isRunning}
+      loading={status === "running"}
       blink
     >
-      <AgentMessageList messages={messages} />
+      <AgentMessageList messages={messages} status={status} />
     </Think>
   );
 }

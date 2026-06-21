@@ -90,7 +90,10 @@ export function ChatWorkspace({
           position: "relative"
         }}
       >
-        <AgentMessageList messages={taskState?.messages ?? []} />
+        <AgentMessageList
+          messages={taskState?.messages ?? []}
+          status={taskState?.status}
+        />
         {pendingApproval ? (
           <ApprovalPanel
             approval={pendingApproval}

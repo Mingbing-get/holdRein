@@ -75,6 +75,74 @@ describe("AgentMessageList", () => {
     expect(screen.getByText("Answer")).toBeInTheDocument();
   });
 
+  it("renders a footer after completed assistant turns", () => {
+    render(
+      <AgentMessageList
+        messages={[
+          { content: "First prompt", id: "user-1", role: "user", timestamp: 1 },
+          {
+            api: "openai-responses",
+            content: [{ text: "First answer", type: "text" }],
+            id: "assistant-1",
+            model: "gpt-4.1",
+            provider: "openai",
+            role: "assistant",
+            stopReason: "stop",
+            timestamp: 2
+          },
+          { content: "Second prompt", id: "user-2", role: "user", timestamp: 3 },
+          {
+            api: "openai-responses",
+            content: [{ text: "Second answer", type: "text" }],
+            id: "assistant-2",
+            model: "gpt-4.1",
+            provider: "openai",
+            role: "assistant",
+            stopReason: "stop",
+            timestamp: 4
+          }
+        ]}
+        status="completed"
+      />
+    );
+
+    expect(screen.getAllByText("footer example")).toHaveLength(2);
+  });
+
+  it("does not render a footer after the running final assistant turn", () => {
+    render(
+      <AgentMessageList
+        messages={[
+          { content: "First prompt", id: "user-1", role: "user", timestamp: 1 },
+          {
+            api: "openai-responses",
+            content: [{ text: "First answer", type: "text" }],
+            id: "assistant-1",
+            model: "gpt-4.1",
+            provider: "openai",
+            role: "assistant",
+            stopReason: "stop",
+            timestamp: 2
+          },
+          { content: "Second prompt", id: "user-2", role: "user", timestamp: 3 },
+          {
+            api: "openai-responses",
+            content: [{ text: "Streaming answer", type: "text" }],
+            id: "assistant-2",
+            model: "gpt-4.1",
+            provider: "openai",
+            role: "assistant",
+            stopReason: "stop",
+            timestamp: 4
+          }
+        ]}
+        status="running"
+      />
+    );
+
+    expect(screen.getAllByText("footer example")).toHaveLength(1);
+  });
+
   it("renders Markdown only for assistant text blocks", () => {
     render(
       <AgentMessageList
