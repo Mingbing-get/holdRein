@@ -11,7 +11,8 @@ import type { WebPlugin } from "@hold-rein/plugin-web";
 const agentTasksMock = vi.hoisted(() => ({
   activeTaskId: "task-1",
   childMessages: {} as Record<string, WebPlugin.AgentMessage[]>,
-  taskMessages: [] as WebPlugin.AgentMessage[]
+  taskMessages: [] as WebPlugin.AgentMessage[],
+  turnFooterRenders: [] as WebPlugin.TurnFooterRender[]
 }));
 
 vi.mock("../../../app/app-workspace-context", () => ({
@@ -34,7 +35,8 @@ vi.mock("../tasks-context", () => ({
 
 vi.mock("../../../app/app-plugin", () => ({
   useAppPlugins: () => ({
-    toolRenders: []
+    toolRenders: [],
+    turnFooterRenders: agentTasksMock.turnFooterRenders
   })
 }));
 
@@ -44,6 +46,7 @@ describe("AgentMessageList", () => {
     agentTasksMock.activeTaskId = "task-1";
     agentTasksMock.childMessages = {};
     agentTasksMock.taskMessages = [];
+    agentTasksMock.turnFooterRenders = [];
   });
 
   it("renders structured user and assistant content", () => {
@@ -75,7 +78,14 @@ describe("AgentMessageList", () => {
     expect(screen.getByText("Answer")).toBeInTheDocument();
   });
 
-  it("renders a footer after completed assistant turns", () => {
+  it("renders plugin footers after completed assistant turns", () => {
+    agentTasksMock.turnFooterRenders = [
+      {
+        id: "turn-summary",
+        Render: () => <div>turn summary</div>
+      }
+    ];
+
     render(
       <AgentMessageList
         messages={[
@@ -106,10 +116,19 @@ describe("AgentMessageList", () => {
       />
     );
 
-    expect(screen.getAllByText("footer example")).toHaveLength(2);
+    expect(screen.getAllByText("turn summary")).toHaveLength(2);
   });
 
-  it("passes the completed turn messages to its footer", () => {
+  it("passes the completed turn messages to plugin footers", () => {
+    agentTasksMock.turnFooterRenders = [
+      {
+        id: "turn-summary",
+        Render: ({ messages }) => (
+          <div data-testid="turn-summary">{messages.map((message) => message.id).join(",")}</div>
+        )
+      }
+    ];
+
     render(
       <AgentMessageList
         messages={[
@@ -145,10 +164,47 @@ describe("AgentMessageList", () => {
       />
     );
 
-    expect(screen.getByText("footer example")).toHaveAttribute(
-      "data-turn-message-count",
-      "3"
+    expect(screen.getByTestId("turn-summary")).toHaveTextContent(
+      "user-1,assistant-1,tool-result-1"
     );
+  });
+
+  it("renders every plugin footer in a vertical flex container", () => {
+    agentTasksMock.turnFooterRenders = [
+      {
+        id: "first-footer",
+        Render: () => <div>first footer</div>
+      },
+      {
+        id: "second-footer",
+        Render: () => <div>second footer</div>
+      }
+    ];
+
+    render(
+      <AgentMessageList
+        messages={[
+          { content: "Prompt", id: "user-1", role: "user", timestamp: 1 },
+          {
+            api: "openai-responses",
+            content: [{ text: "Answer", type: "text" }],
+            id: "assistant-1",
+            model: "gpt-4.1",
+            provider: "openai",
+            role: "assistant",
+            stopReason: "stop",
+            timestamp: 2
+          }
+        ]}
+        status="completed"
+      />
+    );
+
+    const footer = screen.getByTestId("agent-turn-footer");
+
+    expect(footer).toHaveClass("ant-flex-vertical");
+    expect(screen.getByText("first footer")).toBeInTheDocument();
+    expect(screen.getByText("second footer")).toBeInTheDocument();
   });
 
   it("does not render a footer after the running final assistant turn", () => {
@@ -182,7 +238,7 @@ describe("AgentMessageList", () => {
       />
     );
 
-    expect(screen.getAllByText("footer example")).toHaveLength(1);
+    expect(screen.queryByTestId("agent-turn-footer")).not.toBeInTheDocument();
   });
 
   it("renders Markdown only for assistant text blocks", () => {

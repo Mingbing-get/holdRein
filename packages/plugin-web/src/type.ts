@@ -207,6 +207,15 @@ export namespace WebPlugin {
     readonly id: string;
   }
 
+  export interface TurnFooterRenderProps {
+    messages: AgentMessage[];
+  }
+
+  export interface TurnFooterRender {
+    readonly Render: ComponentType<TurnFooterRenderProps>;
+    readonly id: string;
+  }
+
   export interface SuggestionItem {
     children?: SuggestionItem[];
     extra?: React.ReactNode;
@@ -226,6 +235,7 @@ export namespace WebPlugin {
     readonly senderSuggestions?: readonly SuggestionGroup[];
     readonly settings?: readonly SettingsItem[];
     readonly toolRenders?: readonly ToolRender[];
+    readonly turnFooterRenders?: readonly TurnFooterRender[];
   }
 
   export type ContributionResolver =

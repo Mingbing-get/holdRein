@@ -22,6 +22,7 @@ export interface AppPluginContextValue {
   senderActions: WebPlugin.SenderAction[];
   senderSuggestions: WebPlugin.SuggestionGroup[];
   toolRenders: WebPlugin.ToolRender[];
+  turnFooterRenders: WebPlugin.TurnFooterRender[];
 }
 
 const AppPluginContext = createContext<AppPluginContextValue | null>(null);
@@ -33,6 +34,7 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
   const [senderActions, setSenderActions] = useState<WebPlugin.SenderAction[]>([])
   const [senderSuggestions, setSenderSuggestions] = useState<WebPlugin.SuggestionGroup[]>([])
   const [toolRenders, setToolRenders] = useState<WebPlugin.ToolRender[]>([])
+  const [turnFooterRenders, setTurnFooterRenders] = useState<WebPlugin.TurnFooterRender[]>([])
 
   const appUi = useAppUi()
 
@@ -61,6 +63,14 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
         ]
       })
     }
+    if (contribution.turnFooterRenders?.length) {
+      setTurnFooterRenders(old => {
+        return [
+          ...old,
+          ...(contribution.turnFooterRenders || []).map(item => ({ ...item, id: `${pluginId}_${item.id}` }))
+        ]
+      })
+    }
     if (contribution.toolRenders?.length) {
       setToolRenders(old => [...old, ...(contribution.toolRenders || [])])
     }
@@ -74,6 +84,7 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
     setSettings([])
     setSenderActions([])
     setToolRenders([])
+    setTurnFooterRenders([])
     setSenderSuggestions([])
   }, [])
 
@@ -114,13 +125,15 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
     settings,
     senderActions,
     toolRenders,
-    senderSuggestions
+    senderSuggestions,
+    turnFooterRenders
   }), [
     rightPanels,
     senderActions,
     settings,
     toolRenders,
-    senderSuggestions
+    senderSuggestions,
+    turnFooterRenders
   ])
 
   return (

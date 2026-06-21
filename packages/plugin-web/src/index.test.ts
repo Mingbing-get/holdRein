@@ -56,6 +56,12 @@ describe("createWebPluginRegistry", () => {
             Render: () => null,
             toolName: "shell_exec"
           }
+        ],
+        turnFooterRenders: [
+          {
+            id: "task-summary",
+            Render: () => null
+          }
         ]
       },
       id: "ui"

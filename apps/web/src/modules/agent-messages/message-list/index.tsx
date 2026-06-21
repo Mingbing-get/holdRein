@@ -55,7 +55,19 @@ function AgentTurnFooter({
 }: {
   messages: WebPlugin.AgentMessage[];
 }) {
-  return <div data-turn-message-count={messages.length}>footer example</div>;
+  const { turnFooterRenders } = useAppPlugins();
+
+  if (!turnFooterRenders.length) {
+    return null;
+  }
+
+  return (
+    <Flex data-testid="agent-turn-footer" gap={8} vertical>
+      {turnFooterRenders.map(({ id, Render }) => (
+        <Render key={id} messages={messages} />
+      ))}
+    </Flex>
+  );
 }
 
 function AgentMessageItem({

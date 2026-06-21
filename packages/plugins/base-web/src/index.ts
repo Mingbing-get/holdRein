@@ -55,6 +55,12 @@ const baseWebPlugin: WebPlugin.Plugin = {
     //     title: 'test bb',
     //     Render: () => 'content bbb'
     //   }
+    // ],
+    // turnFooterRenders: [
+    //   {
+    //     id: 'test',
+    //     Render: ({ messages }) => `${messages.length}条消息`
+    //   }
     // ]
   }
 }
