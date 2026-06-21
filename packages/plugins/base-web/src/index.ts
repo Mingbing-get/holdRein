@@ -1,5 +1,12 @@
 import type { WebPlugin } from '@hold-rein/plugin-web'
-import { shellExecTool } from './tools'
+import {
+  editFileTool,
+  findFilesTool,
+  grepFilesTool,
+  readFileTool,
+  shellExecTool,
+  writeFileTool
+} from './tools'
 
 const baseWebPlugin: WebPlugin.Plugin = {
   id: '__base',
@@ -12,6 +19,11 @@ const baseWebPlugin: WebPlugin.Plugin = {
     //   }
     // ],
     toolRenders: [
+      readFileTool,
+      writeFileTool,
+      grepFilesTool,
+      findFilesTool,
+      editFileTool,
       shellExecTool
     ],
     // senderSuggestions: [

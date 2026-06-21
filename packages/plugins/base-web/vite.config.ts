@@ -8,7 +8,15 @@ export default defineConfig({
       formats: ["es", "cjs"]
     },
     rollupOptions: {
-      external: ["@ant-design/icons", "antd", "react", "react-dom", "react/jsx-runtime"]
+      external: [
+        "@ant-design/icons",
+        "@monaco-editor/react",
+        "antd",
+        "monaco-editor",
+        "react",
+        "react-dom",
+        "react/jsx-runtime"
+      ]
     },
     sourcemap: true
   }

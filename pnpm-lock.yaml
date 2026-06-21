@@ -193,9 +193,15 @@ importers:
       '@hold-rein/plugin-web':
         specifier: workspace:^
         version: link:../../plugin-web
+      '@monaco-editor/react':
+        specifier: 4.7.0
+        version: 4.7.0(monaco-editor@0.55.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       antd:
         specifier: 6.4.3
         version: 6.4.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      monaco-editor:
+        specifier: 0.55.1
+        version: 0.55.1
       react:
         specifier: 19.2.6
         version: 19.2.6
