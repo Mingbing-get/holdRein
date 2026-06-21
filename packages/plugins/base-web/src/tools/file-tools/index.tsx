@@ -45,7 +45,7 @@ export function WriteFileToolRender(props: WebPlugin.ToolRenderProps) {
   const args = props.toolCall.arguments;
   const path = getStringArg(args, "path");
   const content = getStringArg(args, "content") ?? "";
-  const output = getTextResult(props.result);
+  const errorOutput = props.result?.isError ? getTextResult(props.result) : "";
 
   return (
     <props.DefaultToolRender title="写入文件" icon={<SaveOutlined />}>
@@ -56,7 +56,9 @@ export function WriteFileToolRender(props: WebPlugin.ToolRenderProps) {
         ) : (
           <span className="base-file-tool__empty">无写入内容</span>
         )}
-        {output ? <pre className="base-file-tool__pre">{output}</pre> : null}
+        {errorOutput ? (
+          <pre className="base-file-tool__pre">{errorOutput}</pre>
+        ) : null}
       </div>
     </props.DefaultToolRender>
   );
@@ -98,7 +100,7 @@ export function EditFileToolRender(props: WebPlugin.ToolRenderProps) {
   const args = props.toolCall.arguments;
   const path = getStringArg(args, "path");
   const replacements = getEditReplacements(args);
-  const output = getTextResult(props.result);
+  const errorOutput = props.result?.isError ? getTextResult(props.result) : "";
 
   return (
     <props.DefaultToolRender title="编辑文件" icon={<DiffOutlined />}>
@@ -116,7 +118,9 @@ export function EditFileToolRender(props: WebPlugin.ToolRenderProps) {
         ) : (
           <span className="base-file-tool__empty">无可预览的替换内容</span>
         )}
-        {output ? <pre className="base-file-tool__pre">{output}</pre> : null}
+        {errorOutput ? (
+          <pre className="base-file-tool__pre">{errorOutput}</pre>
+        ) : null}
       </div>
     </props.DefaultToolRender>
   );
