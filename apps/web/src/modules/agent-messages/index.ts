@@ -3,7 +3,7 @@ export { ApprovalPanel } from "./approval-panel";
 export { AgentMessageList } from "./message-list";
 export { useTurnFooterMessageGroups } from "./use-turn-footer-message-groups/index";
 export type {
-  TurnFooterMessageGroup,
+  TurnFooterMessageGroups,
   TurnFooterStatus
 } from "./use-turn-footer-message-groups/index";
 export type {

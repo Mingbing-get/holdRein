@@ -19,12 +19,9 @@ describe("useTurnFooterMessageGroups", () => {
       useTurnFooterMessageGroups(messages, "running")
     );
 
-    expect(result.current).toEqual([
-      {
-        beforeAssistantId: "assistant-1",
-        messages: [messages[0], messages[1]]
-      }
-    ]);
+    expect(result.current).toEqual({
+      "assistant-1": [messages[0], messages[1]]
+    });
   });
 
   it("returns the final assistant turn when the status is not running", () => {
@@ -37,12 +34,9 @@ describe("useTurnFooterMessageGroups", () => {
       useTurnFooterMessageGroups(messages, "completed")
     );
 
-    expect(result.current).toEqual([
-      {
-        beforeAssistantId: "assistant-1",
-        messages
-      }
-    ]);
+    expect(result.current).toEqual({
+      "assistant-1": messages
+    });
   });
 
   it("keeps tool results and custom messages inside their assistant turn", () => {
@@ -72,12 +66,9 @@ describe("useTurnFooterMessageGroups", () => {
       useTurnFooterMessageGroups(messages, "completed")
     );
 
-    expect(result.current).toEqual([
-      {
-        beforeAssistantId: "assistant-1",
-        messages
-      }
-    ]);
+    expect(result.current).toEqual({
+      "assistant-1": messages
+    });
   });
 });
 

@@ -3,10 +3,10 @@ import { useMemo } from "react";
 import type { AgentTaskState, SubagentState } from "../agent-message-types";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
-export interface TurnFooterMessageGroup {
-  beforeAssistantId: string;
-  messages: WebPlugin.AgentMessage[];
-}
+export type TurnFooterMessageGroups = Record<
+  string,
+  WebPlugin.AgentMessage[]
+>;
 
 export type TurnFooterStatus =
   | AgentTaskState["status"]
@@ -16,7 +16,7 @@ export type TurnFooterStatus =
 export function useTurnFooterMessageGroups(
   messages: WebPlugin.AgentMessage[],
   status: TurnFooterStatus
-): TurnFooterMessageGroup[] {
+): TurnFooterMessageGroups {
   return useMemo(
     () => getTurnFooterMessageGroups(messages, status),
     [messages, status]
@@ -26,8 +26,8 @@ export function useTurnFooterMessageGroups(
 export function getTurnFooterMessageGroups(
   messages: WebPlugin.AgentMessage[],
   status: TurnFooterStatus
-): TurnFooterMessageGroup[] {
-  const groups: TurnFooterMessageGroup[] = [];
+): TurnFooterMessageGroups {
+  const groups: TurnFooterMessageGroups = {};
   let turnMessages: WebPlugin.AgentMessage[] = [];
   let assistantId: string | undefined;
 
@@ -53,13 +53,10 @@ export function getTurnFooterMessageGroups(
 }
 
 function appendCompletedTurn(
-  groups: TurnFooterMessageGroup[],
+  groups: TurnFooterMessageGroups,
   messages: WebPlugin.AgentMessage[],
   assistantId: string | undefined
 ): void {
   if (!assistantId) return;
-  groups.push({
-    beforeAssistantId: assistantId,
-    messages
-  });
+  groups[assistantId] = messages;
 }

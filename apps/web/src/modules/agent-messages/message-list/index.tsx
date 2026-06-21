@@ -31,25 +31,31 @@ export function AgentMessageList({ messages, status }: AgentMessageListProps) {
     [footerSourceMessages]
   );
   const footerGroups = useTurnFooterMessageGroups(footerSourceMessages, status);
-  const footerAssistantIds = useMemo(
-    () => new Set(footerGroups.map((group) => group.beforeAssistantId)),
-    [footerGroups]
-  );
 
   return (
     <Flex data-testid="agent-message-list" gap={12} vertical>
-      {visibleMessages.map((message) => (
-        <Fragment key={message.id}>
-          <AgentMessageItem message={message} messages={messages} />
-          {footerAssistantIds.has(message.id) ? <AgentTurnFooter /> : null}
-        </Fragment>
-      ))}
+      {visibleMessages.map((message) => {
+        const footerMessages = footerGroups[message.id];
+
+        return (
+          <Fragment key={message.id}>
+            <AgentMessageItem message={message} messages={messages} />
+            {footerMessages ? (
+              <AgentTurnFooter messages={footerMessages} />
+            ) : null}
+          </Fragment>
+        );
+      })}
     </Flex>
   );
 }
 
-function AgentTurnFooter() {
-  return <div>footer example</div>;
+function AgentTurnFooter({
+  messages
+}: {
+  messages: WebPlugin.AgentMessage[];
+}) {
+  return <div data-turn-message-count={messages.length}>footer example</div>;
 }
 
 function AgentMessageItem({

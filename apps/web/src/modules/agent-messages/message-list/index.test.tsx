@@ -109,6 +109,48 @@ describe("AgentMessageList", () => {
     expect(screen.getAllByText("footer example")).toHaveLength(2);
   });
 
+  it("passes the completed turn messages to its footer", () => {
+    render(
+      <AgentMessageList
+        messages={[
+          { content: "Run command", id: "user-1", role: "user", timestamp: 1 },
+          {
+            api: "openai-responses",
+            content: [
+              {
+                arguments: { command: "pnpm test" },
+                id: "tool-call-1",
+                name: "bash",
+                type: "toolCall"
+              }
+            ],
+            id: "assistant-1",
+            model: "gpt-4.1",
+            provider: "openai",
+            role: "assistant",
+            stopReason: "toolUse",
+            timestamp: 2
+          },
+          {
+            content: [{ text: "Tests passed", type: "text" }],
+            id: "tool-result-1",
+            isError: false,
+            role: "toolResult",
+            timestamp: 3,
+            toolCallId: "tool-call-1",
+            toolName: "bash"
+          }
+        ]}
+        status="completed"
+      />
+    );
+
+    expect(screen.getByText("footer example")).toHaveAttribute(
+      "data-turn-message-count",
+      "3"
+    );
+  });
+
   it("does not render a footer after the running final assistant turn", () => {
     render(
       <AgentMessageList
