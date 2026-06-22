@@ -12,6 +12,7 @@ import { createSessionRepo, getEnvApiKey, getSkillDirs, interruptHarness, toAgen
 import { runToolBeforeExecute } from "../approval/tool-approval";
 import { extractAssistantText, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "../subagent";
 import { pluginRegistry } from '../../../plugin'
+import { formatWorkspaceAgentInstructionsForSystemPrompt, readWorkspaceAgentInstructions } from "./workspace-agent-instructions";
 
 import type { AgentRuntime, CreateAgentRuntimeOptions, RunningAgent, HarnessSession, CreateHarnessOptions, PendingVisibleCustomMessage, StartHarnessOptions, StartHarnessResult } from './type'
 
@@ -60,6 +61,7 @@ export function createAgentRuntime(
         throw new Error("Unknown model");
       }
 
+      const workspaceAgentInstructions = await readWorkspaceAgentInstructions(input.workspacePath);
       const pendingSubagentResults = new Map<string, Set<string>>();
 
       const createHarness = async (harnessOptions: CreateHarnessOptions) => {
@@ -119,6 +121,7 @@ export function createAgentRuntime(
             [
               ...(contribution.systemPrompts || []),
               `Workspace: ${input.workspacePath}`,
+              formatWorkspaceAgentInstructionsForSystemPrompt(workspaceAgentInstructions),
               `Current time: ${new Date().toISOString()}`,
               "Use shell_exec for workspace commands and skill scripts.",
               "Resolve skill-relative references from each skill file directory.",
