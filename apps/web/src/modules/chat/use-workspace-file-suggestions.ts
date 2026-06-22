@@ -200,6 +200,7 @@ function createFileSuggestion(
   const relativePath = getRelativeWorkspacePath(workspacePath, entry.path);
   const suggestionLabel = entry.kind === "folder" ? `${entry.name}/` : entry.name;
   const suggestionPath = entry.kind === "folder" ? `${relativePath}/` : relativePath;
+  const suggestionKind = entry.kind === "folder" ? "文件夹" : "文件";
   const children = entry.children?.map((childEntry) =>
     createFileSuggestion(childEntry, workspacePath, relativePath)
   );
@@ -207,14 +208,14 @@ function createFileSuggestion(
   return {
     ...(children?.length ? { children } : {}),
     label: parentRelativePath ? suggestionLabel : suggestionPath,
-    value: `/${suggestionPath}`
+    value: `${suggestionKind}[/${suggestionPath}]`
   };
 }
 
 function createSkillSuggestion(skill: WorkspaceSkill): WebPlugin.SuggestionItem {
   return {
     label: skill.name,
-    value: `/${skill.name}`
+    value: `使用技能[${skill.name}]`
   };
 }
 

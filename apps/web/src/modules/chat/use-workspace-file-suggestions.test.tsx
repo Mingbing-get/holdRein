@@ -92,11 +92,11 @@ describe("useWorkspaceFileSuggestions", () => {
               children: [
                 {
                   label: "main.ts",
-                  value: "/src/main.ts"
+                  value: "文件[/src/main.ts]"
                 }
               ],
               label: "src/",
-              value: "/src/"
+              value: "文件夹[/src/]"
             }
           ],
           title: "文件",
@@ -106,7 +106,7 @@ describe("useWorkspaceFileSuggestions", () => {
           suggestions: [
             {
               label: "code-reviewer",
-              value: "/code-reviewer"
+              value: "使用技能[code-reviewer]"
             }
           ],
           title: "技能",
@@ -129,7 +129,7 @@ describe("useWorkspaceFileSuggestions", () => {
           suggestions: [
             {
               label: "README.md",
-              value: "/README.md"
+              value: "文件[/README.md]"
             }
           ],
           title: "文件",
@@ -139,7 +139,7 @@ describe("useWorkspaceFileSuggestions", () => {
           suggestions: [
             {
               label: "planner",
-              value: "/planner"
+              value: "使用技能[planner]"
             }
           ],
           title: "技能",
