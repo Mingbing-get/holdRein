@@ -356,6 +356,46 @@ describe("AgentMessageList", () => {
     );
   });
 
+  it("renders unparsed streaming tool arguments without using custom tool renderers", () => {
+    agentTasksMock.toolRenders = [
+      {
+        toolName: "bash",
+        Render: () => <div data-testid="custom-tool-render">custom</div>
+      }
+    ];
+    const streamingToolCall = {
+      arguments: {},
+      argumentsParsed: false,
+      argumentsText: "{\"command\":",
+      id: "tool-call-1",
+      name: "bash",
+      type: "toolCall"
+    } satisfies WebPlugin.ToolCall & {
+      argumentsParsed: false;
+      argumentsText: string;
+    };
+
+    render(
+      <AgentMessageList
+        messages={[
+          {
+            api: "openai-responses",
+            content: [streamingToolCall],
+            id: "assistant-1",
+            model: "gpt-4.1",
+            provider: "openai",
+            role: "assistant",
+            stopReason: "toolUse",
+            timestamp: 1
+          }
+        ]}
+      />
+    );
+
+    expect(screen.queryByTestId("custom-tool-render")).not.toBeInTheDocument();
+    expect(screen.getByText("{\"command\":")).toBeInTheDocument();
+  });
+
   it("renders child messages inside a callsubagent message", () => {
     agentTasksMock.childMessages["agent-child"] = [
       {

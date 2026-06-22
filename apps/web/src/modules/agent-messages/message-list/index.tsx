@@ -219,10 +219,22 @@ function ToolCallMessageItem({
   const toolRender = useMemo(() => {
     return toolRenders.find(item => item.toolName === toolCall.name)
   }, [toolRenders, toolCall.name])
+  const canUseToolRender =
+    toolCall.argumentsText === undefined || toolCall.argumentsParsed === true;
+  const rawArgumentsText =
+    toolCall.argumentsParsed === false ? toolCall.argumentsText : undefined;
+  const shouldShowRawArguments = rawArgumentsText !== undefined;
 
   const renderDefaultChildren = useCallback(() => (
     <div className="agent-tool-call">
-      <ToolCallSection title="参数" value={formatToolValue(toolCall.arguments)} />
+      <ToolCallSection
+        title="参数"
+        value={
+          shouldShowRawArguments
+            ? rawArgumentsText
+            : formatToolValue(toolCall.arguments)
+        }
+      />
       {toolResult ? (
         <ToolCallSection
           danger={toolResult.isError}
@@ -231,9 +243,9 @@ function ToolCallMessageItem({
         />
       ) : null}
     </div>
-  ), [toolCall, toolResult])
+  ), [rawArgumentsText, shouldShowRawArguments, toolCall, toolResult])
 
-  if (toolRender) {
+  if (toolRender && canUseToolRender) {
     return (
       <toolRender.Render
         toolCall={toolCall}
@@ -247,6 +259,7 @@ function ToolCallMessageItem({
 
   return (
     <DefaultToolRender
+      defaultExpanded={shouldShowRawArguments}
       title={`run tool: ${toolCall.name}`}
       icon={<ToolOutlined />}
     >
@@ -255,12 +268,17 @@ function ToolCallMessageItem({
   )
 }
 
-function DefaultToolRender({ icon, title, children }: WebPlugin.DefaultToolRenderProps) {
+function DefaultToolRender({
+  defaultExpanded = false,
+  icon,
+  title,
+  children
+}: WebPlugin.DefaultToolRenderProps) {
   return (
     <Think
       title={title}
       blink
-      defaultExpanded={false}
+      defaultExpanded={defaultExpanded}
       icon={icon}
     >
       {children}

@@ -21,6 +21,8 @@ export interface ImageContent {
 
 export interface ToolCall {
   arguments: Record<string, unknown>;
+  argumentsParsed?: boolean;
+  argumentsText?: string;
   id: string;
   name: string;
   thoughtSignature?: string;

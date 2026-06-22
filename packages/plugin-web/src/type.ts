@@ -87,6 +87,8 @@ export namespace WebPlugin {
 
   export interface ToolCall {
     arguments: Record<string, unknown>;
+    argumentsParsed?: boolean;
+    argumentsText?: string;
     id: string;
     name: string;
     thoughtSignature?: string;
@@ -153,6 +155,7 @@ export namespace WebPlugin {
 
   export interface DefaultToolRenderProps {
     icon?: React.ReactNode,
+    defaultExpanded?: boolean,
     title: string,
     children: React.ReactNode
   }

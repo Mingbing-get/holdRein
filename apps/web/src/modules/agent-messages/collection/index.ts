@@ -1,6 +1,7 @@
 import type {
   AgentEventEnvelope,
   ThinkingContent,
+  ToolCall,
   TextContent
 } from "../agent-message-types";
 import type { WebPlugin } from "@hold-rein/plugin-web";
@@ -91,6 +92,15 @@ function mergeAssistantDelta(
   if (type === "thinking_delta" && typeof delta.delta === "string") {
     content[contentIndex] = appendThinking(content[contentIndex], delta.delta);
   }
+  if (isToolCallStart(type)) {
+    content[contentIndex] = startToolCall(content[contentIndex], delta);
+  }
+  if (isToolCallDelta(type)) {
+    content[contentIndex] = appendToolCallArguments(
+      content[contentIndex],
+      getToolArgumentsDelta(delta)
+    );
+  }
 
   const next = [...messages];
   next[index] = { ...message, content };
@@ -124,6 +134,108 @@ function appendThinking(
     thinking: (value?.type === "thinking" ? value.thinking : "") + delta,
     type: "thinking"
   };
+}
+
+function startToolCall(
+  value: WebPlugin.AssistantMessage["content"][number] | undefined,
+  delta: Record<string, unknown>
+): ToolCall {
+  const existing = value?.type === "toolCall" ? value : undefined;
+  const initialArgumentsText = getInitialToolArgumentsText(delta);
+  const parsedArguments = parseToolArguments(initialArgumentsText);
+  const parsed = parsedArguments !== undefined;
+
+  return {
+    arguments: parsed ? parsedArguments : existing?.arguments ?? {},
+    ...(initialArgumentsText === undefined
+      ? {}
+      : {
+          argumentsParsed: parsed,
+          argumentsText: initialArgumentsText
+        }),
+    id: getToolCallId(delta) ?? existing?.id ?? "",
+    name: getToolName(delta) ?? existing?.name ?? "",
+    type: "toolCall"
+  };
+}
+
+function appendToolCallArguments(
+  value: WebPlugin.AssistantMessage["content"][number] | undefined,
+  delta: string | undefined
+): ToolCall {
+  const existing = value?.type === "toolCall" ? value : undefined;
+  const argumentsText = `${existing?.argumentsText ?? ""}${delta ?? ""}`;
+  const parsedArguments = parseToolArguments(argumentsText);
+
+  return {
+    arguments: parsedArguments ?? existing?.arguments ?? {},
+    argumentsParsed: parsedArguments !== undefined,
+    argumentsText,
+    id: existing?.id ?? "",
+    name: existing?.name ?? "",
+    type: "toolCall"
+  };
+}
+
+function isToolCallStart(type: unknown): boolean {
+  return (
+    type === "tool_call_start" ||
+    type === "toolCall_start" ||
+    type === "tool_use_start" ||
+    type === "toolUse_start"
+  );
+}
+
+function isToolCallDelta(type: unknown): boolean {
+  return (
+    type === "tool_call_delta" ||
+    type === "toolCall_delta" ||
+    type === "tool_use_delta" ||
+    type === "toolUse_delta"
+  );
+}
+
+function getToolCallId(delta: Record<string, unknown>): string | undefined {
+  return getString(delta.toolCallId) ?? getString(delta.tool_call_id) ?? getString(delta.id);
+}
+
+function getToolName(delta: Record<string, unknown>): string | undefined {
+  return getString(delta.toolName) ?? getString(delta.tool_name) ?? getString(delta.name);
+}
+
+function getToolArgumentsDelta(delta: Record<string, unknown>): string | undefined {
+  return (
+    getString(delta.argumentsDelta) ??
+    getString(delta.arguments_delta) ??
+    getString(delta.inputDelta) ??
+    getString(delta.input_delta) ??
+    getString(delta.delta)
+  );
+}
+
+function getInitialToolArgumentsText(
+  delta: Record<string, unknown>
+): string | undefined {
+  const value = delta.arguments ?? delta.input;
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object") return JSON.stringify(value);
+  return getToolArgumentsDelta(delta);
+}
+
+function parseToolArguments(value: string | undefined): Record<string, unknown> | undefined {
+  if (value === undefined || value.trim() === "") return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function getString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
 }
 
 function getRecord(value: unknown): Record<string, unknown> | undefined {
