@@ -95,6 +95,63 @@ describe("useSenderSuggestions", () => {
     ]);
   });
 
+  it("returns titled suggestion groups separately for the same trigger", () => {
+    const { result } = renderHook(() =>
+      useSenderSuggestions({
+        suggestionGroups: [
+          {
+            title: "Commands",
+            trigger: "/",
+            suggestions: [
+              {
+                label: "release",
+                value: "/release"
+              }
+            ]
+          },
+          {
+            title: "Files",
+            trigger: "/",
+            suggestions: [
+              {
+                label: "readme.md",
+                value: "/README.md"
+              }
+            ]
+          }
+        ]
+      })
+    );
+
+    expect(
+      result.current.getGroupsByQuery({
+        query: "",
+        trigger: "/"
+      })
+    ).toEqual([
+      {
+        suggestions: [
+          {
+            label: "release",
+            value: "/release"
+          }
+        ],
+        title: "Commands",
+        trigger: "/"
+      },
+      {
+        suggestions: [
+          {
+            label: "readme.md",
+            value: "/README.md"
+          }
+        ],
+        title: "Files",
+        trigger: "/"
+      }
+    ]);
+  });
+
   it("returns matching nested items while preserving parent suggestions", () => {
     const { result } = renderHook(() =>
       useSenderSuggestions({

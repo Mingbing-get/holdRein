@@ -59,11 +59,3 @@ body {
 .ant-input-affix-wrapper input::placeholder {
   color: var(--app-color-input-placeholder);
 }
-
-.chat-workspace-suggestion-popup .ant-cascader-menu-item-active {
-  color: var(--app-color-text-on-emphasis) !important;
-}
-
-.chat-workspace-suggestion-popup .ant-cascader-menu-item-active * {
-  color: inherit;
-}

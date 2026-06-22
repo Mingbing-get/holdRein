@@ -1,11 +1,10 @@
 import { Divider, Flex } from "antd";
 import {
   Sender as ASender,
-  Suggestion,
   type SenderProps
 } from "@ant-design/x";
 import type { WebPlugin } from "@hold-rein/plugin-web";
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAppPlugins } from "../../../app/app-plugin";
 import { ModelSelector, type SelectedModel } from "../model-selector";
@@ -20,6 +19,10 @@ import {
   shouldHandleSpaceKeydown,
   shouldHandleSuggestionEnterKeydown
 } from "./utils";
+import {
+  flattenSuggestionItems,
+  SenderSuggestionPopup
+} from "./suggestion-popup";
 
 export {
   clampCursorIndex,
@@ -88,7 +91,7 @@ export default function Sender({
   const {
     closeSuggestions,
     currentTrigger,
-    getItemsByQuery,
+    getGroupsByQuery,
     getTriggerQuery,
     openSuggestionForTrigger,
     setSuggestionOpen,
@@ -98,45 +101,45 @@ export default function Sender({
   });
 
   const disabled = useMemo(() => senderProps.disabled || !draftMessage?.length, [senderProps.disabled, draftMessage])
+  const activeSuggestionGroups = suggestionOpen
+    ? getGroupsByQuery(currentTrigger.current ?? undefined)
+    : [];
+  const selectableSuggestionItems = useMemo(
+    () => flattenSuggestionItems(activeSuggestionGroups),
+    [activeSuggestionGroups]
+  );
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
+
+  useEffect(() => {
+    setActiveSuggestionIndex(0);
+  }, [draftMessage, suggestionOpen]);
+
+  const selectSuggestionValue = useCallback((value: string) => {
+    const activeTrigger = currentTrigger.current;
+    const overwriteLength = activeTrigger
+      ? `${activeTrigger.trigger}${activeTrigger.query}`.length
+      : 0;
+
+    insertText(value, overwriteLength);
+    closeSuggestions();
+  }, [closeSuggestions, currentTrigger, insertText]);
 
   return (
-    <Flex vertical>
-      <Suggestion<SuggestionTrigger>
-        classNames={{
-          popup: CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS
-        }}
-        getPopupContainer={(triggerNode) =>
-          triggerNode.parentElement ?? document.body
-        }
-        items={(info) => getItemsByQuery(info)}
-        onOpenChange={setSuggestionOpen}
-        onSelect={(value) => {
-          const activeTrigger = currentTrigger.current;
-          const overwriteLength = activeTrigger
-            ? `${activeTrigger.trigger}${activeTrigger.query}`.length
-            : 0;
-
-          insertText(value, overwriteLength);
-          closeSuggestions();
-        }}
-        open={suggestionOpen}
-        styles={{
-          popup: {
-            maxHeight: '60vh',
-            overflowY: 'auto',
-            border: "1px solid var(--app-color-border-secondary)",
-            borderRadius: 16,
-            boxShadow:
-              "0 18px 36px color-mix(in srgb, var(--app-color-shadow) 32%, transparent)"
-          },
-          root: {
-            width: "100%"
-          }
-        }}
-      >
-        {({ onTrigger, onKeyDown }) => (
-          (() => {
-            return (
+    <Flex
+      vertical
+      style={{
+        position: "relative",
+        width: "100%"
+      }}
+    >
+      {suggestionOpen && activeSuggestionGroups.length ? (
+        <SenderSuggestionPopup
+          activeIndex={activeSuggestionIndex}
+          className={CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS}
+          groups={activeSuggestionGroups}
+          onSelect={selectSuggestionValue}
+        />
+      ) : null}
               <ASender
                 {...senderProps}
                 loading={loading}
@@ -152,7 +155,6 @@ export default function Sender({
 
                   if (trigger) {
                     openSuggestionForTrigger(trigger);
-                    onTrigger(trigger);
 
                     return;
                   }
@@ -248,19 +250,46 @@ export default function Sender({
                     insertText(" ");
                     return;
                   }
+                  if (suggestionOpen && selectableSuggestionItems.length) {
+                    if (e.key === "ArrowDown" || e.code === "ArrowDown") {
+                      e.preventDefault();
+                      setActiveSuggestionIndex((currentIndex) =>
+                        (currentIndex + 1) % selectableSuggestionItems.length
+                      );
+                      return;
+                    }
+
+                    if (e.key === "ArrowUp" || e.code === "ArrowUp") {
+                      e.preventDefault();
+                      setActiveSuggestionIndex((currentIndex) =>
+                        (
+                          currentIndex +
+                          selectableSuggestionItems.length -
+                          1
+                        ) % selectableSuggestionItems.length
+                      );
+                      return;
+                    }
+
+                    if (e.key === "Escape" || e.code === "Escape") {
+                      e.preventDefault();
+                      closeSuggestions();
+                      return;
+                    }
+                  }
                   if (shouldHandleSuggestionEnterKeydown(e, suggestionOpen)) {
-                    onKeyDown(e);
+                    const activeItem =
+                      selectableSuggestionItems[activeSuggestionIndex];
+
+                    if (activeItem) {
+                      selectSuggestionValue(activeItem.value);
+                    }
                     e.preventDefault();
                     return false;
                   }
-                  onKeyDown(e)
                 }}
                 onSubmit={handleSubmit}
               />
-            );
-          })()
-        )}
-      </Suggestion>
     </Flex>
   )
 }

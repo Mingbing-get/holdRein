@@ -14,6 +14,7 @@ export interface UseSenderSuggestionsResult {
   currentTrigger: React.RefObject<SuggestionTrigger | null>;
   suggestionOpen: boolean;
   closeSuggestions: () => void;
+  getGroupsByQuery: (trigger?: SuggestionTrigger) => WebPlugin.SuggestionGroup[];
   getItemsByQuery: (trigger?: SuggestionTrigger) => WebPlugin.SuggestionItem[];
   getTriggerQuery: (
     value: string,
@@ -31,23 +32,11 @@ export function useSenderSuggestions({
   const mergedSuggestionGroups = useMemo(() => {
     if (!suggestionGroups?.length) return [];
 
-    const groupsByTrigger = new Map<string, WebPlugin.SuggestionGroup>();
-
-    for (const group of suggestionGroups) {
-      const existingGroup = groupsByTrigger.get(group.trigger);
-
-      if (existingGroup) {
-        existingGroup.suggestions.push(...group.suggestions);
-        continue;
-      }
-
-      groupsByTrigger.set(group.trigger, {
-        suggestions: [...group.suggestions],
-        trigger: group.trigger
-      });
-    }
-
-    return Array.from(groupsByTrigger.values());
+    return suggestionGroups.map((group) => ({
+      ...(group.title ? { title: group.title } : {}),
+      suggestions: [...group.suggestions],
+      trigger: group.trigger
+    }));
   }, [suggestionGroups]);
 
   const closeSuggestions = useCallback(() => {
@@ -60,19 +49,32 @@ export function useSenderSuggestions({
     setSuggestionOpen(true);
   }, []);
 
+  const getGroupsByQuery = useCallback((
+    trigger?: SuggestionTrigger
+  ): WebPlugin.SuggestionGroup[] => {
+    if (!trigger || !mergedSuggestionGroups.length) return [];
+
+    return mergedSuggestionGroups.flatMap((group, groupIndex) => {
+      if (group.trigger !== trigger.trigger) return [];
+
+      const suggestions = filterSuggestionItems(group.suggestions, trigger.query);
+      if (!suggestions.length) return [];
+
+      return [
+        {
+          ...(group.title ? { title: group.title } : {}),
+          suggestions,
+          trigger: group.trigger
+        }
+      ];
+    });
+  }, [mergedSuggestionGroups]);
+
   const getItemsByQuery = useCallback((
     trigger?: SuggestionTrigger
   ): WebPlugin.SuggestionItem[] => {
-    if (!trigger || !mergedSuggestionGroups.length) return [];
-
-    for (const group of mergedSuggestionGroups) {
-      if (group.trigger === trigger.trigger) {
-        return filterSuggestionItems(group.suggestions, trigger.query);
-      }
-    }
-
-    return [];
-  }, [mergedSuggestionGroups]);
+    return getGroupsByQuery(trigger).flatMap((group) => group.suggestions);
+  }, [getGroupsByQuery]);
 
   const getTriggerQuery = useCallback((
     value: string,
@@ -117,6 +119,7 @@ export function useSenderSuggestions({
   return {
     closeSuggestions,
     currentTrigger,
+    getGroupsByQuery,
     getItemsByQuery,
     getTriggerQuery,
     openSuggestionForTrigger,

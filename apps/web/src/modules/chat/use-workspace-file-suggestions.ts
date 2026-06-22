@@ -84,6 +84,7 @@ export function useWorkspaceFileSuggestions(
     return [
       {
         trigger: "/",
+        title: '文件',
         suggestions: entries.map((entry) =>
           createFileSuggestion(entry, workspacePath, "")
         )

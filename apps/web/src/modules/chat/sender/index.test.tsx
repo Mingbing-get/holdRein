@@ -315,19 +315,15 @@ describe("sender suggestion theme styles", () => {
     expect(senderSource).toContain('caretColor: "var(--app-color-text)"');
   });
 
-  it("scopes the selected suggestion text override to the sender popup", () => {
-    const themeCss = readFileSync(
-      getWebSourcePath("app/theme.css"),
+  it("uses theme variables for custom suggestion group styling", () => {
+    const senderSource = readFileSync(
+      getWebSourcePath("modules/chat/sender/suggestion-popup.tsx"),
       "utf8"
     );
 
-    expect(themeCss.match(/--app-color-text-on-emphasis:/g)).toHaveLength(2);
-    expect(themeCss).toContain(
-      `.${CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS} .ant-cascader-menu-item-active`
-    );
-    expect(themeCss).toContain(
-      "color: var(--app-color-text-on-emphasis) !important;"
-    );
+    expect(senderSource).toContain("data-suggestion-group-title");
+    expect(senderSource).toContain("var(--app-color-text-tertiary)");
+    expect(senderSource).toContain("var(--app-color-fill-secondary)");
   });
 });
 

@@ -226,6 +226,7 @@ export namespace WebPlugin {
 
   export interface SuggestionGroup {
     suggestions: SuggestionItem[];
+    title?: string;
     trigger: string;
   }
 
