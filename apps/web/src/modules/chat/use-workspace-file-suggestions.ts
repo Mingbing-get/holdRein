@@ -208,7 +208,7 @@ function createFileSuggestion(
   return {
     ...(children?.length ? { children } : {}),
     label: parentRelativePath ? suggestionLabel : suggestionPath,
-    value: `${suggestionKind}[/${suggestionPath}]`
+    value: `${suggestionKind}[${suggestionPath}]`
   };
 }
 
