@@ -54,7 +54,7 @@ export function useSenderSuggestions({
   ): WebPlugin.SuggestionGroup[] => {
     if (!trigger || !mergedSuggestionGroups.length) return [];
 
-    return mergedSuggestionGroups.flatMap((group, groupIndex) => {
+    return mergedSuggestionGroups.flatMap((group) => {
       if (group.trigger !== trigger.trigger) return [];
 
       const suggestions = filterSuggestionItems(group.suggestions, trigger.query);

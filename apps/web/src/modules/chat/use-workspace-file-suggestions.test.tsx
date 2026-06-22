@@ -51,6 +51,16 @@ describe("useWorkspaceFileSuggestions", () => {
       )
       .mockResolvedValueOnce(
         jsonResponse({
+          skills: [
+            {
+              name: "code-reviewer",
+              path: "/Users/mingbing/apps/workspace-one/.agents/skills/reviewer"
+            }
+          ]
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
           entries: [
             {
               extension: ".md",
@@ -61,38 +71,83 @@ describe("useWorkspaceFileSuggestions", () => {
           ],
           parentPath: "/Users/mingbing/apps/workspace-one"
         })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          skills: [
+            {
+              name: "planner",
+              path: "/Users/mingbing/apps/workspace-one/.hold-rein/skills/planner"
+            }
+          ]
+        })
       );
     const view = renderHookProbe("running");
 
     await waitFor(() => {
-      expect(readSuggestions()).toEqual([
+      expect(readSuggestionGroups()).toEqual([
         {
-          children: [
+          suggestions: [
             {
-              label: "main.ts",
-              value: "/src/main.ts"
+              children: [
+                {
+                  label: "main.ts",
+                  value: "/src/main.ts"
+                }
+              ],
+              label: "src/",
+              value: "/src/"
             }
           ],
-          label: "src/",
-          value: "/src/"
+          title: "文件",
+          trigger: "/"
+        },
+        {
+          suggestions: [
+            {
+              label: "code-reviewer",
+              value: "/code-reviewer"
+            }
+          ],
+          title: "技能",
+          trigger: "/"
         }
       ]);
     });
     expect(fetchMock).toHaveBeenCalledWith(
       "http://localhost:4000/api/v1/file-system/entries/recursive?parentPath=%2FUsers%2Fmingbing%2Fapps%2Fworkspace-one&ignores=node_modules&useGitIgnore=true"
     );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:4000/api/v1/agents/skills?workspacePath=%2FUsers%2Fmingbing%2Fapps%2Fworkspace-one"
+    );
 
     view.rerender(getHookProbe("completed"));
 
     await waitFor(() => {
-      expect(readSuggestions()).toEqual([
+      expect(readSuggestionGroups()).toEqual([
         {
-          label: "README.md",
-          value: "/README.md"
+          suggestions: [
+            {
+              label: "README.md",
+              value: "/README.md"
+            }
+          ],
+          title: "文件",
+          trigger: "/"
+        },
+        {
+          suggestions: [
+            {
+              label: "planner",
+              value: "/planner"
+            }
+          ],
+          title: "技能",
+          trigger: "/"
         }
       ]);
     });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 });
 
@@ -137,11 +192,8 @@ function SuggestionsProbe({
     "http://localhost:4000",
     taskStatus
   );
-  const suggestions = suggestionGroups.flatMap((group) =>
-    group.suggestions
-  );
 
-  return <div data-testid="suggestions">{JSON.stringify(suggestions)}</div>;
+  return <div data-testid="suggestions">{JSON.stringify(suggestionGroups)}</div>;
 }
 
 function jsonResponse(data: unknown): Response {
@@ -155,6 +207,6 @@ function jsonResponse(data: unknown): Response {
   } as Response;
 }
 
-function readSuggestions(): unknown {
+function readSuggestionGroups(): unknown {
   return JSON.parse(screen.getByTestId("suggestions").textContent ?? "[]");
 }

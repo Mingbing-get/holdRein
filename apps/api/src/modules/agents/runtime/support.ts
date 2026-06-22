@@ -1,4 +1,6 @@
-import { join } from "node:path";
+import type { Dirent } from "node:fs";
+import { readdir, readFile } from "node:fs/promises";
+import { basename, join } from "node:path";
 
 import {
   JsonlSessionRepo,
@@ -13,6 +15,11 @@ import type { AgentSessionMetadata } from "../agent-types";
 interface InterruptibleHarness {
   abort?: () => Promise<unknown> | unknown;
   interrupt?: () => Promise<unknown> | unknown;
+}
+
+export interface WorkspaceSkill {
+  name: string;
+  path: string;
 }
 
 export async function interruptHarness(harness: AgentHarness): Promise<void> {
@@ -48,6 +55,76 @@ export function getSkillDirs(
     SKILL_DIR,
     ...(configuredSkillDirs ?? [])
   ]));
+}
+
+export async function listWorkspaceSkills(
+  workspacePath: string,
+  configuredSkillDirs?: string[]
+): Promise<WorkspaceSkill[]> {
+  const skillDirs = getSkillDirs(workspacePath, configuredSkillDirs);
+  const skills = await Promise.all(
+    skillDirs.map((skillDir) => listSkillsInDir(skillDir))
+  );
+
+  return skills.flat();
+}
+
+async function listSkillsInDir(skillDir: string): Promise<WorkspaceSkill[]> {
+  let entries: Dirent<string>[];
+
+  try {
+    entries = await readdir(skillDir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const skillEntries = entries
+    .filter((entry) => entry.isDirectory())
+    .sort((leftEntry, rightEntry) => leftEntry.name.localeCompare(rightEntry.name));
+  const skills = await Promise.all(
+    skillEntries.map((entry) => readSkill(skillDir, entry.name))
+  );
+
+  return skills.filter((skill): skill is WorkspaceSkill => skill !== null);
+}
+
+async function readSkill(
+  skillDir: string,
+  skillFolderName: string
+): Promise<WorkspaceSkill | null> {
+  const skillPath = join(skillDir, skillFolderName);
+  const skillFilePath = join(skillPath, "SKILL.md");
+
+  try {
+    const content = await readFile(skillFilePath, "utf8");
+
+    return {
+      name: parseSkillName(content) ?? basename(skillPath),
+      path: skillPath
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseSkillName(content: string): string | undefined {
+  const frontmatterMatch = /^---\n(?<frontmatter>[\s\S]*?)\n---/u.exec(content);
+  const frontmatter = frontmatterMatch?.groups?.frontmatter;
+
+  if (!frontmatter) {
+    return undefined;
+  }
+
+  for (const line of frontmatter.split("\n")) {
+    const nameMatch = /^name:\s*(?<name>.+?)\s*$/u.exec(line);
+    const rawName = nameMatch?.groups?.name;
+
+    if (rawName) {
+      return rawName.replace(/^["']|["']$/gu, "");
+    }
+  }
+
+  return undefined;
 }
 
 export function getEnvApiKey(provider: string): string | undefined {

@@ -5,9 +5,11 @@ import { RESPONSE_CODE_DEFINITIONS } from "../../../response/response-codes";
 import type { AgentEventEnvelope, StartAgentInput } from "../agent-types";
 import { getDefaultAgentsService } from "../service/default";
 import type { AgentsService } from "../service";
+import { listWorkspaceSkills } from "../runtime/support";
 
 export interface CreateAgentsRouterOptions {
   agentsService?: AgentsService;
+  skillDirs?: string[];
 }
 
 interface StartAgentBody {
@@ -66,6 +68,34 @@ export function createAgentsRouter(
             response,
             RESPONSE_CODE_DEFINITIONS.badRequest,
             error instanceof Error ? error.message : "Failed to start agent"
+          );
+        });
+    }
+  );
+
+  router.get(
+    "/agents/skills",
+    (request: Request, response: Response): void => {
+      const workspacePath = getRequiredQueryString(request.query.workspacePath);
+
+      if (workspacePath === null) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "workspacePath must be a string"
+        );
+        return;
+      }
+
+      void listWorkspaceSkills(workspacePath, options.skillDirs)
+        .then((skills) => {
+          sendSuccess(response, { skills });
+        })
+        .catch((error) => {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.badRequest,
+            error instanceof Error ? error.message : "Failed to list skills"
           );
         });
     }
@@ -388,6 +418,10 @@ function parseAfterSequence(
   }
 
   return Number(value);
+}
+
+function getRequiredQueryString(value: Request["query"][string]): string | null {
+  return typeof value === "string" ? value : null;
 }
 
 function writeNdjsonEvent(response: Response, event: AgentEventEnvelope): void {

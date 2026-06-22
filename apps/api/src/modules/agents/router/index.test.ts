@@ -1,5 +1,9 @@
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import request from "supertest";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createApp } from "../../../app";
 import type { AgentsService } from "../service";
@@ -94,6 +98,15 @@ function createService(overrides: Partial<AgentsService> = {}): AgentsService {
 }
 
 describe("agent routes", () => {
+  let rootPath = "";
+
+  afterEach(async () => {
+    if (rootPath) {
+      await rm(rootPath, { force: true, recursive: true });
+      rootPath = "";
+    }
+  });
+
   it("starts an agent run for a workspace path", async () => {
     const service = createService();
 
@@ -131,6 +144,37 @@ describe("agent routes", () => {
       provider: "openai",
       workspacePath: "/tmp/workspace"
     });
+  });
+
+  it("lists skills for a workspace path", async () => {
+    rootPath = await mkdtemp(join(tmpdir(), "hold-rein-agent-skills-"));
+    const skillPath = join(rootPath, ".agents", "skills", "reviewer");
+
+    await mkdir(skillPath, { recursive: true });
+    await writeFile(
+      join(skillPath, "SKILL.md"),
+      "---\nname: code-reviewer\n---\n# Code Reviewer\n"
+    );
+
+    const response = await request(await createApp({ agentsService: createService() }))
+      .get("/api/v1/agents/skills")
+      .query({ workspacePath: rootPath });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.skills).toEqual(expect.arrayContaining([
+      {
+        name: "code-reviewer",
+        path: skillPath
+      }
+    ]));
+  });
+
+  it("rejects invalid skill list requests", async () => {
+    const response = await request(await createApp({ agentsService: createService() }))
+      .get("/api/v1/agents/skills");
+
+    expect(response.status).toBe(400);
+    expect(response.body.msg).toBe("workspacePath must be a string");
   });
 
   it("rejects invalid start requests", async () => {

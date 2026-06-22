@@ -16,9 +16,6 @@ import {
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS,
-} from ".";
 import Sender from ".";
 import {
   getCurrentCursorCharacterIndex,

@@ -11,6 +11,15 @@ import type { AgentTaskState } from "../agent-messages";
 
 type TaskStatus = AgentTaskState["status"] | undefined;
 
+interface WorkspaceSkill {
+  name: string;
+  path: string;
+}
+
+interface WorkspaceSkillsResponse {
+  skills: WorkspaceSkill[];
+}
+
 export function useWorkspaceFileSuggestions(
   apiBaseUrl: string,
   taskStatus: TaskStatus
@@ -19,6 +28,7 @@ export function useWorkspaceFileSuggestions(
     state: { activeWorkspaceId, workspaces }
   } = useAppWorkspace();
   const [entries, setEntries] = useState<FileSystemEntry[]>([]);
+  const [skills, setSkills] = useState<WorkspaceSkill[]>([]);
   const activeWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.id === activeWorkspaceId),
     [activeWorkspaceId, workspaces]
@@ -33,6 +43,9 @@ export function useWorkspaceFileSuggestions(
       setEntries((currentEntries) =>
         currentEntries.length ? [] : currentEntries
       );
+      setSkills((currentSkills) =>
+        currentSkills.length ? [] : currentSkills
+      );
       return;
     }
 
@@ -40,10 +53,10 @@ export function useWorkspaceFileSuggestions(
     requestIdRef.current = requestId;
 
     try {
-      const listing = await fetchWorkspaceEntriesRecursive(
-        apiBaseUrl,
-        workspacePath
-      );
+      const [listing, skillListing] = await Promise.all([
+        fetchWorkspaceEntriesRecursive(apiBaseUrl, workspacePath),
+        fetchWorkspaceSkills(apiBaseUrl, workspacePath)
+      ]);
 
       if (requestIdRef.current === requestId) {
         setEntries((currentEntries) =>
@@ -51,11 +64,19 @@ export function useWorkspaceFileSuggestions(
             ? currentEntries
             : listing.entries
         );
+        setSkills((currentSkills) =>
+          areSkillsEqual(currentSkills, skillListing.skills)
+            ? currentSkills
+            : skillListing.skills
+        );
       }
     } catch {
       if (requestIdRef.current === requestId) {
         setEntries((currentEntries) =>
           currentEntries.length ? [] : currentEntries
+        );
+        setSkills((currentSkills) =>
+          currentSkills.length ? [] : currentSkills
         );
       }
     }
@@ -77,20 +98,32 @@ export function useWorkspaceFileSuggestions(
   return useMemo(() => {
     const workspacePath = activeWorkspace?.path;
 
-    if (!workspacePath || !entries.length) {
+    if (!workspacePath || (!entries.length && !skills.length)) {
       return [];
     }
 
-    return [
-      {
+    const groups: WebPlugin.SuggestionGroup[] = [];
+
+    if (entries.length) {
+      groups.push({
         trigger: "/",
         title: '文件',
         suggestions: entries.map((entry) =>
           createFileSuggestion(entry, workspacePath, "")
         )
-      }
-    ];
-  }, [activeWorkspace?.path, entries]);
+      });
+    }
+
+    if (skills.length) {
+      groups.push({
+        trigger: "/",
+        title: "技能",
+        suggestions: skills.map(createSkillSuggestion)
+      });
+    }
+
+    return groups;
+  }, [activeWorkspace?.path, entries, skills]);
 }
 
 async function fetchWorkspaceEntriesRecursive(
@@ -131,6 +164,34 @@ function createWorkspaceEntriesRecursiveUrl(
   return `${baseUrl}/api/v1/file-system/entries/recursive?${query.toString()}`;
 }
 
+async function fetchWorkspaceSkills(
+  apiBaseUrl: string,
+  workspacePath: string
+): Promise<WorkspaceSkillsResponse> {
+  const response = await fetch(createWorkspaceSkillsUrl(apiBaseUrl, workspacePath));
+
+  if (!response.ok) {
+    throw new Error("Failed to load workspace skill suggestions");
+  }
+
+  const payload = (await response.json()) as ApiResponse<WorkspaceSkillsResponse>;
+
+  if (!payload.data || !Array.isArray(payload.data.skills)) {
+    return {
+      skills: []
+    };
+  }
+
+  return payload.data;
+}
+
+function createWorkspaceSkillsUrl(apiBaseUrl: string, workspacePath: string): string {
+  const baseUrl = apiBaseUrl.replace(/\/$/, "");
+  const query = new URLSearchParams({ workspacePath });
+
+  return `${baseUrl}/api/v1/agents/skills?${query.toString()}`;
+}
+
 function createFileSuggestion(
   entry: FileSystemEntry,
   workspacePath: string,
@@ -147,6 +208,13 @@ function createFileSuggestion(
     ...(children?.length ? { children } : {}),
     label: parentRelativePath ? suggestionLabel : suggestionPath,
     value: `/${suggestionPath}`
+  };
+}
+
+function createSkillSuggestion(skill: WorkspaceSkill): WebPlugin.SuggestionItem {
+  return {
+    label: skill.name,
+    value: `/${skill.name}`
   };
 }
 
@@ -187,6 +255,25 @@ function areEntriesEqual(
       leftEntry.name === rightEntry.name &&
       leftEntry.path === rightEntry.path &&
       areEntriesEqual(leftEntry.children ?? [], rightEntry.children ?? [])
+    );
+  });
+}
+
+function areSkillsEqual(
+  leftSkills: WorkspaceSkill[],
+  rightSkills: WorkspaceSkill[]
+): boolean {
+  if (leftSkills.length !== rightSkills.length) {
+    return false;
+  }
+
+  return leftSkills.every((leftSkill, index) => {
+    const rightSkill = rightSkills[index];
+
+    return (
+      rightSkill !== undefined &&
+      leftSkill.name === rightSkill.name &&
+      leftSkill.path === rightSkill.path
     );
   });
 }

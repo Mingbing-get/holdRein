@@ -11,8 +11,7 @@ import { ModelSelector, type SelectedModel } from "../model-selector";
 import { WorkspaceSelector } from "../workspace-selector";
 import {
   useSenderInputState,
-  useSenderSuggestions,
-  type SuggestionTrigger
+  useSenderSuggestions
 } from "./hooks";
 import {
   getCurrentCursorCharacterIndex,
