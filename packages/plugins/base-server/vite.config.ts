@@ -1,4 +1,10 @@
+import { builtinModules } from "node:module";
 import { defineConfig } from "vite";
+
+const nodeBuiltins = builtinModules.flatMap((name) => [
+  name,
+  `node:${name}`
+]);
 
 export default defineConfig({
   build: {
@@ -9,6 +15,7 @@ export default defineConfig({
     },
     rollupOptions: {
       external: [
+        ...nodeBuiltins,
         "@earendil-works/pi-agent-core",
         "@earendil-works/pi-ai",
         "@hold-rein/plugin-server",

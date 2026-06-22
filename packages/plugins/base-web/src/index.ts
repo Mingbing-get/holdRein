@@ -1,5 +1,6 @@
 import type { WebPlugin } from '@hold-rein/plugin-web'
 import {
+  deleteFileTool,
   editFileTool,
   findFilesTool,
   grepFilesTool,
@@ -23,6 +24,7 @@ const baseWebPlugin: WebPlugin.Plugin = {
     toolRenders: [
       readFileTool,
       writeFileTool,
+      deleteFileTool,
       grepFilesTool,
       findFilesTool,
       editFileTool,

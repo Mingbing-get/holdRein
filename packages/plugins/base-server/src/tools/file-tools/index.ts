@@ -1,3 +1,4 @@
+export { createDeleteFileTool } from "./delete-file-tool";
 export { createEditFileTool } from "./edit-file-tool";
 export { createFindFilesTool } from "./find-files-tool";
 export { createGrepFilesTool } from "./grep-files-tool";

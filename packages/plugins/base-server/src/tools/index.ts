@@ -1,4 +1,5 @@
 export {
+  createDeleteFileTool,
   createEditFileTool,
   createFindFilesTool,
   createGrepFilesTool,

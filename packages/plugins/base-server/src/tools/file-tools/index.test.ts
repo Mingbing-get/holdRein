@@ -1,10 +1,11 @@
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { describe, expect, it, vi } from "vitest";
 import type { ServerPlugin } from "@hold-rein/plugin-server";
 
 import {
+  createDeleteFileTool,
   createEditFileTool,
   createFindFilesTool,
   createGrepFilesTool,
@@ -58,6 +59,39 @@ describe("file tools", () => {
 
     expect(requestApproval).toHaveBeenCalledWith(
       "Allowed to write file: src/value.ts"
+    );
+  });
+
+  it("deletes a file", async () => {
+    const cwd = await createWorkspace();
+    await writeFile(join(cwd, "remove-me.txt"), "temporary\n", "utf8");
+    const tool = createDeleteFileTool(createEnv(cwd));
+
+    const result = await tool.execute("call-1", {
+      path: "remove-me.txt"
+    });
+
+    await expect(stat(join(cwd, "remove-me.txt"))).rejects.toThrow();
+    expect(result.content[0]?.text).toContain(
+      "Successfully deleted remove-me.txt"
+    );
+    expect(result.details).toMatchObject({
+      path: join(cwd, "remove-me.txt")
+    });
+  });
+
+  it("requests approval before deleting files", async () => {
+    const tool = createDeleteFileTool(createEnv("/workspace"));
+    const requestApproval = vi.fn().mockResolvedValue(undefined);
+
+    await tool.beforeExecute?.({
+      event: { input: { path: "src/value.ts" } },
+      requestApproval,
+      workspacePath: "/workspace"
+    } as ServerPlugin.ToolBeforeExecuteOptions);
+
+    expect(requestApproval).toHaveBeenCalledWith(
+      "Allowed to delete file: src/value.ts"
     );
   });
 

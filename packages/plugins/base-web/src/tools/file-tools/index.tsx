@@ -1,5 +1,6 @@
 import {
   DiffOutlined,
+  DeleteOutlined,
   FileSearchOutlined,
   FileTextOutlined,
   ReadOutlined,
@@ -56,6 +57,26 @@ export function WriteFileToolRender(props: WebPlugin.ToolRenderProps) {
         ) : (
           <span className="base-file-tool__empty">无写入内容</span>
         )}
+        {errorOutput ? (
+          <pre className="base-file-tool__pre">{errorOutput}</pre>
+        ) : null}
+      </div>
+    </props.DefaultToolRender>
+  );
+}
+
+export function DeleteFileToolRender(props: WebPlugin.ToolRenderProps) {
+  const args = props.toolCall.arguments;
+  const path = getStringArg(args, "path");
+  const errorOutput = props.result?.isError ? getTextResult(props.result) : "";
+
+  return (
+    <props.DefaultToolRender title="删除文件" icon={<DeleteOutlined />}>
+      <div className="base-file-tool">
+        <ToolMeta path={path} />
+        {!props.result ? (
+          <span className="base-file-tool__empty">等待删除结果</span>
+        ) : null}
         {errorOutput ? (
           <pre className="base-file-tool__pre">{errorOutput}</pre>
         ) : null}
@@ -213,6 +234,11 @@ export const readFileTool: WebPlugin.ToolRender = {
 export const writeFileTool: WebPlugin.ToolRender = {
   Render: WriteFileToolRender,
   toolName: "write_file"
+};
+
+export const deleteFileTool: WebPlugin.ToolRender = {
+  Render: DeleteFileToolRender,
+  toolName: "delete_file"
 };
 
 export const grepFilesTool: WebPlugin.ToolRender = {

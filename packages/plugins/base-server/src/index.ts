@@ -2,6 +2,7 @@ import type { ServerPlugin } from '@hold-rein/plugin-server'
 
 import createRouter from './routes'
 import {
+  createDeleteFileTool,
   createEditFileTool,
   createFindFilesTool,
   createGrepFilesTool,
@@ -18,6 +19,7 @@ const baseServerPlugin: ServerPlugin.Plugin = {
       tools: [
         createReadFileTool(context.env),
         createWriteFileTool(context.env),
+        createDeleteFileTool(context.env),
         createGrepFilesTool(context.env),
         createFindFilesTool(context.env),
         createEditFileTool(context.env),
