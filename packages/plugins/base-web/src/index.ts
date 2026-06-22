@@ -5,7 +5,9 @@ import {
   grepFilesTool,
   readFileTool,
   shellExecTool,
-  writeFileTool
+  writeFileTool,
+  callSubagentTool,
+  revokeSubagentTool
 } from './tools'
 
 const baseWebPlugin: WebPlugin.Plugin = {
@@ -24,7 +26,9 @@ const baseWebPlugin: WebPlugin.Plugin = {
       grepFilesTool,
       findFilesTool,
       editFileTool,
-      shellExecTool
+      shellExecTool,
+      callSubagentTool,
+      revokeSubagentTool
     ],
     // senderSuggestions: [
     //   {
