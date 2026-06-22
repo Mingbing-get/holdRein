@@ -28,6 +28,7 @@ export function createAgentRuntime(
   const subagents = new Map<string, SubagentRun<HarnessSession>>();
   const harnessSessions = new Map<string, HarnessSession>();
   const harnessTools = new Map<string, ServerPlugin.PluginTool[]>();
+  const interruptedHarnesses = new WeakSet<AgentHarness>();
 
   return {
     interrupt: async (agentId) => {
@@ -37,6 +38,7 @@ export function createAgentRuntime(
         return false;
       }
 
+      interruptedHarnesses.add(runningAgent.harness);
       runningAgents.delete(agentId);
       await interruptHarness(runningAgent.harness);
       return true;
@@ -200,6 +202,9 @@ export function createAgentRuntime(
           }
           if (event.type === "agent_end") {
             options.eventBus.emit({ agentId: harnessOptions.agentId, type: "agent_end" });
+            if (interruptedHarnesses.has(harness)) {
+              return;
+            }
             if (harnessOptions.parentAgentId) {
               await finishSubagent(harnessOptions.agentId, contribution);
               return;

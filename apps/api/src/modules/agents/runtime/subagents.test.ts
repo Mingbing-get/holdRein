@@ -250,6 +250,44 @@ describe("agent runtime subagent calls", () => {
     }));
   });
 
+  it.each([
+    { customType: "agent_continuation", mode: "direct", useSubagent: false },
+    { customType: "callsubagent", mode: "subagent", useSubagent: true }
+  ])("does not start plugin $mode continuations after manual interrupt", async ({
+    customType,
+    useSubagent
+  }) => {
+    const { appendCustomMessageEntry, repo } = createSessionRepo();
+    const eventBus = createAgentEventBus();
+    const subagentRepository = createInMemorySubagentRepository();
+    let resolvePrompt: (() => void) | undefined;
+    const onAgentEnd = vi.fn().mockResolvedValue({
+      details: { source: "test-plugin" },
+      prompt: "Run this follow-up separately",
+      useSubagent
+    });
+    resolveContributions.mockResolvedValue(createContribution({ onAgentEnd }));
+    prompt.mockImplementationOnce(() => new Promise<void>((resolve) => {
+      resolvePrompt = resolve;
+    }));
+    const runtime = createRuntime(repo, eventBus, subagentRepository);
+
+    const result = await runtime.start(createRunInput());
+    await expect(runtime.interrupt(result.agentId)).resolves.toBe(true);
+    await harnessSubscribers[0]?.({ type: "agent_end" });
+
+    expect(onAgentEnd).not.toHaveBeenCalled();
+    expect(subagentRepository.findByTaskId("task-1")).toEqual([]);
+    expect(appendCustomMessageEntry).not.toHaveBeenCalledWith(
+      customType,
+      expect.anything(),
+      true,
+      expect.anything()
+    );
+    expect(prompt).toHaveBeenCalledTimes(1);
+    resolvePrompt?.();
+  });
+
   it("adds a revoke tool to the parent harness after a subagent completes", async () => {
     const { repo } = createSessionRepo();
     const eventBus = createAgentEventBus();
