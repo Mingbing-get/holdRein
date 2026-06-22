@@ -174,6 +174,7 @@ function toTaskSummary(
 
   return {
     ...(activeAgentId ? { activeAgentId } : {}),
+    approvalPolicy: task.approvalPolicy,
     id: task.id,
     initialUserMessage: task.initialUserMessage,
     lastContinuedAt: task.lastContinuedAt,
@@ -181,6 +182,7 @@ function toTaskSummary(
     lastModelProvider: task.lastModelProvider,
     lastModelProviderSource: task.lastModelProviderSource,
     status: task.status,
+    thinkingLevel: task.thinkingLevel,
     title: task.title
   };
 }

@@ -1,4 +1,4 @@
-import { Divider, Flex } from "antd";
+import { Button, Divider, Flex, Select } from "antd";
 import {
   Sender as ASender,
   type SenderProps
@@ -22,6 +22,16 @@ import {
   flattenSuggestionItems,
   SenderSuggestionPopup
 } from "./suggestion-popup";
+import type {
+  ApprovalPolicy,
+  ThinkingLevel
+} from "../../agent-messages/agent-message-types";
+import {
+  APPROVAL_POLICY_LABELS,
+  DEFAULT_APPROVAL_POLICY,
+  DEFAULT_THINKING_LEVEL,
+  THINKING_LEVEL_OPTIONS
+} from "./task-options";
 
 export {
   clampCursorIndex,
@@ -38,29 +48,37 @@ export const CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS =
 
 interface Props extends Pick<SenderProps, 'autoSize' | 'className' | 'classNames' | 'disabled' | 'placeholder'> {
   activeAgent?: SelectedModel | null
+  approvalPolicy?: ApprovalPolicy
   apiBaseUrl: string
   draftKey?: string | undefined
   running?: boolean
   suggestionGroups?: WebPlugin.SuggestionGroup[] | undefined
   taskId?: string | undefined
+  thinkingLevel?: ThinkingLevel
   onActiveAgentChange?: (activeAgent: SelectedModel) => void
+  onApprovalPolicyChange?: (approvalPolicy: ApprovalPolicy) => void
   onCancel?: () => Promise<void> | void
   onSubmit?: (...args: Parameters<Required<SenderProps>['onSubmit']>) => Promise<void> | void
   onMessageChange?: (message: string) => void
+  onThinkingLevelChange?: (thinkingLevel: ThinkingLevel) => void
   workspacePath?: string | undefined
 }
 
 export default function Sender({
   activeAgent,
+  approvalPolicy = DEFAULT_APPROVAL_POLICY,
   apiBaseUrl,
   draftKey,
   running = false,
   onCancel,
   onActiveAgentChange,
+  onApprovalPolicyChange,
   suggestionGroups,
   taskId,
   onMessageChange,
   onSubmit,
+  onThinkingLevelChange,
+  thinkingLevel = DEFAULT_THINKING_LEVEL,
   workspacePath,
   ...senderProps
 }: Props) {
@@ -216,6 +234,49 @@ export default function Sender({
                             ? { onChange: onActiveAgentChange }
                             : {})}
                         />
+                        {activeAgent?.reasoning === true ? (
+                          <>
+                            <Divider
+                              orientation="vertical"
+                              style={{
+                                borderColor:
+                                  "var(--app-color-border-secondary)"
+                              }}
+                            />
+                            <Select<ThinkingLevel>
+                              aria-label="思考级别"
+                              options={THINKING_LEVEL_OPTIONS}
+                              popupMatchSelectWidth={false}
+                              size="small"
+                              style={{ minWidth: 72 }}
+                              value={thinkingLevel}
+                              variant="borderless"
+                              {...(onThinkingLevelChange
+                                ? { onChange: onThinkingLevelChange }
+                                : {})}
+                            />
+                          </>
+                        ) : null}
+                        <Divider
+                          orientation="vertical"
+                          style={{
+                            borderColor: "var(--app-color-border-secondary)"
+                          }}
+                        />
+                        <Button
+                          aria-label="审批策略"
+                          size="small"
+                          type={approvalPolicy === "run_all" ? "primary" : "text"}
+                          onClick={() => {
+                            onApprovalPolicyChange?.(
+                              approvalPolicy === "run_all"
+                                ? "approval"
+                                : "run_all"
+                            );
+                          }}
+                        >
+                          {APPROVAL_POLICY_LABELS[approvalPolicy]}
+                        </Button>
                         {senderActions.length ? (
                           <>
                             <Divider

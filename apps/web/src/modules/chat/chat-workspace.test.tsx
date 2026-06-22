@@ -187,9 +187,11 @@ describe("ChatWorkspace", () => {
     expect(agentTasksMock.continueTask).toHaveBeenCalledWith(
       "task-one",
       {
+        approvalPolicy: "approval",
         modelId: "claude-3-5-sonnet",
         prompt: "Inspect this project",
-        provider: "anthropic"
+        provider: "anthropic",
+        thinkingLevel: "medium"
       }
     );
   });
@@ -244,9 +246,11 @@ describe("ChatWorkspace", () => {
     fireEvent.click(screen.getByTestId("sender"));
 
     expect(agentTasksMock.startTask).toHaveBeenCalledWith({
+      approvalPolicy: "approval",
       modelId: "claude-3-5-sonnet",
       prompt: "Inspect this project",
       provider: "anthropic",
+      thinkingLevel: "medium",
       workspacePath: "/Users/mingbing/apps/workspace-one"
     });
     expect(agentTasksMock.continueTask).not.toHaveBeenCalled();

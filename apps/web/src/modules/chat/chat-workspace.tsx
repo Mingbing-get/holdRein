@@ -1,5 +1,5 @@
 import { Flex } from "antd";
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { useAppWorkspace } from "../../app/app-workspace-context";
 import {
@@ -8,6 +8,12 @@ import {
   useAgentTasks
 } from "../agent-messages";
 import Sender from "./sender";
+import {
+  DEFAULT_APPROVAL_POLICY,
+  DEFAULT_THINKING_LEVEL,
+  normalizeApprovalPolicy,
+  normalizeThinkingLevel
+} from "./sender/task-options";
 import { useWorkspaceFileSuggestions } from "./use-workspace-file-suggestions";
 
 interface ChatWorkspaceProps {
@@ -36,6 +42,9 @@ export function ChatWorkspace({
   const activeWorkspace = workspaces.find(
     (workspace) => workspace.id === activeWorkspaceId
   );
+  const activeWorkspaceTask = activeWorkspace?.tasks.find(
+    (task) => task.id === activeTaskId
+  );
   const taskState = getTaskState(activeTaskId);
   const pendingApproval = getPendingApproval(activeTaskId);
   const suggestionGroups = useWorkspaceFileSuggestions(
@@ -46,6 +55,15 @@ export function ChatWorkspace({
   const bottomRef = useRef<HTMLDivElement>(null);
   const previousTaskIdRef = useRef(activeTaskId);
   const shouldFollowMessagesRef = useRef(true);
+  const [thinkingLevel, setThinkingLevel] = useState(DEFAULT_THINKING_LEVEL);
+  const [approvalPolicy, setApprovalPolicy] = useState(DEFAULT_APPROVAL_POLICY);
+
+  useEffect(() => {
+    setThinkingLevel(normalizeThinkingLevel(activeWorkspaceTask?.thinkingLevel));
+    setApprovalPolicy(
+      normalizeApprovalPolicy(activeWorkspaceTask?.approvalPolicy)
+    );
+  }, [activeTaskId, activeWorkspaceTask?.approvalPolicy, activeWorkspaceTask?.thinkingLevel]);
 
   useLayoutEffect(() => {
     if (previousTaskIdRef.current !== activeTaskId) {
@@ -112,15 +130,18 @@ export function ChatWorkspace({
 
       <Sender
         activeAgent={activeAgent}
+        approvalPolicy={approvalPolicy}
         apiBaseUrl={apiBaseUrl}
         disabled={senderDisabled}
         draftKey="chat-workspace-sender"
         running={taskState?.status === "running"}
         suggestionGroups={suggestionGroups}
         taskId={activeTaskId}
+        thinkingLevel={thinkingLevel}
         workspacePath={activeWorkspace?.path}
         autoSize={{ minRows: 1, maxRows: 4 }}
         onActiveAgentChange={setActiveAgent}
+        onApprovalPolicyChange={setApprovalPolicy}
         onCancel={async () => {
           if (!activeTaskId) {
             return;
@@ -128,6 +149,7 @@ export function ChatWorkspace({
 
           await cancelTask(activeTaskId);
         }}
+        onThinkingLevelChange={setThinkingLevel}
         onSubmit={async (message) => {
           if (!activeAgent || !activeWorkspace || !message.trim()) {
             return;
@@ -135,17 +157,21 @@ export function ChatWorkspace({
 
           if (activeTaskId) {
             await continueTask(activeTaskId, {
+              approvalPolicy,
               modelId: activeAgent.modelId,
               prompt: message,
-              provider: activeAgent.providerId
+              provider: activeAgent.providerId,
+              thinkingLevel
             });
             return;
           }
 
           await startTask({
+            approvalPolicy,
             modelId: activeAgent.modelId,
             prompt: message,
             provider: activeAgent.providerId,
+            thinkingLevel,
             workspacePath: activeWorkspace.path
           });
         }}

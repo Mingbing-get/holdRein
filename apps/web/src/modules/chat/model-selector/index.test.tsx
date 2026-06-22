@@ -145,7 +145,8 @@ describe("ModelSelector", () => {
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith({
         modelId: "claude-3-5-sonnet",
-        providerId: "anthropic"
+        providerId: "anthropic",
+        reasoning: true
       });
     });
   });

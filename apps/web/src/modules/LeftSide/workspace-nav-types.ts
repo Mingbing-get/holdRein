@@ -1,5 +1,11 @@
+import type {
+  ApprovalPolicy,
+  ThinkingLevel
+} from "../agent-messages/agent-message-types";
+
 export interface WorkspaceTaskSummary {
   activeAgentId?: string;
+  approvalPolicy?: ApprovalPolicy;
   id: string;
   initialUserMessage: string;
   lastContinuedAt: string;
@@ -7,6 +13,7 @@ export interface WorkspaceTaskSummary {
   lastModelProvider: string;
   lastModelProviderSource: "built_in" | "custom";
   status: "running" | "completed" | "error";
+  thinkingLevel?: ThinkingLevel;
   title: string;
 }
 

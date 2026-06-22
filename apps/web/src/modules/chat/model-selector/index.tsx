@@ -17,6 +17,7 @@ interface ModelCascaderOption {
   isLeaf?: boolean;
   label: string;
   loading?: boolean;
+  reasoning?: boolean;
   value: string;
 }
 
@@ -28,6 +29,7 @@ interface ProviderOption extends ModelCascaderOption {
 export interface SelectedModel {
   modelId: string;
   providerId: string;
+  reasoning?: boolean;
 }
 
 interface ModelSelectorProps {
@@ -75,6 +77,7 @@ function buildModelOptions(models: ModelSummary[]): ModelCascaderOption[] {
   return models.map((model) => ({
     isLeaf: true,
     label: model.name,
+    reasoning: model.reasoning,
     value: model.id
   }));
 }
@@ -157,15 +160,17 @@ export function ModelSelector({
         suffixIcon={<DownOutlined style={{ color: "var(--app-color-text)" }} />}
         value={cascaderValue ?? []}
         variant="borderless"
-        onChange={(nextValue) => {
+        onChange={(nextValue, selectedOptions) => {
           if (!isModelSelection(nextValue)) {
             return;
           }
 
+          const selectedModel = selectedOptions[1];
           setSelectedValue(nextValue);
           onChange?.({
             modelId: nextValue[1],
-            providerId: nextValue[0]
+            providerId: nextValue[0],
+            reasoning: selectedModel?.reasoning === true
           });
         }}
       />

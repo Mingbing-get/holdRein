@@ -13,9 +13,11 @@ export interface CreateAgentsRouterOptions {
 }
 
 interface StartAgentBody {
+  approvalPolicy?: unknown;
   modelId?: string;
   prompt?: string;
   provider?: string;
+  thinkingLevel?: unknown;
   workspacePath?: string;
 }
 
@@ -25,9 +27,11 @@ interface ApprovalDecisionBody {
 }
 
 interface ContinueTaskBody {
+  approvalPolicy?: unknown;
   modelId?: string;
   prompt?: string;
   provider?: string;
+  thinkingLevel?: unknown;
 }
 
 interface RenameTaskBody {
@@ -372,8 +376,14 @@ function parseContinueTaskBody(
     return null;
   }
 
+  const options = parseTaskRunOptions(body);
+
+  if (!options) {
+    return null;
+  }
+
   if (body.provider === undefined && body.modelId === undefined) {
-    return { prompt: body.prompt, taskId };
+    return { ...options, prompt: body.prompt, taskId };
   }
 
   if (typeof body.provider !== "string" || typeof body.modelId !== "string") {
@@ -381,6 +391,7 @@ function parseContinueTaskBody(
   }
 
   return {
+    ...options,
     modelId: body.modelId,
     prompt: body.prompt,
     provider: body.provider,
@@ -398,12 +409,48 @@ function parseStartAgentBody(body: StartAgentBody): StartAgentInput | null {
     return null;
   }
 
+  const options = parseTaskRunOptions(body);
+
+  if (!options) {
+    return null;
+  }
+
   return {
+    ...options,
     modelId: body.modelId,
     prompt: body.prompt,
     provider: body.provider,
     workspacePath: body.workspacePath
   };
+}
+
+function parseTaskRunOptions(body: {
+  approvalPolicy?: unknown;
+  thinkingLevel?: unknown;
+}): Pick<StartAgentInput, "approvalPolicy" | "thinkingLevel"> | null {
+  const approvalPolicy = body.approvalPolicy ?? "approval";
+  const thinkingLevel = body.thinkingLevel ?? "medium";
+
+  if (approvalPolicy !== "approval" && approvalPolicy !== "run_all") {
+    return null;
+  }
+
+  if (!isThinkingLevel(thinkingLevel)) {
+    return null;
+  }
+
+  return { approvalPolicy, thinkingLevel };
+}
+
+function isThinkingLevel(value: unknown): value is StartAgentInput["thinkingLevel"] {
+  return (
+    value === "off" ||
+    value === "minimal" ||
+    value === "low" ||
+    value === "medium" ||
+    value === "high" ||
+    value === "xhigh"
+  );
 }
 
 function parseAfterSequence(

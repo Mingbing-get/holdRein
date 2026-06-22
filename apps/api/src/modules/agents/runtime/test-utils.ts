@@ -17,9 +17,11 @@ import {
 
 export function createRunInput() {
   return {
+    approvalPolicy: "approval" as const,
     modelId: "gpt-4.1",
     prompt: "Continue",
     provider: "openai",
+    thinkingLevel: "medium" as const,
     taskId: "task-1",
     workspacePath: "/tmp/workspace"
   };

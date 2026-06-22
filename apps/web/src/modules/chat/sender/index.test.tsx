@@ -483,10 +483,10 @@ describe("Sender action button", () => {
 
     const footerTools = screen.getByTestId("sender-footer-tools");
     expect(footerTools).toHaveTextContent(
-      "工作空间选择模型选择插件动作:hello:/tmp/workspace"
+      "工作空间选择模型选择需审批插件动作:hello:/tmp/workspace"
     );
 
     const dividers = footerTools.querySelectorAll(".ant-divider-vertical");
-    expect(dividers).toHaveLength(2);
+    expect(dividers).toHaveLength(3);
   });
 });

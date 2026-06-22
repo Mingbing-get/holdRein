@@ -48,6 +48,16 @@ export interface PendingApproval {
   };
 }
 
+export type ThinkingLevel =
+  | "off"
+  | "minimal"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh";
+
+export type ApprovalPolicy = "approval" | "run_all";
+
 export interface ApprovalDecisionInput {
   agentId: string;
   approvalId: string;
@@ -88,16 +98,20 @@ export interface SubagentState {
 export type SubagentStatesById = Record<string, SubagentState>;
 
 export interface StartTaskInput {
+  approvalPolicy?: ApprovalPolicy;
   modelId: string;
   prompt: string;
   provider: string;
+  thinkingLevel?: ThinkingLevel;
   workspacePath: string;
 }
 
 export interface ContinueTaskInput {
+  approvalPolicy?: ApprovalPolicy;
   modelId: string;
   prompt: string;
   provider: string;
+  thinkingLevel?: ThinkingLevel;
 }
 
 export interface StartedWorkspace {
@@ -109,12 +123,14 @@ export interface StartedWorkspace {
 export interface StartedTask {
   id: string;
   initialUserMessage: string;
+  approvalPolicy: ApprovalPolicy;
   lastContinuedAt: string;
   lastModelId?: string | null;
   lastModelName: string;
   lastModelProvider: string;
   lastModelProviderSource: "built_in" | "custom";
   status: "running" | "completed" | "error";
+  thinkingLevel: ThinkingLevel;
   title: string;
   workspaceId: string;
 }

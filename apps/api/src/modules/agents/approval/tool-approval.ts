@@ -4,11 +4,12 @@ import type { ServerPlugin } from "@hold-rein/plugin-server";
 
 import type { AgentApprovalStore } from "./store";
 import type { AgentEventBus } from "../event/event-bus";
-import type { ToolApprovalRequest } from "../agent-types";
+import type { ApprovalPolicy, ToolApprovalRequest } from "../agent-types";
 
 export async function runToolBeforeExecute(input: {
   agentId: string;
   approvalStore: AgentApprovalStore;
+  approvalPolicy: ApprovalPolicy;
   event: ServerPlugin.ToolBeforeExecuteOptions["event"];
   eventBus: AgentEventBus;
   tool: ServerPlugin.PluginTool;
@@ -20,6 +21,10 @@ export async function runToolBeforeExecute(input: {
     workspacePath: input.workspacePath,
     event: input.event,
     requestApproval: async (title) => {
+      if (input.approvalPolicy === "run_all") {
+        return undefined;
+      }
+
       const approvalId = `approval_${randomUUID()}`;
       const approvalRequest: ToolApprovalRequest = {
         agentId: input.agentId,

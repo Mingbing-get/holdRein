@@ -16,6 +16,7 @@ const ACTIVE_WORKSPACE_ID_STORAGE_KEY = "hold-rein.active-workspace-id";
 export interface ActiveAgentSelection {
   modelId: string;
   providerId: string;
+  reasoning?: boolean;
 }
 
 export interface AppWorkspaceState {
@@ -79,7 +80,11 @@ function isActiveAgentSelection(value: unknown): value is ActiveAgentSelection {
     "modelId" in value &&
     "providerId" in value &&
     typeof value.modelId === "string" &&
-    typeof value.providerId === "string"
+    typeof value.providerId === "string" &&
+    (
+      !("reasoning" in value) ||
+      typeof value.reasoning === "boolean"
+    )
   );
 }
 

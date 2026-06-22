@@ -71,7 +71,7 @@ export function createAgentRuntime(
           isContinue: harnessOptions.isContinue,
           session: harnessOptions.session,
           prompt: harnessOptions.pluginPrompt,
-          thinkingLevel: 'medium',
+          thinkingLevel: input.thinkingLevel,
           model
         }
         const contribution = await pluginRegistry.resolveContributions(pluginContext)
@@ -126,6 +126,7 @@ export function createAgentRuntime(
             ]
               .filter(Boolean)
               .join("\n\n"),
+          thinkingLevel: input.thinkingLevel,
           tools
         });
 
@@ -224,6 +225,7 @@ export function createAgentRuntime(
             approvalStore: options.approvalStore,
             event,
             eventBus: options.eventBus,
+            approvalPolicy: input.approvalPolicy,
             tool,
             workspacePath: input.workspacePath
           });

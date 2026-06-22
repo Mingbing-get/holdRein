@@ -20,6 +20,7 @@ import { startTaskRun } from "../task/run-monitor";
 import type {
   AgentEventSubscription,
   AgentSessionMetadata,
+  ApprovalPolicy,
   ApprovalDecisionInput,
   ApprovalDecisionResult,
   StoredAgentMessage,
@@ -28,6 +29,7 @@ import type {
   StartAgentResult,
   SubscribeAgentEventsInput,
   TaskMessageHistory,
+  ThinkingLevel,
   TaskTitleResult
 } from "../agent-types";
 import {
@@ -61,7 +63,9 @@ export interface RenameTaskInput extends GetTaskTitleInput {
 }
 
 interface ContinueTaskBaseInput {
+  approvalPolicy?: ApprovalPolicy;
   prompt: string;
+  thinkingLevel?: ThinkingLevel;
   taskId: string;
 }
 
@@ -83,9 +87,7 @@ export interface CreateAgentsServiceOptions {
   titleGenerator: TaskTitleGenerator;
 }
 
-export function createAgentsService(
-  options: CreateAgentsServiceOptions
-): AgentsService {
+export function createAgentsService(options: CreateAgentsServiceOptions): AgentsService {
   const titleJobs = new Map<string, Promise<TaskTitleResult>>();
   const now = options.now ?? (() => new Date());
   const subagentRepository =
@@ -120,9 +122,11 @@ export function createAgentsService(
 
       startTitleJob({
         input: {
+          approvalPolicy: task.approvalPolicy,
           modelId: task.lastModelId ?? task.lastModelName,
           prompt: task.initialUserMessage,
           provider: task.lastModelProvider,
+          thinkingLevel: task.thinkingLevel,
           workspacePath: ""
         },
         now,
@@ -181,6 +185,15 @@ export function createAgentsService(
               options.modelProvidersService
             )
           : null;
+      const optionUpdate = {
+        approvalPolicy: input.approvalPolicy ?? task.approvalPolicy,
+        thinkingLevel: input.thinkingLevel ?? task.thinkingLevel
+      };
+      options.repository.updateTaskOptions(
+        taskId,
+        optionUpdate,
+        now().toISOString()
+      );
       options.repository.updateTaskStatus(taskId, "running", now().toISOString());
       const run = await startTaskRun({
         ...(options.activeTaskRuns
@@ -195,6 +208,7 @@ export function createAgentsService(
             selectedModel?.lastModelId ?? task.lastModelId ?? task.lastModelName,
           prompt,
           provider: selectedModel?.lastModelProvider ?? task.lastModelProvider,
+          ...optionUpdate,
           ...(session ? { session } : {}),
           taskId,
           workspacePath: workspace.path
@@ -248,6 +262,7 @@ export function createAgentsService(
         now().toISOString()
       ),
     startAgent: async (input) => {
+      const taskOptions = getTaskRunOptions(input);
       const createdAt = now().toISOString();
       const workspace = ensureWorkspace({
         createdAt,
@@ -270,10 +285,12 @@ export function createAgentsService(
         initialUserMessage: input.prompt,
         lastContinuedAt: createdAt,
         ...taskModel,
+        approvalPolicy: taskOptions.approvalPolicy,
         sessionCreatedAt: null,
         sessionId: null,
         sessionPath: null,
         status: "running",
+        thinkingLevel: taskOptions.thinkingLevel,
         title: "",
         updatedAt: createdAt,
         workspaceId: workspace.id
@@ -297,7 +314,7 @@ export function createAgentsService(
         now,
         repository: options.repository,
         runtime: options.runtime,
-        runtimeInput: { ...input, taskId: task.id },
+        runtimeInput: { ...input, ...taskOptions, taskId: task.id },
         taskId: task.id
       });
       const updatedTask = options.repository.updateTaskSession(task.id, run.session) ?? task;
@@ -306,6 +323,16 @@ export function createAgentsService(
     },
     subscribeToAgentEvents: (input, listener) =>
       options.eventBus.subscribe(input, listener)
+  };
+}
+
+function getTaskRunOptions(input: {
+  approvalPolicy?: ApprovalPolicy;
+  thinkingLevel?: ThinkingLevel;
+}): Pick<TaskRow, "approvalPolicy" | "thinkingLevel"> {
+  return {
+    approvalPolicy: input.approvalPolicy ?? "approval",
+    thinkingLevel: input.thinkingLevel ?? "medium"
   };
 }
 
@@ -452,22 +479,14 @@ function startTitleJob(input: {
       const currentTask = input.repository.findTaskById(input.task.id);
 
       if (!currentTask || currentTask.title.trim().length > 0) {
-        return {
-          id: input.task.id,
-          title: currentTask?.title ?? title
-        };
+        return { id: input.task.id, title: currentTask?.title ?? title };
       }
 
       const updatedTask = input.repository.updateTaskTitle(
-        input.task.id,
-        title,
-        input.now().toISOString()
+        input.task.id, title, input.now().toISOString()
       );
 
-      return {
-        id: input.task.id,
-        title: updatedTask?.title ?? title
-      };
+      return { id: input.task.id, title: updatedTask?.title ?? title };
     })
     .finally(() => {
       input.titleJobs.delete(input.task.id);

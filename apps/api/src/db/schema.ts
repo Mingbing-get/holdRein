@@ -85,6 +85,11 @@ export const tasks = sqliteTable(
     createdAt: text("created_at").notNull(),
     id: text("id").primaryKey(),
     initialUserMessage: text("initial_user_message").notNull(),
+    approvalPolicy: text("approval_policy", {
+      enum: ["approval", "run_all"]
+    })
+      .notNull()
+      .default("approval"),
     lastContinuedAt: text("last_continued_at"),
     lastModelId: text("last_model_id"),
     lastModelName: text("last_model_name").notNull(),
@@ -100,6 +105,11 @@ export const tasks = sqliteTable(
     })
       .notNull()
       .default("completed"),
+    thinkingLevel: text("thinking_level", {
+      enum: ["off", "minimal", "low", "medium", "high", "xhigh"]
+    })
+      .notNull()
+      .default("medium"),
     title: text("title").notNull(),
     updatedAt: text("updated_at").notNull(),
     workspaceId: text("workspace_id")

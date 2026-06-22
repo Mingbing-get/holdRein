@@ -10,8 +10,8 @@ import type {
 import { tasks, workspaces } from "../../db";
 
 export interface WorkspaceRepositorySeed {
-  tasks: TaskRow[];
-  workspaces: WorkspaceRow[];
+  tasks: NewTaskRow[];
+  workspaces: NewWorkspaceRow[];
 }
 
 export interface ListWorkspaceTasksInput {
@@ -48,6 +48,11 @@ export interface WorkspaceRepository {
     >,
     updatedAt: string
   ) => TaskRow | undefined;
+  updateTaskOptions: (
+    taskId: string,
+    options: Pick<TaskRow, "approvalPolicy" | "thinkingLevel">,
+    updatedAt: string
+  ) => TaskRow | undefined;
   updateTaskSession: (
     taskId: string,
     session: { createdAt: string; id: string; path: string }
@@ -62,8 +67,8 @@ export interface WorkspaceRepository {
 export function createInMemoryWorkspaceRepository(
   seed: WorkspaceRepositorySeed = { tasks: [], workspaces: [] }
 ): WorkspaceRepository {
-  const workspaceRows = [...seed.workspaces];
-  const taskRows = [...seed.tasks];
+  const workspaceRows = seed.workspaces.map((workspace) => workspace);
+  const taskRows = seed.tasks.map(toTaskRow);
 
   return {
     createTask: (task) => {
@@ -158,6 +163,14 @@ export function createInMemoryWorkspaceRepository(
       const existingTask = taskRows[taskIndex];
       if (!existingTask) return undefined;
       const nextTask = { ...existingTask, ...model, updatedAt };
+      taskRows[taskIndex] = nextTask;
+      return nextTask;
+    },
+    updateTaskOptions: (taskId, options, updatedAt) => {
+      const taskIndex = taskRows.findIndex((task) => task.id === taskId);
+      const existingTask = taskRows[taskIndex];
+      if (!existingTask) return undefined;
+      const nextTask = { ...existingTask, ...options, updatedAt };
       taskRows[taskIndex] = nextTask;
       return nextTask;
     },
@@ -289,6 +302,14 @@ export function createSqliteWorkspaceRepository(
         .run();
       return database.db.select().from(tasks).where(eq(tasks.id, taskId)).get();
     },
+    updateTaskOptions: (taskId, options, updatedAt) => {
+      database.db
+        .update(tasks)
+        .set({ ...options, updatedAt })
+        .where(eq(tasks.id, taskId))
+        .run();
+      return database.db.select().from(tasks).where(eq(tasks.id, taskId)).get();
+    },
     updateTaskSession: (taskId, session) => {
       database.db
         .update(tasks)
@@ -321,11 +342,13 @@ function sortTasksDescending(taskRows: TaskRow[]): TaskRow[] {
 function toTaskRow(task: NewTaskRow): TaskRow {
   return {
     ...task,
+    approvalPolicy: task.approvalPolicy ?? "approval",
     lastContinuedAt: task.lastContinuedAt ?? null,
     lastModelId: task.lastModelId ?? null,
     sessionCreatedAt: task.sessionCreatedAt ?? null,
     sessionId: task.sessionId ?? null,
     sessionPath: task.sessionPath ?? null,
-    status: task.status ?? "completed"
+    status: task.status ?? "completed",
+    thinkingLevel: task.thinkingLevel ?? "medium"
   };
 }

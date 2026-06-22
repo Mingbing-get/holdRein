@@ -205,6 +205,7 @@ function createTask(
   } = {}
 ): TaskRow {
   return {
+    approvalPolicy: "approval",
     createdAt: "2026-06-11T00:00:00.000Z",
     id: "task-one",
     initialUserMessage: "Hello",
@@ -217,6 +218,7 @@ function createTask(
     sessionId: input.sessionPath ? "session-one" : null,
     sessionPath: input.sessionPath ?? null,
     status: input.status ?? "completed",
+    thinkingLevel: "medium",
     title: "Hello",
     updatedAt: "2026-06-11T00:00:00.000Z",
     workspaceId: "workspace-one"

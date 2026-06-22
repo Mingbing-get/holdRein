@@ -30,9 +30,11 @@ describe("agent message API", () => {
     await startAgentTask(
       "http://localhost:4000/",
       {
+        approvalPolicy: "run_all",
         modelId: "gpt-4.1",
         prompt: "Inspect this project",
         provider: "openai",
+        thinkingLevel: "high",
         workspacePath: "/workspace"
       },
       fetcher
@@ -42,9 +44,11 @@ describe("agent message API", () => {
       "http://localhost:4000/api/v1/agents/start",
       expect.objectContaining({
         body: JSON.stringify({
+          approvalPolicy: "run_all",
           modelId: "gpt-4.1",
           prompt: "Inspect this project",
           provider: "openai",
+          thinkingLevel: "high",
           workspacePath: "/workspace"
         }),
         method: "POST"
@@ -115,9 +119,11 @@ describe("agent message API", () => {
       "",
       "task-1",
       {
+        approvalPolicy: "approval",
         modelId: "claude-3-5-sonnet",
         prompt: "Continue",
-        provider: "anthropic"
+        provider: "anthropic",
+        thinkingLevel: "medium"
       },
       fetcher
     );
@@ -126,9 +132,11 @@ describe("agent message API", () => {
       "/api/v1/agents/tasks/task-1/continue",
       expect.objectContaining({
         body: JSON.stringify({
+          approvalPolicy: "approval",
           modelId: "claude-3-5-sonnet",
           prompt: "Continue",
-          provider: "anthropic"
+          provider: "anthropic",
+          thinkingLevel: "medium"
         }),
         method: "POST"
       })

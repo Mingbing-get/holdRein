@@ -1,16 +1,21 @@
 import type { AgentHarnessEvent } from "@earendil-works/pi-agent-core";
+import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { TaskRow, WorkspaceRow } from "../../db";
 
 export interface StartAgentInput {
+  approvalPolicy?: ApprovalPolicy;
   modelId: string;
   prompt: string;
   provider: string;
+  thinkingLevel?: ThinkingLevel;
   workspacePath: string;
 }
 
-export interface RunAgentInput extends StartAgentInput {
+export interface RunAgentInput extends Omit<StartAgentInput, "approvalPolicy" | "thinkingLevel"> {
+  approvalPolicy: ApprovalPolicy;
   session?: AgentSessionMetadata;
   taskId: string;
+  thinkingLevel: ThinkingLevel;
 }
 
 export interface AgentSessionMetadata {
@@ -24,6 +29,10 @@ export interface AgentRunResult {
   session: AgentSessionMetadata;
   status: "running";
 }
+
+export type ApprovalPolicy = "approval" | "run_all";
+
+export type { ThinkingLevel };
 
 export type InterruptTaskResult =
   | {

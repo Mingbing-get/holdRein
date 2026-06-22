@@ -139,9 +139,11 @@ describe("agent routes", () => {
       }
     });
     expect(service.startAgent).toHaveBeenCalledWith({
+      approvalPolicy: "approval",
       modelId: "gpt-4.1",
       prompt: "Inspect this project",
       provider: "openai",
+      thinkingLevel: "medium",
       workspacePath: "/tmp/workspace"
     });
   });
@@ -220,9 +222,11 @@ describe("agent routes", () => {
 
     expect(response.status).toBe(200);
     expect(service.continueTask).toHaveBeenCalledWith({
+      approvalPolicy: "approval",
       modelId: "claude-3-5-sonnet",
       prompt: "Continue",
       provider: "anthropic",
+      thinkingLevel: "medium",
       taskId: "task-1"
     });
   });
@@ -235,7 +239,9 @@ describe("agent routes", () => {
 
     expect(response.status).toBe(200);
     expect(service.continueTask).toHaveBeenCalledWith({
+      approvalPolicy: "approval",
       prompt: "Continue",
+      thinkingLevel: "medium",
       taskId: "task-1"
     });
   });

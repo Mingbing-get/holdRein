@@ -2,6 +2,7 @@ import type { TaskRow, WorkspaceRow } from "../../db";
 
 export interface WorkspaceTaskSummary {
   activeAgentId?: string;
+  approvalPolicy: TaskRow["approvalPolicy"];
   id: string;
   initialUserMessage: string;
   lastContinuedAt: string;
@@ -9,6 +10,7 @@ export interface WorkspaceTaskSummary {
   lastModelProvider: string;
   lastModelProviderSource: TaskRow["lastModelProviderSource"];
   status: TaskRow["status"];
+  thinkingLevel: TaskRow["thinkingLevel"];
   title: string;
 }
 

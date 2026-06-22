@@ -24,7 +24,7 @@ describe("database", () => {
 
     migrateDatabase({ exec } as { exec: (sql: string) => void });
 
-    expect(exec).toHaveBeenCalledTimes(23);
+    expect(exec).toHaveBeenCalledTimes(25);
     expect(exec).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_model_providers")
@@ -52,6 +52,14 @@ describe("database", () => {
     expect(exec).toHaveBeenNthCalledWith(
       10,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS tasks")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      10,
+      expect.stringContaining("approval_policy TEXT NOT NULL")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      10,
+      expect.stringContaining("thinking_level TEXT NOT NULL")
     );
     expect(exec).toHaveBeenNthCalledWith(
       10,
@@ -114,7 +122,7 @@ describe("database", () => {
       expect.stringContaining("CREATE INDEX IF NOT EXISTS subagents_task_id_idx")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      19,
+      21,
       expect.stringContaining("ALTER TABLE subagents ADD COLUMN agent_name")
     );
     expect(exec).toHaveBeenLastCalledWith(
