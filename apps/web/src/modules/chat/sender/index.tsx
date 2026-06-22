@@ -1,4 +1,4 @@
-import { Button, Divider, Flex, Select } from "antd";
+import { Button, ConfigProvider, Divider, Flex, Select } from "antd";
 import {
   Sender as ASender,
   type SenderProps
@@ -45,6 +45,19 @@ export {
 
 export const CHAT_WORKSPACE_SUGGESTION_POPUP_CLASS =
   "chat-workspace-suggestion-popup";
+
+const senderSelectTheme = {
+  components: {
+    Select: {
+      colorText: "var(--app-color-text)",
+      colorTextPlaceholder: "var(--app-color-text)",
+      optionActiveBg: "var(--app-color-fill-secondary)",
+      optionSelectedBg:
+        "color-mix(in srgb, var(--app-color-primary) 16%, var(--app-color-bg-elevated))",
+      optionSelectedColor: "var(--app-color-text)"
+    }
+  }
+} as const;
 
 interface Props extends Pick<SenderProps, 'autoSize' | 'className' | 'classNames' | 'disabled' | 'placeholder'> {
   activeAgent?: SelectedModel | null
@@ -243,18 +256,19 @@ export default function Sender({
                                   "var(--app-color-border-secondary)"
                               }}
                             />
-                            <Select<ThinkingLevel>
-                              aria-label="思考级别"
-                              options={THINKING_LEVEL_OPTIONS}
-                              popupMatchSelectWidth={false}
-                              size="small"
-                              style={{ minWidth: 72 }}
-                              value={thinkingLevel}
-                              variant="borderless"
-                              {...(onThinkingLevelChange
-                                ? { onChange: onThinkingLevelChange }
-                                : {})}
-                            />
+                            <ConfigProvider theme={senderSelectTheme}>
+                              <Select<ThinkingLevel>
+                                aria-label="思考级别"
+                                options={THINKING_LEVEL_OPTIONS}
+                                popupMatchSelectWidth={false}
+                                size="small"
+                                value={thinkingLevel}
+                                variant="borderless"
+                                {...(onThinkingLevelChange
+                                  ? { onChange: onThinkingLevelChange }
+                                  : {})}
+                              />
+                            </ConfigProvider>
                           </>
                         ) : null}
                         <Divider
