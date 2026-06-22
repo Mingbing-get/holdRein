@@ -73,6 +73,31 @@ describe("file change summary turn footer", () => {
     ]);
   });
 
+  it("omits file tool calls whose result failed", () => {
+    const items = getFileChangeSummaryItems([
+      assistantMessage([
+        toolCall("write-1", "write_file", {
+          content: "blocked",
+          path: "src/blocked.ts"
+        }),
+        toolCall("write-2", "write_file", {
+          content: "created",
+          path: "src/created.ts"
+        })
+      ]),
+      toolResult("write-1", "write_file", true),
+      toolResult("write-2", "write_file", false)
+    ]);
+
+    expect(items).toEqual([
+      {
+        content: { text: "created", type: "code" },
+        operation: "write",
+        path: "src/created.ts"
+      }
+    ]);
+  });
+
   it("displays changed files relative to the active workspace", () => {
     render(
       React.createElement(FileChangeSummaryTurnFooter, {
@@ -206,5 +231,21 @@ function toolCall(
     id,
     name,
     type: "toolCall"
+  };
+}
+
+function toolResult(
+  toolCallId: string,
+  toolName: string,
+  isError: boolean
+): WebPlugin.ToolResultMessage {
+  return {
+    content: [{ text: isError ? "rejected" : "ok", type: "text" }],
+    id: `tool-result-${toolCallId}`,
+    isError,
+    role: "toolResult",
+    timestamp: 2,
+    toolCallId,
+    toolName
   };
 }

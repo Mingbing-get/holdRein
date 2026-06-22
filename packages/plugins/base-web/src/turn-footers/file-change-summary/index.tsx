@@ -118,6 +118,7 @@ export function getFileChangeSummaryItems(
   messages: readonly WebPlugin.AgentMessage[]
 ): FileChangeSummaryItem[] {
   const items: FileChangeSummaryItem[] = [];
+  const failedToolCallIds = getFailedToolCallIds(messages);
 
   for (const message of messages) {
     if (message.role !== "assistant") {
@@ -126,6 +127,9 @@ export function getFileChangeSummaryItems(
 
     for (const block of message.content) {
       if (block.type !== "toolCall") {
+        continue;
+      }
+      if (failedToolCallIds.has(block.id)) {
         continue;
       }
 
@@ -137,6 +141,20 @@ export function getFileChangeSummaryItems(
   }
 
   return items;
+}
+
+function getFailedToolCallIds(
+  messages: readonly WebPlugin.AgentMessage[]
+): ReadonlySet<string> {
+  const failedToolCallIds = new Set<string>();
+
+  for (const message of messages) {
+    if (message.role === "toolResult" && message.isError) {
+      failedToolCallIds.add(message.toolCallId);
+    }
+  }
+
+  return failedToolCallIds;
 }
 
 export const fileChangeSummaryTurnFooter: WebPlugin.TurnFooterRender = {
