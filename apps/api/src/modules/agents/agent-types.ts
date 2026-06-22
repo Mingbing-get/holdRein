@@ -59,6 +59,7 @@ export interface AgentEventEnvelope {
 
 export interface TaskSubagentHistory {
   agentId: string;
+  agentName: string;
   messages: StoredAgentMessage[];
   parentAgentId: string;
   status: "running" | "completed" | "interrupted";

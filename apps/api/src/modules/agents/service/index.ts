@@ -227,6 +227,7 @@ export function createAgentsService(
       const subagents = await Promise.all(
         subagentRepository.findByTaskId(taskId).map(async (subagent) => ({
           agentId: subagent.agentId,
+          agentName: subagent.agentName,
           messages: await loadSubagentMessages({
             runtime: options.runtime,
             subagent,

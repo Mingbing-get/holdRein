@@ -503,6 +503,7 @@ describe("agents service", () => {
     });
     const subagentRepository = createInMemorySubagentRepository([
       {
+        agentName: "researcher",
         agentId: "agent-child",
         createdAt: "now",
         parentAgentId: "agent-parent",
@@ -514,6 +515,7 @@ describe("agents service", () => {
         updatedAt: "now"
       },
       {
+        agentName: "reviewer",
         agentId: "agent-grandchild",
         createdAt: "now",
         parentAgentId: "agent-child",
@@ -525,6 +527,7 @@ describe("agents service", () => {
         updatedAt: "now"
       },
       {
+        agentName: "subagent",
         agentId: "agent-legacy",
         createdAt: "now",
         parentAgentId: "agent-parent",
@@ -536,6 +539,7 @@ describe("agents service", () => {
         updatedAt: "now"
       },
       {
+        agentName: "subagent",
         agentId: "agent-broken",
         createdAt: "now",
         parentAgentId: "agent-parent",
@@ -584,6 +588,7 @@ describe("agents service", () => {
       ],
       subagents: [
         {
+          agentName: "researcher",
           agentId: "agent-child",
           messages: [
             {
@@ -597,6 +602,7 @@ describe("agents service", () => {
           status: "completed"
         },
         {
+          agentName: "reviewer",
           agentId: "agent-grandchild",
           messages: [
             {
@@ -610,12 +616,14 @@ describe("agents service", () => {
           status: "running"
         },
         {
+          agentName: "subagent",
           agentId: "agent-legacy",
           messages: [],
           parentAgentId: "agent-parent",
           status: "completed"
         },
         {
+          agentName: "subagent",
           agentId: "agent-broken",
           messages: [],
           parentAgentId: "agent-parent",

@@ -24,7 +24,7 @@ describe("database", () => {
 
     migrateDatabase({ exec } as { exec: (sql: string) => void });
 
-    expect(exec).toHaveBeenCalledTimes(22);
+    expect(exec).toHaveBeenCalledTimes(23);
     expect(exec).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_model_providers")
@@ -95,6 +95,10 @@ describe("database", () => {
     );
     expect(exec).toHaveBeenNthCalledWith(
       12,
+      expect.stringContaining("agent_name TEXT NOT NULL")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      12,
       expect.stringContaining("session_id TEXT")
     );
     expect(exec).toHaveBeenNthCalledWith(
@@ -108,6 +112,10 @@ describe("database", () => {
     expect(exec).toHaveBeenNthCalledWith(
       13,
       expect.stringContaining("CREATE INDEX IF NOT EXISTS subagents_task_id_idx")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      19,
+      expect.stringContaining("ALTER TABLE subagents ADD COLUMN agent_name")
     );
     expect(exec).toHaveBeenLastCalledWith(
       expect.stringContaining("DROP TABLE IF EXISTS task_messages")
@@ -211,20 +219,21 @@ describe("database", () => {
       ).toThrow();
       sqlite.prepare(`
         INSERT INTO subagents (
-          agent_id, parent_agent_id, task_id, status,
+          agent_id, agent_name, parent_agent_id, task_id, status,
           session_id, session_path, session_created_at,
           created_at, updated_at
         ) VALUES (
-          'agent-child', 'agent-parent', 'task-1', 'running',
+          'agent-child', 'researcher', 'agent-parent', 'task-1', 'running',
           'session-child', '/sessions/session-child.jsonl', 'created',
           'now', 'now'
         )
       `).run();
       expect(
         sqlite.prepare(
-          "SELECT session_id, session_path, session_created_at, status FROM subagents WHERE agent_id = 'agent-child'"
+          "SELECT agent_name, session_id, session_path, session_created_at, status FROM subagents WHERE agent_id = 'agent-child'"
         ).get()
       ).toEqual({
+        agent_name: "researcher",
         session_created_at: "created",
         session_id: "session-child",
         session_path: "/sessions/session-child.jsonl",
@@ -240,11 +249,11 @@ describe("database", () => {
       ).toEqual({ status: "interrupted" });
       expect(() => sqlite.prepare(`
         INSERT INTO subagents (
-          agent_id, parent_agent_id, task_id, status,
+          agent_id, agent_name, parent_agent_id, task_id, status,
           session_id, session_path, session_created_at,
           created_at, updated_at
         ) VALUES (
-          'agent-invalid', 'agent-parent', 'task-1', 'failed',
+          'agent-invalid', 'researcher', 'agent-parent', 'task-1', 'failed',
           'session-invalid', '/sessions/session-invalid.jsonl', 'created',
           'now', 'now'
         )
@@ -376,10 +385,11 @@ describe("database", () => {
       expect(
         sqlite
           .prepare(
-            "SELECT session_id, session_path, session_created_at FROM subagents WHERE agent_id = 'agent-child'"
+            "SELECT agent_name, session_id, session_path, session_created_at FROM subagents WHERE agent_id = 'agent-child'"
           )
           .get()
       ).toEqual({
+        agent_name: "subagent",
         session_created_at: null,
         session_id: null,
         session_path: null

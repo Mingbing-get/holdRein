@@ -7,6 +7,7 @@ import { resolveAgentModel } from "../model/resolver";
 import { appendVisibleCustomMessage } from "./messages";
 import { addPendingSubagentResult, appendSubagentResult, flushPendingSubagentResults } from "./subagent-results";
 import { createRuntimeRevokeSubagentTool, createRuntimeSubagentTools } from "./subagent-tools";
+import { startContinuationSubagent } from "./continuation-subagent";
 import { createSessionRepo, getEnvApiKey, getSkillDirs, interruptHarness, toAgentSessionMetadata } from "./support";
 import { runToolBeforeExecute } from "../approval/tool-approval";
 import { extractAssistantText, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "../subagent";
@@ -16,7 +17,6 @@ import type { AgentRuntime, CreateAgentRuntimeOptions, RunningAgent, HarnessSess
 
 const AGENT_CONTINUATION_CUSTOM_TYPE = "agent_continuation";
 const AGENT_CONTINUE_PROMPT = "";
-const CALL_SUBAGENT_CUSTOM_TYPE = "callsubagent";
 
 export function createAgentRuntime(
   options: CreateAgentRuntimeOptions
@@ -94,9 +94,7 @@ export function createAgentRuntime(
           sessionRepo,
           startHarness,
           persistedSubagentRepository: subagentRepository,
-          ...(options.subagentDatabase === undefined
-            ? {}
-            : { subagentDatabase: options.subagentDatabase }),
+          ...(options.subagentDatabase === undefined ? {} : { subagentDatabase: options.subagentDatabase }),
           subagents,
           taskId: input.taskId,
           workspacePath: input.workspacePath
@@ -272,81 +270,13 @@ export function createAgentRuntime(
           sessionRepo,
           startHarness,
           persistedSubagentRepository: subagentRepository,
-          ...(options.subagentDatabase === undefined
-            ? {}
-            : { subagentDatabase: options.subagentDatabase }),
+          ...(options.subagentDatabase === undefined ? {} : { subagentDatabase: options.subagentDatabase }),
           subagents,
           taskId: input.taskId,
           workspacePath: input.workspacePath
         });
         tools.push(tool);
         await runningAgents.get(agentId)?.harness.setTools?.(tools, tools.map((item) => item.name));
-      };
-      const startContinuationSubagent = async (
-        parentAgentId: string,
-        parentAgentName: string | undefined,
-        parentSession: HarnessSession,
-        prompt: string
-      ) => {
-        const agentId = `agent_${randomUUID()}`;
-        const createdAt = new Date().toISOString();
-        const childSession = await sessionRepo.create({ cwd: input.workspacePath });
-        const childSessionMetadata = toAgentSessionMetadata(
-          await childSession.getMetadata()
-        );
-        subagentRepository.create({
-          agentId,
-          createdAt,
-          parentAgentId,
-          sessionCreatedAt: childSessionMetadata.createdAt,
-          sessionId: childSessionMetadata.id,
-          sessionPath: childSessionMetadata.path,
-          status: "running",
-          taskId: input.taskId,
-          updatedAt: createdAt
-        });
-
-        let started: StartHarnessResult;
-        try {
-          started = await startHarness(prompt, {
-            agentId,
-            agentName: "subagent",
-            isContinue: false,
-            parentAgentId,
-            pluginPrompt: prompt,
-            session: childSession
-          });
-        } catch (error) {
-          subagentRepository.delete(agentId);
-          throw error;
-        }
-
-        subagents.set(started.agentId, {
-          agentId: started.agentId,
-          agentName: "subagent",
-          agentSession: started.harnessSession,
-          consumed: false,
-          lastAssistantText: "",
-          parentAgentId,
-          ...(parentAgentName === undefined ? {} : { parentAgentName }),
-          parentSession,
-          session: started.session,
-          status: "running"
-        });
-        await appendVisibleCustomMessage({
-          agentId: parentAgentId,
-          content: 'Subagent "subagent" is running.',
-          customType: CALL_SUBAGENT_CUSTOM_TYPE,
-          details: {
-            agentId: started.agentId,
-            agentName: "subagent",
-            parentAgentId,
-            session: started.session,
-            taskId: input.taskId
-          },
-          eventBus: options.eventBus,
-          session: parentSession
-        });
       };
       const continueOrEndTask = async (
         harnessAgentId: string,
@@ -374,12 +304,8 @@ export function createAgentRuntime(
             isContinue: true,
             pluginPrompt: prompt,
             session: harnessSession,
-            ...(currentSubagent === undefined
-              ? {}
-              : { parentAgentId: currentSubagent.parentAgentId }),
-            ...(harnessAgentName === undefined
-              ? {}
-              : { agentName: harnessAgentName })
+            ...(currentSubagent === undefined ? {} : { parentAgentId: currentSubagent.parentAgentId }),
+            ...(harnessAgentName === undefined ? {} : { agentName: harnessAgentName })
           });
           return true;
         }
@@ -403,12 +329,19 @@ export function createAgentRuntime(
         }
 
         if (continuation.useSubagent === true) {
-          await startContinuationSubagent(
-            harnessAgentId,
-            harnessAgentName,
-            harnessSession,
-            continuation.prompt
-          );
+          await startContinuationSubagent({
+            eventBus: options.eventBus,
+            parentAgentId: harnessAgentId,
+            parentAgentName: harnessAgentName,
+            parentSession: harnessSession,
+            prompt: continuation.prompt,
+            sessionRepo,
+            startHarness,
+            subagentRepository,
+            subagents,
+            taskId: input.taskId,
+            workspacePath: input.workspacePath
+          });
           return true;
         }
         await appendVisibleCustomMessage({
@@ -424,12 +357,8 @@ export function createAgentRuntime(
           isContinue: true,
           pluginPrompt: continuation.prompt,
           session: harnessSession,
-          ...(currentSubagent === undefined
-            ? {}
-            : { parentAgentId: currentSubagent.parentAgentId }),
-          ...(harnessAgentName === undefined
-            ? {}
-            : { agentName: harnessAgentName })
+          ...(currentSubagent === undefined ? {} : { parentAgentId: currentSubagent.parentAgentId }),
+          ...(harnessAgentName === undefined ? {} : { agentName: harnessAgentName })
         });
         return true;
       };

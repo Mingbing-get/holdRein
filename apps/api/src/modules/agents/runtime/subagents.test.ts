@@ -209,6 +209,7 @@ describe("agent runtime subagent calls", () => {
     const childRows = subagentRepository.findByTaskId("task-1");
     expect(childRows).toHaveLength(1);
     expect(childRows[0]).toEqual(expect.objectContaining({
+      agentName: "subagent",
       parentAgentId: result.agentId,
       sessionId: "session-2",
       status: "running"
@@ -414,6 +415,7 @@ describe("agent runtime subagent calls", () => {
       type: "subagent_resumed",
       payload: expect.objectContaining({
         agentId: childAgentId,
+        agentName: "researcher",
         parentAgentId: result.agentId,
         session: expect.objectContaining({ id: "session-2" }),
         taskId: "task-1"

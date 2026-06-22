@@ -19,6 +19,7 @@ export function initializeSubagentsFromHistory(
   const next = { ...current };
   for (const subagent of subagents) {
     next[subagent.agentId] = {
+      agentName: subagent.agentName,
       messages: subagent.messages,
       parentAgentId: subagent.parentAgentId,
       status: subagent.status,
@@ -41,6 +42,7 @@ export function discoverSubagents(
   const next = { ...current };
   for (const agentId of missingAgentIds) {
     next[agentId] = {
+      agentName: "subagent",
       messages: [],
       parentAgentId: "",
       status: "running",
@@ -56,6 +58,7 @@ export function reduceSubagentEvent(
   event: AgentEventEnvelope
 ): SubagentStatesById {
   const existing = current[agentId] ?? {
+    agentName: "subagent",
     messages: [],
     parentAgentId: "",
     status: "running" as const,
@@ -93,6 +96,10 @@ export function reduceSubagentResumeEvent(
       ? payload.taskId
       : existing?.taskId ?? taskId;
   const nextState = {
+    agentName:
+      typeof payload.agentName === "string"
+        ? payload.agentName
+        : existing?.agentName ?? "subagent",
     messages,
     parentAgentId:
       typeof payload.parentAgentId === "string"

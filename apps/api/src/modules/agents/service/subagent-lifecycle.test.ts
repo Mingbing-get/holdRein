@@ -146,6 +146,7 @@ function createSubagent(input: {
 }) {
   return {
     agentId: input.agentId,
+    agentName: "subagent",
     createdAt: "now",
     parentAgentId: "agent-parent",
     sessionCreatedAt: input.sessionPath ? "now" : null,

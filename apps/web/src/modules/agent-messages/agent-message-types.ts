@@ -66,6 +66,7 @@ export interface AgentTaskState {
 
 export interface TaskSubagentHistory {
   agentId: string;
+  agentName: string;
   messages: WebPlugin.AgentMessage[];
   parentAgentId: string;
   status: "running" | "completed" | "interrupted";
@@ -77,6 +78,7 @@ export interface TaskMessageHistory {
 }
 
 export interface SubagentState {
+  agentName: string;
   messages: WebPlugin.AgentMessage[];
   parentAgentId: string;
   status: "running" | "completed" | "interrupted";

@@ -87,6 +87,7 @@ export function createRuntimeRevokeSubagentTool(
         throw new Error(`Subagent session is missing: ${agentId}`);
       }
       const existingSubagent = input.subagents.get(agentId);
+      const agentName = existingSubagent?.agentName ?? subagentRow.agentName;
       const agentSession = await input.sessionRepo.open({
         ...session,
         cwd: input.workspacePath
@@ -94,7 +95,7 @@ export function createRuntimeRevokeSubagentTool(
       updateSubagentStatus(input.subagentDatabase, agentId, "running");
       input.subagents.set(agentId, {
         agentId,
-        agentName: existingSubagent?.agentName ?? "subagent",
+        agentName,
         agentSession,
         consumed: false,
         lastAssistantText: "",
@@ -107,6 +108,7 @@ export function createRuntimeRevokeSubagentTool(
         agentId: input.parentAgentId,
         payload: {
           agentId,
+          agentName,
           parentAgentId: input.parentAgentId,
           session,
           taskId: input.taskId
@@ -115,7 +117,7 @@ export function createRuntimeRevokeSubagentTool(
       });
       await input.startHarness(prompt, {
         agentId,
-        agentName: existingSubagent?.agentName ?? "subagent",
+        agentName,
         isContinue: true,
         parentAgentId: input.parentAgentId,
         pluginPrompt: prompt,
@@ -124,12 +126,12 @@ export function createRuntimeRevokeSubagentTool(
 
       return {
         content: [{
-          text: `Subagent "${existingSubagent?.agentName ?? "subagent"}" was revoked. agentId=${agentId}`,
+          text: `Subagent "${agentName}" was revoked. agentId=${agentId}`,
           type: "text" as const
         }],
         details: {
           agentId,
-          agentName: existingSubagent?.agentName ?? "subagent",
+          agentName,
           parentAgentId: input.parentAgentId,
           session,
           taskId: input.taskId
@@ -220,6 +222,7 @@ async function startSubagent(
   );
   input.persistedSubagentRepository.create({
     agentId,
+    agentName: request.agentName,
     createdAt,
     parentAgentId: input.parentAgentId,
     sessionCreatedAt: childSessionMetadata.createdAt,

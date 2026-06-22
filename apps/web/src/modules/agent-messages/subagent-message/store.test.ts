@@ -12,6 +12,7 @@ describe("subagent message store", () => {
   it("initializes restored subagent messages and statuses from task history", () => {
     const history: TaskSubagentHistory[] = [
       {
+        agentName: "researcher",
         agentId: "agent-child",
         messages: [assistantMessage("message-child", "Restored child")],
         parentAgentId: "agent-parent",
@@ -21,6 +22,7 @@ describe("subagent message store", () => {
 
     expect(initializeSubagentsFromHistory({}, history, "task-1")).toEqual({
       "agent-child": {
+        agentName: "researcher",
         messages: [assistantMessage("message-child", "Restored child")],
         parentAgentId: "agent-parent",
         status: "completed",
@@ -34,6 +36,7 @@ describe("subagent message store", () => {
       {},
       [
         {
+          agentName: "researcher",
           agentId: "agent-child",
           messages: [assistantMessage("message-child", "Restored child")],
           parentAgentId: "agent-parent",
@@ -53,6 +56,7 @@ describe("subagent message store", () => {
       discoverSubagents({}, [callSubagentMessage("agent-child")], "task-1")
     ).toEqual({
         "agent-child": {
+          agentName: "subagent",
           messages: [],
           parentAgentId: "",
           status: "running",
@@ -77,6 +81,7 @@ describe("subagent message store", () => {
       })
     ).toEqual({
       "agent-child": {
+        agentName: "subagent",
         messages: [],
         parentAgentId: "",
         status: "completed",
@@ -90,6 +95,7 @@ describe("subagent message store", () => {
       {},
       [
         {
+          agentName: "researcher",
           agentId: "agent-child",
           messages: [assistantMessage("message-child", "Finished child")],
           parentAgentId: "agent-parent",
@@ -106,6 +112,7 @@ describe("subagent message store", () => {
           agentId: "agent-parent",
           payload: {
             agentId: "agent-child",
+            agentName: "analyst",
             messages: [userMessage("message-resume", "Resume child")],
             parentAgentId: "agent-parent",
             taskId: "task-1"
@@ -118,6 +125,7 @@ describe("subagent message store", () => {
       )
     ).toEqual({
       "agent-child": {
+        agentName: "analyst",
         messages: [
           assistantMessage("message-child", "Finished child"),
           userMessage("message-resume", "Resume child")
