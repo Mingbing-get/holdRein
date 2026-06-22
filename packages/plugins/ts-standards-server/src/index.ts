@@ -47,7 +47,11 @@ const tsStandardsServerPlugin: ServerPlugin.Plugin = {
         ...(isValidator ? [VALIDATOR_SKILL_DIR] : [])
       ],
       systemPrompts: [
-        "Use the planning skill to break down implementation work before editing code.",
+        ...(context.agentName === "main"
+          ? [
+              "Use the planning skill to break down implementation work before editing code."
+            ]
+          : []),
         ...(detection.detected
           ? [
               "This workspace looks like a TypeScript or JavaScript project. Use the ts-standards skill for code organization, tests, and verification."

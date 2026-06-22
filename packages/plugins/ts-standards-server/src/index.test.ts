@@ -31,6 +31,33 @@ describe("tsStandardsServerPlugin", () => {
     );
   });
 
+  it("injects the planning system prompt only for the main agent", async () => {
+    const workspacePath = await createWorkspace({
+      "package.json": JSON.stringify({
+        scripts: { test: "vitest run" },
+        devDependencies: { typescript: "5.8.3" }
+      })
+    });
+
+    const mainContribution = await resolveContribution(
+      workspacePath,
+      "Build a form",
+      { agentName: "main" }
+    );
+    const workerContribution = await resolveContribution(
+      workspacePath,
+      "Build a form",
+      { agentName: "worker" }
+    );
+
+    expect(mainContribution.systemPrompts?.join("\n")).toContain(
+      "Use the planning skill"
+    );
+    expect(workerContribution.systemPrompts?.join("\n")).not.toContain(
+      "Use the planning skill"
+    );
+  });
+
   it("injects only planning skill dirs for non TS projects", async () => {
     const workspacePath = await createWorkspace({
       "README.md": "plain docs"
@@ -215,7 +242,8 @@ describe("tsStandardsServerPlugin", () => {
 
 async function resolveContribution(
   workspacePath: string,
-  prompt: string
+  prompt: string,
+  options: { agentName?: string } = {}
 ): Promise<ServerPlugin.Contribution> {
   const resolver = tsStandardsServerPlugin.contributionResolver;
 
@@ -224,7 +252,7 @@ async function resolveContribution(
   }
 
   return resolver({
-    agentName: "worker",
+    agentName: options.agentName ?? "main",
     env: { cwd: workspacePath } as ServerPlugin.RuntimeContext["env"],
     isContinue: false,
     model: {} as ServerPlugin.RuntimeContext["model"],
