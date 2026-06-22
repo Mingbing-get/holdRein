@@ -1,0 +1,64 @@
+.base-file-change-summary {
+  background: var(--app-color-bg-container, transparent);
+  border: 1px solid var(--app-color-border-secondary, currentColor);
+  border-radius: 8px;
+  color: var(--app-color-text, currentColor);
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+
+.base-file-change-summary__title {
+  background: var(--app-color-fill-secondary, transparent);
+  border-radius: 7px 7px 0 0;
+  color: var(--app-color-text, currentColor);
+  font-size: 12px;
+  font-weight: 600;
+  margin: -10px -10px 0;
+  padding: 12px 8px;
+}
+
+.base-file-change-summary__list {
+  display: grid;
+  gap: 6px;
+}
+
+.base-file-change-summary__item {
+  display: grid;
+  gap: 6px;
+}
+
+.base-file-change-summary__row {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--app-color-text, currentColor);
+  display: flex;
+  font: inherit;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 0;
+  text-align: left;
+}
+
+button.base-file-change-summary__row {
+  cursor: pointer;
+}
+
+button.base-file-change-summary__row:hover {
+  color: var(--app-color-primary, currentColor);
+}
+
+.base-file-change-summary__icon {
+  color: var(--app-color-text-secondary, var(--app-color-text, currentColor));
+  flex: 0 0 auto;
+}
+
+.base-file-change-summary__path {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.base-file-change-summary__preview {
+  margin-left: 22px;
+}

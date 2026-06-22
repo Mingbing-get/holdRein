@@ -10,14 +10,28 @@ import type { WebPlugin } from "@hold-rein/plugin-web";
 
 const agentTasksMock = vi.hoisted(() => ({
   activeTaskId: "task-1",
+  activeWorkspaceId: "",
   childMessages: {} as Record<string, WebPlugin.AgentMessage[]>,
   taskMessages: [] as WebPlugin.AgentMessage[],
+  toolRenders: [] as WebPlugin.ToolRender[],
   turnFooterRenders: [] as WebPlugin.TurnFooterRender[]
 }));
 
 vi.mock("../../../app/app-workspace-context", () => ({
   useAppWorkspace: () => ({
-    state: { activeTaskId: agentTasksMock.activeTaskId }
+    state: {
+      activeTaskId: agentTasksMock.activeTaskId,
+      activeWorkspaceId: agentTasksMock.activeWorkspaceId,
+      workspaces: [
+        {
+          hasMore: false,
+          id: "workspace-1",
+          name: "Workspace",
+          path: "/tmp/workspace",
+          tasks: []
+        }
+      ]
+    }
   })
 }));
 
@@ -35,7 +49,7 @@ vi.mock("../tasks-context", () => ({
 
 vi.mock("../../../app/app-plugin", () => ({
   useAppPlugins: () => ({
-    toolRenders: [],
+    toolRenders: agentTasksMock.toolRenders,
     turnFooterRenders: agentTasksMock.turnFooterRenders
   })
 }));
@@ -44,8 +58,10 @@ describe("AgentMessageList", () => {
   afterEach(() => {
     cleanup();
     agentTasksMock.activeTaskId = "task-1";
+    agentTasksMock.activeWorkspaceId = "";
     agentTasksMock.childMessages = {};
     agentTasksMock.taskMessages = [];
+    agentTasksMock.toolRenders = [];
     agentTasksMock.turnFooterRenders = [];
   });
 
@@ -120,11 +136,14 @@ describe("AgentMessageList", () => {
   });
 
   it("passes the completed turn messages to plugin footers", () => {
+    agentTasksMock.activeWorkspaceId = "workspace-1";
     agentTasksMock.turnFooterRenders = [
       {
         id: "turn-summary",
-        Render: ({ messages }) => (
-          <div data-testid="turn-summary">{messages.map((message) => message.id).join(",")}</div>
+        Render: ({ messages, workspacePath }) => (
+          <div data-testid="turn-summary">
+            {workspacePath}:{messages.map((message) => message.id).join(",")}
+          </div>
         )
       }
     ];
@@ -165,7 +184,7 @@ describe("AgentMessageList", () => {
     );
 
     expect(screen.getByTestId("turn-summary")).toHaveTextContent(
-      "user-1,assistant-1,tool-result-1"
+      "/tmp/workspace:user-1,assistant-1,tool-result-1"
     );
   });
 
@@ -291,6 +310,15 @@ describe("AgentMessageList", () => {
   });
 
   it("renders tool arguments and result through its tool call", () => {
+    agentTasksMock.activeWorkspaceId = "workspace-1";
+    agentTasksMock.toolRenders = [
+      {
+        toolName: "bash",
+        Render: ({ workspacePath }) => (
+          <div data-testid="custom-tool-render">{workspacePath}</div>
+        )
+      }
+    ];
     const assistantMessage: WebPlugin.AgentMessage = {
       api: "openai-responses",
       content: [
@@ -323,12 +351,9 @@ describe("AgentMessageList", () => {
 
     render(<AgentMessageList messages={messages} />);
 
-    fireEvent.click(screen.getByText("run tool: bash"));
-
-    expect(screen.getByText("参数")).toBeInTheDocument();
-    expect(screen.getByText(/"command": "pnpm test"/)).toBeInTheDocument();
-    expect(screen.getByText("执行结果")).toBeInTheDocument();
-    expect(screen.getByText("Tests passed")).toBeInTheDocument();
+    expect(screen.getByTestId("custom-tool-render")).toHaveTextContent(
+      "/tmp/workspace"
+    );
   });
 
   it("renders child messages inside a callsubagent message", () => {

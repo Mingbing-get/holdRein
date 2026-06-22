@@ -10,6 +10,7 @@ import {
   callSubagentTool,
   revokeSubagentTool
 } from './tools'
+import { fileChangeSummaryTurnFooter } from './turn-footers'
 
 const baseWebPlugin: WebPlugin.Plugin = {
   id: '__base',
@@ -72,12 +73,9 @@ const baseWebPlugin: WebPlugin.Plugin = {
     //     Render: () => 'content bbb'
     //   }
     // ],
-    // turnFooterRenders: [
-    //   {
-    //     id: 'test',
-    //     Render: ({ messages }) => `${messages.length}条消息`
-    //   }
-    // ]
+    turnFooterRenders: [
+      fileChangeSummaryTurnFooter
+    ]
   }
 }
 

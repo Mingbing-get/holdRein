@@ -162,6 +162,7 @@ export namespace WebPlugin {
     readonly toolCall: ToolCall;
     readonly renderDefaultChildren: () => React.ReactNode;
     readonly DefaultToolRender: ComponentType<DefaultToolRenderProps>;
+    readonly workspacePath?: string | undefined;
   }
 
   export interface ToolRender {
@@ -187,6 +188,7 @@ export namespace WebPlugin {
       providerId: string;
     } | null;
     activeWorkspaceId?: string
+    workspacePath?: string | undefined;
   };
 
   export interface RightPanel {
@@ -200,6 +202,7 @@ export namespace WebPlugin {
     draftMessage: string
     changeMessage: (message: string) => void
     insertText: (insertedText: string, overwriteLength?: number | undefined) => void
+    workspacePath?: string | undefined;
   };
 
   export interface SenderAction {
@@ -209,6 +212,7 @@ export namespace WebPlugin {
 
   export interface TurnFooterRenderProps {
     messages: AgentMessage[];
+    workspacePath?: string | undefined;
   }
 
   export interface TurnFooterRender {

@@ -13,6 +13,7 @@ import { CodePreview, DiffPreview } from "./code-preview";
 import {
   getStringArg,
   getTextResult,
+  getWorkspaceRelativePath,
   splitResultLines
 } from "./utils";
 
@@ -31,7 +32,7 @@ export function ReadFileToolRender(props: WebPlugin.ToolRenderProps) {
   return (
     <props.DefaultToolRender title="读取文件" icon={<ReadOutlined />}>
       <div className="base-file-tool">
-        <ToolMeta path={path} />
+        <ToolMeta path={path} workspacePath={props.workspacePath} />
         {output ? (
           <CodePreview content={output} path={path} />
         ) : (
@@ -51,7 +52,7 @@ export function WriteFileToolRender(props: WebPlugin.ToolRenderProps) {
   return (
     <props.DefaultToolRender title="写入文件" icon={<SaveOutlined />}>
       <div className="base-file-tool">
-        <ToolMeta path={path} />
+        <ToolMeta path={path} workspacePath={props.workspacePath} />
         {content ? (
           <CodePreview content={content} path={path} />
         ) : (
@@ -73,7 +74,7 @@ export function DeleteFileToolRender(props: WebPlugin.ToolRenderProps) {
   return (
     <props.DefaultToolRender title="删除文件" icon={<DeleteOutlined />}>
       <div className="base-file-tool">
-        <ToolMeta path={path} />
+        <ToolMeta path={path} workspacePath={props.workspacePath} />
         {!props.result ? (
           <span className="base-file-tool__empty">等待删除结果</span>
         ) : null}
@@ -94,7 +95,7 @@ export function GrepFilesToolRender(props: WebPlugin.ToolRenderProps) {
   return (
     <props.DefaultToolRender title="按内容查找" icon={<SearchOutlined />}>
       <div className="base-file-tool">
-        <ToolMeta path={path} pattern={pattern} />
+        <ToolMeta path={path} pattern={pattern} workspacePath={props.workspacePath} />
         <ResultList emptyText="等待 grep 结果" lines={lines} />
       </div>
     </props.DefaultToolRender>
@@ -110,7 +111,7 @@ export function FindFilesToolRender(props: WebPlugin.ToolRenderProps) {
   return (
     <props.DefaultToolRender title="按文件名查找" icon={<FileSearchOutlined />}>
       <div className="base-file-tool">
-        <ToolMeta path={path} pattern={pattern} />
+        <ToolMeta path={path} pattern={pattern} workspacePath={props.workspacePath} />
         <ResultList emptyText="等待查找结果" lines={lines} />
       </div>
     </props.DefaultToolRender>
@@ -126,7 +127,7 @@ export function EditFileToolRender(props: WebPlugin.ToolRenderProps) {
   return (
     <props.DefaultToolRender title="编辑文件" icon={<DiffOutlined />}>
       <div className="base-file-tool">
-        <ToolMeta path={path} />
+        <ToolMeta path={path} workspacePath={props.workspacePath} />
         {replacements.length ? (
           replacements.map((replacement, index) => (
             <DiffPreview
@@ -149,16 +150,20 @@ export function EditFileToolRender(props: WebPlugin.ToolRenderProps) {
 
 function ToolMeta({
   path,
-  pattern
+  pattern,
+  workspacePath
 }: {
   path: string | undefined;
   pattern?: string | undefined;
+  workspacePath?: string | undefined;
 }) {
+  const displayPath = getWorkspaceRelativePath(path, workspacePath);
+
   return (
     <div className="base-file-tool__meta">
-      {path ? (
+      {displayPath ? (
         <span className="base-file-tool__chip">
-          <FileTextOutlined /> {path}
+          <FileTextOutlined /> {displayPath}
         </span>
       ) : null}
       {pattern ? (

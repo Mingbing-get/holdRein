@@ -4,6 +4,7 @@ import { Bubble, Think } from "@ant-design/x";
 import "./index.css";
 
 import { useAppPlugins } from '../../../app/app-plugin';
+import { useAppWorkspace } from "../../../app/app-workspace-context";
 import { getCalledSubagentId } from "../collection";
 import { MarkdownContent } from "../markdown-content";
 import { SubagentMessageList } from "../subagent-message";
@@ -23,6 +24,14 @@ export interface AgentMessageListProps {
 }
 
 export function AgentMessageList({ messages, status }: AgentMessageListProps) {
+  const {
+    state: { activeWorkspaceId, workspaces }
+  } = useAppWorkspace();
+  const workspacePath = useMemo(
+    () =>
+      workspaces.find((workspace) => workspace.id === activeWorkspaceId)?.path,
+    [activeWorkspaceId, workspaces]
+  );
   const footerSourceMessages = useMemo(
     () => messages.filter((message) => !isContinueSentinel(message)),
     [messages]
@@ -40,9 +49,16 @@ export function AgentMessageList({ messages, status }: AgentMessageListProps) {
 
         return (
           <Fragment key={message.id}>
-            <AgentMessageItem message={message} messages={messages} />
+            <AgentMessageItem
+              message={message}
+              messages={messages}
+              workspacePath={workspacePath}
+            />
             {footerMessages ? (
-              <AgentTurnFooter messages={footerMessages} />
+              <AgentTurnFooter
+                messages={footerMessages}
+                workspacePath={workspacePath}
+              />
             ) : null}
           </Fragment>
         );
@@ -52,9 +68,11 @@ export function AgentMessageList({ messages, status }: AgentMessageListProps) {
 }
 
 function AgentTurnFooter({
-  messages
+  messages,
+  workspacePath
 }: {
   messages: WebPlugin.AgentMessage[];
+  workspacePath?: string | undefined;
 }) {
   const { turnFooterRenders } = useAppPlugins();
 
@@ -65,7 +83,7 @@ function AgentTurnFooter({
   return (
     <Flex data-testid="agent-turn-footer" gap={8} vertical>
       {turnFooterRenders.map(({ id, Render }) => (
-        <Render key={id} messages={messages} />
+        <Render key={id} messages={messages} workspacePath={workspacePath} />
       ))}
     </Flex>
   );
@@ -73,16 +91,24 @@ function AgentTurnFooter({
 
 function AgentMessageItem({
   message,
-  messages
+  messages,
+  workspacePath
 }: {
   message: WebPlugin.AgentMessage;
   messages: WebPlugin.AgentMessage[];
+  workspacePath?: string | undefined;
 }) {
   if (message.role === "user") {
     return <Bubble content={getText(message.content)} placement="end" />;
   }
   if (message.role === "assistant") {
-    return <AssistantMessageItem message={message} messages={messages} />;
+    return (
+      <AssistantMessageItem
+        message={message}
+        messages={messages}
+        workspacePath={workspacePath}
+      />
+    );
   }
   if (message.role === "toolResult") {
     return null;
@@ -127,10 +153,12 @@ function AgentMessageItem({
 
 function AssistantMessageItem({
   message,
-  messages
+  messages,
+  workspacePath
 }: {
   message: WebPlugin.AssistantMessage;
   messages: WebPlugin.AgentMessage[];
+  workspacePath?: string | undefined;
 }) {
   return (
     <Flex gap={8} vertical>
@@ -161,6 +189,7 @@ function AssistantMessageItem({
             key={index}
             messages={messages}
             toolCall={block}
+            workspacePath={workspacePath}
           />
         );
       })}
@@ -171,10 +200,12 @@ function AssistantMessageItem({
 
 function ToolCallMessageItem({
   messages,
-  toolCall
+  toolCall,
+  workspacePath
 }: {
   messages: WebPlugin.AgentMessage[];
   toolCall: WebPlugin.ToolCall;
+  workspacePath?: string | undefined;
 }) {
   const { toolRenders } = useAppPlugins();
 
@@ -208,6 +239,7 @@ function ToolCallMessageItem({
         toolCall={toolCall}
         DefaultToolRender={DefaultToolRender}
         renderDefaultChildren={renderDefaultChildren}
+        workspacePath={workspacePath}
         {...(toolResult ? { result: toolResult } : {})}
       />
     )

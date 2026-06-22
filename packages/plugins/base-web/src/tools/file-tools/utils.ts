@@ -24,6 +24,31 @@ export function splitResultLines(text: string): string[] {
   return text.split(/\r?\n/).filter(Boolean);
 }
 
+export function getWorkspaceRelativePath(
+  path: string | undefined,
+  workspacePath: string | undefined
+): string | undefined {
+  if (!path || !workspacePath) {
+    return path;
+  }
+
+  const normalizedPath = normalizePath(path);
+  const normalizedWorkspacePath = stripTrailingSeparators(
+    normalizePath(workspacePath)
+  );
+
+  if (normalizedPath === normalizedWorkspacePath) {
+    return ".";
+  }
+
+  const workspacePrefix = `${normalizedWorkspacePath}/`;
+  if (normalizedPath.startsWith(workspacePrefix)) {
+    return normalizedPath.slice(workspacePrefix.length);
+  }
+
+  return path;
+}
+
 export function useMonacoTheme(): "vs" | "vs-dark" {
   const [theme, setTheme] = useState<"vs" | "vs-dark">(() =>
     document.documentElement.dataset.themeMode === "dark" ? "vs-dark" : "vs"
@@ -46,4 +71,12 @@ export function useMonacoTheme(): "vs" | "vs-dark" {
   }, []);
 
   return theme;
+}
+
+function normalizePath(path: string): string {
+  return path.replace(/\\/g, "/");
+}
+
+function stripTrailingSeparators(path: string): string {
+  return path.replace(/\/+$/g, "");
 }

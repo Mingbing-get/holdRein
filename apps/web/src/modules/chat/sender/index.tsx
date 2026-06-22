@@ -231,6 +231,7 @@ export default function Sender({
                                 draftMessage={draftMessage}
                                 insertText={insertText}
                                 key={id}
+                                workspacePath={workspacePath}
                               />
                             ))}
                           </>

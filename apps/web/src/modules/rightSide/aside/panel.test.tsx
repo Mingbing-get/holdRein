@@ -123,7 +123,7 @@ describe("RightPanel", () => {
     fireEvent.click(runsTab);
 
     expect(screen.getByTestId("runs-panel")).toHaveTextContent(
-      "runs:workspace-1:no-agent"
+      "runs:workspace-1:/tmp/workspace:no-agent"
     );
     expect(screen.getByRole("tab", { name: "运行详情" })).toHaveAttribute(
       "aria-selected",
@@ -237,9 +237,10 @@ const InspectorPanel: WebPlugin.RightPanel["Render"] = ({
 
 const RunsPanel: WebPlugin.RightPanel["Render"] = ({
   activeAgent,
-  activeWorkspaceId
+  activeWorkspaceId,
+  workspacePath
 }) => (
   <section data-testid="runs-panel">
-    runs:{activeWorkspaceId}:{activeAgent?.modelId ?? "no-agent"}
+    runs:{activeWorkspaceId}:{workspacePath}:{activeAgent?.modelId ?? "no-agent"}
   </section>
 );

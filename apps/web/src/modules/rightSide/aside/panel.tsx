@@ -12,7 +12,7 @@ import { WorkspaceFileTree } from "../file-tree";
 export default function RightPanel() {
   const { rightPanels } = useAppPlugins();
   const {
-    state: { activeAgent, activeTaskId, activeWorkspaceId },
+    state: { activeAgent, activeTaskId, activeWorkspaceId, workspaces },
   } = useAppWorkspace();
   const { getTaskState } = useAgentTasks();
   const [activePanelId, setActivePanelId] = useState<string>("");
@@ -53,14 +53,18 @@ export default function RightPanel() {
       messages: taskState?.messages ?? [],
       status: taskState?.status ?? "idle",
       ...(activeTaskId ? { taskId: activeTaskId } : {}),
-      ...(activeWorkspaceId ? { activeWorkspaceId } : {})
+      ...(activeWorkspaceId ? { activeWorkspaceId } : {}),
+      workspacePath: workspaces.find(
+        (workspace) => workspace.id === activeWorkspaceId
+      )?.path
     }),
     [
       activeAgent,
       activeTaskId,
       activeWorkspaceId,
       taskState?.messages,
-      taskState?.status
+      taskState?.status,
+      workspaces
     ]
   );
 

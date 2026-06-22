@@ -456,8 +456,13 @@ describe("Sender action button", () => {
   });
 
   it("renders plugin sender actions after the model selector with a divider", () => {
-    const Render: WebPlugin.SenderAction["Render"] = ({ draftMessage }) => (
-      <button type="button">插件动作:{draftMessage}</button>
+    const Render: WebPlugin.SenderAction["Render"] = ({
+      draftMessage,
+      workspacePath
+    }) => (
+      <button type="button">
+        插件动作:{draftMessage}:{workspacePath}
+      </button>
     );
 
     mockUseAppPlugins.mockReturnValue({
@@ -470,7 +475,7 @@ describe("Sender action button", () => {
       senderSuggestions: []
     });
 
-    render(<Sender apiBaseUrl="" />);
+    render(<Sender apiBaseUrl="" workspacePath="/tmp/workspace" />);
 
     fireEvent.change(screen.getByLabelText("消息"), {
       target: { value: "hello" }
@@ -478,7 +483,7 @@ describe("Sender action button", () => {
 
     const footerTools = screen.getByTestId("sender-footer-tools");
     expect(footerTools).toHaveTextContent(
-      "工作空间选择模型选择插件动作:hello"
+      "工作空间选择模型选择插件动作:hello:/tmp/workspace"
     );
 
     const dividers = footerTools.querySelectorAll(".ant-divider-vertical");
