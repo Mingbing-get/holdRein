@@ -155,23 +155,31 @@ function FileChangeRow({
   item: FileChangeSummaryItem;
   onToggle?: (() => void) | undefined;
 }) {
+  const rowClassName = [
+    "base-file-change-summary__row",
+    item.operation === "delete" ? "base-file-change-summary__row--delete" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const stats = getLineStats(item);
   const content = (
     <>
       <span className="base-file-change-summary__icon">
         {getOperationIcon(item.operation)}
       </span>
       <span className="base-file-change-summary__path">{displayPath}</span>
+      {stats ? <LineStats stats={stats} /> : null}
     </>
   );
 
   if (!onToggle) {
-    return <div className="base-file-change-summary__row">{content}</div>;
+    return <div className={rowClassName}>{content}</div>;
   }
 
   return (
     <button
       aria-expanded={expanded}
-      className="base-file-change-summary__row"
+      className={rowClassName}
       onClick={onToggle}
       type="button"
     >
@@ -286,6 +294,53 @@ function countOperations(
     }),
     { delete: 0, edit: 0, write: 0 }
   );
+}
+
+function LineStats({
+  stats
+}: {
+  stats: { added: number; removed: number };
+}) {
+  return (
+    <span
+      aria-label={`新增 ${stats.added} 行，删除 ${stats.removed} 行`}
+      className="base-file-change-summary__stats"
+    >
+      <span className="base-file-change-summary__stat base-file-change-summary__stat--added">
+        +{stats.added}
+      </span>
+      {stats.removed > 0 ? (
+        <span className="base-file-change-summary__stat base-file-change-summary__stat--removed">
+          -{stats.removed}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
+function getLineStats(
+  item: FileChangeSummaryItem
+): { added: number; removed: number } | undefined {
+  if (item.content?.type === "code") {
+    return { added: countTextLines(item.content.text), removed: 0 };
+  }
+
+  if (item.content?.type === "diff") {
+    return {
+      added: countTextLines(item.content.modified),
+      removed: countTextLines(item.content.original)
+    };
+  }
+
+  return undefined;
+}
+
+function countTextLines(text: string): number {
+  const normalized = text.replace(/\n$/, "");
+  if (!normalized) {
+    return 0;
+  }
+  return normalized.split("\n").length;
 }
 
 function getOperationIcon(operation: FileOperation): ReactNode {

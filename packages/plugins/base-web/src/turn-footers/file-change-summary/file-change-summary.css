@@ -55,8 +55,32 @@ button.base-file-change-summary__row:hover {
 }
 
 .base-file-change-summary__path {
+  flex: 1 1 auto;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.base-file-change-summary__row--delete,
+.base-file-change-summary__row--delete .base-file-change-summary__icon {
+  color: var(--app-color-danger, currentColor);
+}
+
+.base-file-change-summary__stats {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.base-file-change-summary__stat--added {
+  color: var(--app-color-success, currentColor);
+}
+
+.base-file-change-summary__stat--removed {
+  color: var(--app-color-danger, currentColor);
 }
 
 .base-file-change-summary__preview {

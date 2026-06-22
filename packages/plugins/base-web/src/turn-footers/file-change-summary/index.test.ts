@@ -136,6 +136,15 @@ describe("file change summary turn footer", () => {
     expect(
       screen.getByText("编辑1个文件、新增1个文件、删除1个文件")
     ).toBeInTheDocument();
+    expect(screen.getByText("+2")).toHaveClass(
+      "base-file-change-summary__stat--added"
+    );
+    expect(screen.getByText("-2")).toHaveClass(
+      "base-file-change-summary__stat--removed"
+    );
+    expect(screen.getByText("+1")).toHaveClass(
+      "base-file-change-summary__stat--added"
+    );
     expect(screen.queryByTestId("diff-preview")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: /src\/app\.ts/ }));
@@ -166,7 +175,11 @@ describe("file change summary turn footer", () => {
     expect(
       screen.queryByRole("button", { name: /src\/old\.ts/ })
     ).not.toBeInTheDocument();
-    expect(screen.getByText("src/old.ts")).toBeInTheDocument();
+    const deletedPath = screen.getByText("src/old.ts");
+    expect(deletedPath).toBeInTheDocument();
+    expect(deletedPath.closest(".base-file-change-summary__row")).toHaveClass(
+      "base-file-change-summary__row--delete"
+    );
   });
 });
 
