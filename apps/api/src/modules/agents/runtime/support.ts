@@ -1,4 +1,3 @@
-import { homedir } from "node:os";
 import { join } from "node:path";
 
 import {
@@ -8,7 +7,7 @@ import {
   type JsonlSessionRepoApi
 } from "@earendil-works/pi-agent-core/node";
 
-import { SESSIONS_DIR } from "../../../config/const";
+import { SESSIONS_DIR, SKILL_DIR } from "../../../config/const";
 import type { AgentSessionMetadata } from "../agent-types";
 
 interface InterruptibleHarness {
@@ -43,10 +42,12 @@ export function getSkillDirs(
   workspacePath: string,
   configuredSkillDirs?: string[]
 ): string[] {
-  return configuredSkillDirs ?? [
+  return Array.from(new Set([
+    join(workspacePath, ".agents", "skills"),
     join(workspacePath, ".hold-rein", "skills"),
-    join(homedir(), ".hold-rein", "skills")
-  ];
+    SKILL_DIR,
+    ...(configuredSkillDirs ?? [])
+  ]));
 }
 
 export function getEnvApiKey(provider: string): string | undefined {
