@@ -104,4 +104,14 @@ describe("UsageStatsView", () => {
     expect(screen.getByText("gpt-4.1")).toBeInTheDocument();
     expect(screen.getByText("Task A")).toBeInTheDocument();
   });
+
+  it("renders model aggregation controls as segmented options", async () => {
+    render(<UsageStatsView apiBaseUrl="http://localhost:4000" />);
+
+    expect(await screen.findByText("用量统计")).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "分开输入输出" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "合并输入输出" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "按模型" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "总消耗" })).toBeInTheDocument();
+  });
 });

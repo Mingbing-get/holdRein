@@ -7,12 +7,19 @@ import type {
 } from "./usage-stats-types";
 
 export interface ModelChartOptionsInput {
+  chartTheme: UsageChartTheme;
   mergeModels: boolean;
   mergeTokenTypes: boolean;
   stats: ModelUsageStats;
 }
 
+export interface UsageChartTheme {
+  borderSecondaryColor: string;
+  textSecondaryColor: string;
+}
+
 export function createModelUsageChartOption({
+  chartTheme,
   mergeModels,
   mergeTokenTypes,
   stats
@@ -52,35 +59,37 @@ export function createModelUsageChartOption({
   });
 
   return {
-    color: [
-      "var(--app-color-chart-input)",
-      "var(--app-color-chart-output)",
-      "var(--app-color-chart-accent)"
-    ],
     grid: { bottom: 36, left: 48, right: 16, top: 36 },
-    legend: { textStyle: { color: "var(--app-color-text-secondary)" } },
+    legend: { textStyle: { color: chartTheme.textSecondaryColor } },
     series,
     tooltip: { trigger: "axis" },
     xAxis: {
-      axisLabel: { color: "var(--app-color-text-secondary)" },
+      axisLabel: { color: chartTheme.textSecondaryColor },
       data: periods.map(formatPeriodLabel),
       type: "category"
     },
     yAxis: {
-      axisLabel: { color: "var(--app-color-text-secondary)" },
-      splitLine: { lineStyle: { color: "var(--app-color-border-secondary)" } },
+      axisLabel: { color: chartTheme.textSecondaryColor },
+      splitLine: { lineStyle: { color: chartTheme.borderSecondaryColor } },
       type: "value"
     }
   };
 }
 
-export function createTaskUsageChartOption(stats: TaskUsageStats): EChartsOption {
+export interface TaskChartOptionsInput {
+  chartTheme: UsageChartTheme;
+  stats: TaskUsageStats;
+}
+
+export function createTaskUsageChartOption({
+  chartTheme,
+  stats
+}: TaskChartOptionsInput): EChartsOption {
   const labels = stats.rows.map((row) => row.label);
 
   return {
-    color: ["var(--app-color-chart-input)", "var(--app-color-chart-output)"],
     grid: { bottom: 48, left: 48, right: 16, top: 36 },
-    legend: { textStyle: { color: "var(--app-color-text-secondary)" } },
+    legend: { textStyle: { color: chartTheme.textSecondaryColor } },
     series: [
       {
         data: stats.rows.map((row) => row.inputToken),
@@ -96,7 +105,7 @@ export function createTaskUsageChartOption(stats: TaskUsageStats): EChartsOption
     tooltip: { trigger: "axis" },
     xAxis: {
       axisLabel: {
-        color: "var(--app-color-text-secondary)",
+        color: chartTheme.textSecondaryColor,
         interval: 0,
         rotate: labels.length > 5 ? 28 : 0
       },
@@ -104,8 +113,8 @@ export function createTaskUsageChartOption(stats: TaskUsageStats): EChartsOption
       type: "category"
     },
     yAxis: {
-      axisLabel: { color: "var(--app-color-text-secondary)" },
-      splitLine: { lineStyle: { color: "var(--app-color-border-secondary)" } },
+      axisLabel: { color: chartTheme.textSecondaryColor },
+      splitLine: { lineStyle: { color: chartTheme.borderSecondaryColor } },
       type: "value"
     }
   };

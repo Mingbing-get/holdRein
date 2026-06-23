@@ -1,6 +1,7 @@
-import { Card, Empty, Segmented, Space, Switch, Typography } from "antd";
+import { Card, Empty, Segmented, Space, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 
+import "./usage-stats-view.css";
 import {
   fetchModelUsageStats,
   fetchTaskUsageStats
@@ -9,6 +10,7 @@ import {
   createModelUsageChartOption,
   createTaskUsageChartOption
 } from "./chart-options";
+import type { UsageChartTheme } from "./chart-options";
 import { EChartsPanel } from "./echarts-panel";
 import type {
   ModelUsageRange,
@@ -22,6 +24,14 @@ interface UsageStatsViewProps {
   apiBaseUrl: string;
 }
 
+type TokenTypeDisplayMode = "split" | "merged";
+type ModelDisplayMode = "model" | "total";
+
+const FALLBACK_CHART_THEME: UsageChartTheme = {
+  borderSecondaryColor: "var(--app-color-border-secondary)",
+  textSecondaryColor: "var(--app-color-text-secondary)"
+};
+
 export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
   const [modelRange, setModelRange] = useState<ModelUsageRange>("24h");
   const [taskRange, setTaskRange] = useState<TaskUsageRange>("7d");
@@ -32,6 +42,9 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
   const [taskStats, setTaskStats] = useState<TaskUsageStats | null>(null);
   const [modelError, setModelError] = useState(false);
   const [taskError, setTaskError] = useState(false);
+  const [chartTheme, setChartTheme] = useState<UsageChartTheme>(() =>
+    readUsageChartTheme()
+  );
 
   useEffect(() => {
     let ignore = false;
@@ -77,24 +90,52 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
     };
   }, [apiBaseUrl, taskGroupBy, taskRange]);
 
+  useEffect(() => {
+    setChartTheme(readUsageChartTheme());
+
+    if (typeof MutationObserver === "undefined") {
+      return undefined;
+    }
+
+    const observer = new MutationObserver(() => {
+      setChartTheme(readUsageChartTheme());
+    });
+    observer.observe(document.documentElement, {
+      attributeFilter: ["data-theme-mode"],
+      attributes: true
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   const modelChartOption = useMemo(
     () =>
       modelStats
         ? createModelUsageChartOption({
+            chartTheme,
             mergeModels,
             mergeTokenTypes,
             stats: modelStats
           })
         : null,
-    [mergeModels, mergeTokenTypes, modelStats]
+    [chartTheme, mergeModels, mergeTokenTypes, modelStats]
   );
   const taskChartOption = useMemo(
-    () => (taskStats ? createTaskUsageChartOption(taskStats) : null),
-    [taskStats]
+    () =>
+      taskStats
+        ? createTaskUsageChartOption({
+            chartTheme,
+            stats: taskStats
+          })
+        : null,
+    [chartTheme, taskStats]
   );
 
   return (
     <section
+      className="usage-stats-view"
       data-testid="usage-stats-view"
       style={{
         display: "flex",
@@ -114,6 +155,7 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
         extra={
           <Space size={12} wrap>
             <Segmented<ModelUsageRange>
+              className="usage-stats-segmented"
               onChange={setModelRange}
               options={[
                 { label: "近 24 小时", value: "24h" },
@@ -121,17 +163,27 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
               ]}
               value={modelRange}
             />
-            <Switch
-              checked={mergeTokenTypes}
-              checkedChildren="合并输入输出"
-              onChange={setMergeTokenTypes}
-              unCheckedChildren="分开"
+            <Segmented<TokenTypeDisplayMode>
+              className="usage-stats-segmented"
+              onChange={(value) => {
+                setMergeTokenTypes(value === "merged");
+              }}
+              options={[
+                { label: "分开输入输出", value: "split" },
+                { label: "合并输入输出", value: "merged" }
+              ]}
+              value={mergeTokenTypes ? "merged" : "split"}
             />
-            <Switch
-              checked={mergeModels}
-              checkedChildren="总消耗"
-              onChange={setMergeModels}
-              unCheckedChildren="按模型"
+            <Segmented<ModelDisplayMode>
+              className="usage-stats-segmented"
+              onChange={(value) => {
+                setMergeModels(value === "total");
+              }}
+              options={[
+                { label: "按模型", value: "model" },
+                { label: "总消耗", value: "total" }
+              ]}
+              value={mergeModels ? "total" : "model"}
             />
           </Space>
         }
@@ -153,6 +205,7 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
         extra={
           <Space size={12} wrap>
             <Segmented<TaskUsageRange>
+              className="usage-stats-segmented"
               onChange={setTaskRange}
               options={[
                 { label: "近一周", value: "7d" },
@@ -161,6 +214,7 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
               value={taskRange}
             />
             <Segmented<TaskUsageGroupBy>
+              className="usage-stats-segmented"
               onChange={setTaskGroupBy}
               options={[
                 { label: "按任务", value: "task" },
@@ -184,6 +238,26 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
       </Card>
     </section>
   );
+}
+
+function readUsageChartTheme(): UsageChartTheme {
+  if (typeof document === "undefined") {
+    return FALLBACK_CHART_THEME;
+  }
+
+  const styles = getComputedStyle(document.documentElement);
+  const textSecondaryColor = styles
+    .getPropertyValue("--app-color-text-secondary")
+    .trim();
+  const borderSecondaryColor = styles
+    .getPropertyValue("--app-color-border-secondary")
+    .trim();
+
+  return {
+    borderSecondaryColor:
+      borderSecondaryColor || FALLBACK_CHART_THEME.borderSecondaryColor,
+    textSecondaryColor: textSecondaryColor || FALLBACK_CHART_THEME.textSecondaryColor
+  };
 }
 
 function UsageNames({ values }: { values: string[] }) {
