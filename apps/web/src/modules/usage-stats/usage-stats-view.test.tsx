@@ -101,8 +101,12 @@ describe("UsageStatsView", () => {
         "http://localhost:4000/api/v1/usage-stats/tasks?range=7d&groupBy=task"
       );
     });
-    expect(screen.getByText("gpt-4.1")).toBeInTheDocument();
-    expect(screen.getByText("Task A")).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "模型 Token 用量折线图" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "任务 Token 用量柱状图" })
+    ).toBeInTheDocument();
   });
 
   it("renders model aggregation controls as segmented options", async () => {

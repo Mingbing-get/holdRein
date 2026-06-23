@@ -106,4 +106,83 @@ describe("usage stats chart options", () => {
       }
     });
   });
+
+  it("truncates task axis labels longer than eight characters", () => {
+    const taskOption = createTaskUsageChartOption({
+      chartTheme,
+      stats: {
+        groupBy: "task",
+        range: "7d",
+        rows: [
+          {
+            id: "task-a",
+            inputToken: 10,
+            label: "1234567890",
+            outputToken: 5,
+            workspaceId: "workspace-a",
+            workspaceName: "Alpha"
+          }
+        ]
+      }
+    });
+    const xAxis = taskOption.xAxis as {
+      axisLabel?: { formatter?: (value: string) => string };
+    };
+
+    expect(xAxis.axisLabel?.formatter?.("12345678")).toBe("12345678");
+    expect(xAxis.axisLabel?.formatter?.("1234567890")).toBe("12345678…");
+  });
+
+  it("stacks task output tokens below input tokens", () => {
+    const taskOption = createTaskUsageChartOption({
+      chartTheme,
+      stats: {
+        groupBy: "task",
+        range: "7d",
+        rows: [
+          {
+            id: "task-a",
+            inputToken: 10,
+            label: "Task A",
+            outputToken: 5,
+            workspaceId: "workspace-a",
+            workspaceName: "Alpha"
+          }
+        ]
+      }
+    });
+
+    expect(taskOption.series).toMatchObject([
+      { data: [5], name: "输出 Token", stack: "tokens", type: "bar" },
+      { data: [10], name: "输入 Token", stack: "tokens", type: "bar" }
+    ]);
+  });
+
+  it("places the task legend above the bar chart", () => {
+    const taskOption = createTaskUsageChartOption({
+      chartTheme,
+      stats: {
+        groupBy: "task",
+        range: "7d",
+        rows: [
+          {
+            id: "task-a",
+            inputToken: 10,
+            label: "Task A",
+            outputToken: 5,
+            workspaceId: "workspace-a",
+            workspaceName: "Alpha"
+          }
+        ]
+      }
+    });
+
+    expect(taskOption).toMatchObject({
+      grid: { top: 60 },
+      legend: {
+        left: "center",
+        top: 0
+      }
+    });
+  });
 });

@@ -191,10 +191,7 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
         {modelError ? (
           <Empty description="模型用量加载失败" />
         ) : modelStats && modelStats.points.length > 0 && modelChartOption ? (
-          <>
-            <EChartsPanel ariaLabel="模型 Token 用量折线图" option={modelChartOption} />
-            <UsageNames values={modelStats.points.map((point) => point.modelName)} />
-          </>
+          <EChartsPanel ariaLabel="模型 Token 用量折线图" option={modelChartOption} />
         ) : (
           <Empty description="暂无模型用量" />
         )}
@@ -228,10 +225,7 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
         {taskError ? (
           <Empty description="任务用量加载失败" />
         ) : taskStats && taskStats.rows.length > 0 && taskChartOption ? (
-          <>
-            <EChartsPanel ariaLabel="任务 Token 用量柱状图" option={taskChartOption} />
-            <UsageNames values={taskStats.rows.map((row) => row.label)} />
-          </>
+          <EChartsPanel ariaLabel="任务 Token 用量柱状图" option={taskChartOption} />
         ) : (
           <Empty description="暂无任务用量" />
         )}
@@ -258,19 +252,4 @@ function readUsageChartTheme(): UsageChartTheme {
       borderSecondaryColor || FALLBACK_CHART_THEME.borderSecondaryColor,
     textSecondaryColor: textSecondaryColor || FALLBACK_CHART_THEME.textSecondaryColor
   };
-}
-
-function UsageNames({ values }: { values: string[] }) {
-  return (
-    <Space size={8} wrap>
-      {[...new Set(values)].map((value) => (
-        <Typography.Text
-          key={value}
-          style={{ color: "var(--app-color-text-secondary)", fontSize: 12 }}
-        >
-          {value}
-        </Typography.Text>
-      ))}
-    </Space>
-  );
 }

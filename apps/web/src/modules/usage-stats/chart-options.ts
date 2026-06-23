@@ -88,17 +88,23 @@ export function createTaskUsageChartOption({
   const labels = stats.rows.map((row) => row.label);
 
   return {
-    grid: { bottom: 48, left: 48, right: 16, top: 36 },
-    legend: { textStyle: { color: chartTheme.textSecondaryColor } },
+    grid: { bottom: 48, left: 48, right: 16, top: 60 },
+    legend: {
+      left: "center",
+      textStyle: { color: chartTheme.textSecondaryColor },
+      top: 0
+    },
     series: [
-      {
-        data: stats.rows.map((row) => row.inputToken),
-        name: "输入 Token",
-        type: "bar"
-      },
       {
         data: stats.rows.map((row) => row.outputToken),
         name: "输出 Token",
+        stack: "tokens",
+        type: "bar"
+      },
+      {
+        data: stats.rows.map((row) => row.inputToken),
+        name: "输入 Token",
+        stack: "tokens",
         type: "bar"
       }
     ],
@@ -106,6 +112,7 @@ export function createTaskUsageChartOption({
     xAxis: {
       axisLabel: {
         color: chartTheme.textSecondaryColor,
+        formatter: truncateAxisLabel,
         interval: 0,
         rotate: labels.length > 5 ? 28 : 0
       },
@@ -169,4 +176,14 @@ function formatPeriodLabel(value: string): string {
   }
 
   return `${hour}:00`;
+}
+
+function truncateAxisLabel(value: string): string {
+  const maxLength = 8;
+
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, maxLength)}…`;
 }
