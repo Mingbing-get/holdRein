@@ -123,7 +123,7 @@ describe("tsStandardsServerPlugin", () => {
       }),
       {
         content: "Status: failed\nFix the style issue.",
-        extra: { agentName: "ts-standards-validator" },
+        details: { agentName: "ts-standards-validator" },
         role: "custom"
       },
       assistantToolCall("call-new", "edit_file", {
@@ -258,7 +258,7 @@ describe("tsStandardsServerPlugin", () => {
         }),
         {
           content: "Status: failed\nFix the style issue.",
-          extra: { agentName: "ts-standards-validator" },
+          details: { agentName: "ts-standards-validator" },
           role: "custom"
         }
       ] as ServerPlugin.AgentEndInput["messages"],

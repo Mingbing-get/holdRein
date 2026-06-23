@@ -321,12 +321,12 @@ function getToolResult(message: unknown):
 }
 
 function getCustomMessageAgentName(message: unknown): string | undefined {
-  if (!isRecord(message) || message.role !== "custom" || !isRecord(message.extra)) {
+  if (!isRecord(message) || message.role !== "custom" || !isRecord(message.details)) {
     return undefined;
   }
 
-  return typeof message.extra.agentName === "string"
-    ? message.extra.agentName
+  return typeof message.details.agentName === "string"
+    ? message.details.agentName
     : undefined;
 }
 
