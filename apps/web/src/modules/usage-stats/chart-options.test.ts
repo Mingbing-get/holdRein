@@ -185,4 +185,33 @@ describe("usage stats chart options", () => {
       }
     });
   });
+
+  it("places the model legend above the line chart", () => {
+    const modelOption = createModelUsageChartOption({
+      chartTheme,
+      mergeModels: false,
+      mergeTokenTypes: false,
+      stats: {
+        bucket: "hour",
+        points: [
+          {
+            inputToken: 10,
+            modelName: "gpt-4.1",
+            outputToken: 5,
+            period: "2026-06-23T08:00:00.000Z",
+            provider: "openai"
+          }
+        ],
+        range: "24h"
+      }
+    });
+
+    expect(modelOption).toMatchObject({
+      grid: { top: 60 },
+      legend: {
+        left: "center",
+        top: 0
+      }
+    });
+  });
 });

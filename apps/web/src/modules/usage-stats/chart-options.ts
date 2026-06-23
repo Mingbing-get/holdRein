@@ -59,8 +59,12 @@ export function createModelUsageChartOption({
   });
 
   return {
-    grid: { bottom: 36, left: 48, right: 16, top: 36 },
-    legend: { textStyle: { color: chartTheme.textSecondaryColor } },
+    grid: { bottom: 36, left: 48, right: 16, top: 60 },
+    legend: {
+      left: "center",
+      textStyle: { color: chartTheme.textSecondaryColor },
+      top: 0
+    },
     series,
     tooltip: { trigger: "axis" },
     xAxis: {
