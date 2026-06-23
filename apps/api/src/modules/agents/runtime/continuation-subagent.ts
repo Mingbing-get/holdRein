@@ -12,7 +12,7 @@ import type { SubagentRun } from "../subagent";
 import type { SubagentRepository } from "../subagent/repository";
 
 const CALL_SUBAGENT_CUSTOM_TYPE = "callsubagent";
-const SUBAGENT_NAME = "subagent";
+const DEFAULT_SUBAGENT_NAME = "subagent";
 
 type StartHarness = (
   promptText: string,
@@ -24,6 +24,7 @@ interface SessionRepo {
 }
 
 export async function startContinuationSubagent(input: {
+  agentName?: string;
   eventBus: AgentEventBus;
   parentAgentId: string;
   parentAgentName: string | undefined;
@@ -36,6 +37,7 @@ export async function startContinuationSubagent(input: {
   taskId: string;
   workspacePath: string;
 }): Promise<void> {
+  const agentName = input.agentName ?? DEFAULT_SUBAGENT_NAME;
   const agentId = `agent_${randomUUID()}`;
   const createdAt = new Date().toISOString();
   const childSession = await input.sessionRepo.create({ cwd: input.workspacePath });
@@ -44,7 +46,7 @@ export async function startContinuationSubagent(input: {
   );
   input.subagentRepository.create({
     agentId,
-    agentName: SUBAGENT_NAME,
+    agentName,
     createdAt,
     parentAgentId: input.parentAgentId,
     sessionCreatedAt: childSessionMetadata.createdAt,
@@ -59,7 +61,7 @@ export async function startContinuationSubagent(input: {
   try {
     started = await input.startHarness(input.prompt, {
       agentId,
-      agentName: SUBAGENT_NAME,
+      agentName,
       isContinue: false,
       parentAgentId: input.parentAgentId,
       pluginPrompt: input.prompt,
@@ -72,7 +74,7 @@ export async function startContinuationSubagent(input: {
 
   input.subagents.set(started.agentId, {
     agentId: started.agentId,
-    agentName: SUBAGENT_NAME,
+    agentName,
     agentSession: started.harnessSession,
     consumed: false,
     lastAssistantText: "",
@@ -86,11 +88,11 @@ export async function startContinuationSubagent(input: {
   });
   await appendVisibleCustomMessage({
     agentId: input.parentAgentId,
-    content: `Subagent "${SUBAGENT_NAME}" is running.`,
+    content: `Subagent "${agentName}" is running.`,
     customType: CALL_SUBAGENT_CUSTOM_TYPE,
     details: {
       agentId: started.agentId,
-      agentName: SUBAGENT_NAME,
+      agentName,
       parentAgentId: input.parentAgentId,
       session: started.session,
       taskId: input.taskId

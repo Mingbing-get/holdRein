@@ -340,6 +340,9 @@ export function createAgentRuntime(
 
         if (continuation.useSubagent === true) {
           await startContinuationSubagent({
+            ...(continuation.agentName === undefined
+              ? {}
+              : { agentName: continuation.agentName }),
             eventBus: options.eventBus,
             parentAgentId: harnessAgentId,
             parentAgentName: harnessAgentName,

@@ -65,6 +65,7 @@ export namespace ServerPlugin {
   }
 
   export interface AgentContinuation {
+    readonly agentName?: string;
     readonly details?: unknown;
     readonly prompt: string;
     readonly useSubagent?: boolean;

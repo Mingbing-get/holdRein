@@ -296,6 +296,7 @@ describe("agent runtime sessions", () => {
     resolveContributions
       .mockResolvedValueOnce(createContribution({
         onAgentEnd: vi.fn().mockResolvedValue({
+          agentName: "ignored-continuation-name",
           prompt: "Use the plugin-selected follow-up prompt"
         }),
         systemPrompts: ["first plugin prompt"]

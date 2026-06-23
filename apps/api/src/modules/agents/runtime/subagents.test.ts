@@ -180,12 +180,13 @@ describe("agent runtime subagent calls", () => {
     resolveParentPrompt?.();
   });
 
-  it("starts plugin continuation prompts in a subagent when requested", async () => {
+  it("starts plugin continuation prompts in a named subagent when requested", async () => {
     const { appendCustomMessageEntry, create, repo } = createSessionRepo();
     const eventBus = createAgentEventBus();
     const subagentRepository = createInMemorySubagentRepository();
     resolveContributions.mockResolvedValue(createContribution({
       onAgentEnd: vi.fn().mockResolvedValue({
+        agentName: "reviewer",
         details: { source: "test-plugin" },
         prompt: "Run this follow-up separately",
         useSubagent: true
@@ -209,17 +210,17 @@ describe("agent runtime subagent calls", () => {
     const childRows = subagentRepository.findByTaskId("task-1");
     expect(childRows).toHaveLength(1);
     expect(childRows[0]).toEqual(expect.objectContaining({
-      agentName: "subagent",
+      agentName: "reviewer",
       parentAgentId: result.agentId,
       sessionId: "session-2",
       status: "running"
     }));
     expect(appendCustomMessageEntry).toHaveBeenCalledWith(
       "callsubagent",
-      'Subagent "subagent" is running.',
+      'Subagent "reviewer" is running.',
       true,
       expect.objectContaining({
-        agentName: "subagent",
+        agentName: "reviewer",
         parentAgentId: result.agentId,
         session: expect.objectContaining({ id: "session-2" }),
         taskId: "task-1"
@@ -233,10 +234,10 @@ describe("agent runtime subagent calls", () => {
     );
     expect(callMessages).toEqual([
       expect.objectContaining({
-        content: 'Subagent "subagent" is running.',
+        content: 'Subagent "reviewer" is running.',
         customType: "callsubagent",
         details: expect.objectContaining({
-          agentName: "subagent",
+          agentName: "reviewer",
           parentAgentId: result.agentId,
           session: expect.objectContaining({ id: "session-2" }),
           taskId: "task-1"
@@ -248,6 +249,11 @@ describe("agent runtime subagent calls", () => {
     expect(harnessConstructor.mock.calls[1]?.[0]).toEqual(expect.objectContaining({
       activeToolNames: expect.arrayContaining(["call_subagent"])
     }));
+    expect(resolveContributions.mock.calls[1]?.[0]).toEqual(
+      expect.objectContaining({
+        agentName: "reviewer"
+      })
+    );
   });
 
   it.each([
