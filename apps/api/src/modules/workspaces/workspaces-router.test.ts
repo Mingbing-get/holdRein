@@ -13,6 +13,7 @@ async function createTestApp() {
   const repository = createInMemoryWorkspaceRepository({
     tasks: [
       createTask({
+        createdAt: "2026-06-01T00:00:00.000Z",
         id: "task-recent-1",
         lastContinuedAt: "2026-06-08T08:00:00.000Z",
         status: "running",
@@ -20,6 +21,7 @@ async function createTestApp() {
         workspaceId: "workspace-alpha"
       }),
       createTask({
+        createdAt: "2026-06-02T00:00:00.000Z",
         id: "task-recent-2",
         lastContinuedAt: "2026-06-07T08:00:00.000Z",
         title: "昨天继续的任务",
@@ -53,7 +55,7 @@ async function createTestApp() {
         updatedAt: "2026-06-08T00:00:00.000Z"
       },
       {
-        createdAt: "2026-06-01T00:00:00.000Z",
+        createdAt: "2026-06-02T00:00:00.000Z",
         id: "workspace-beta",
         name: "Beta Workspace",
         path: "/tmp/beta",
@@ -129,26 +131,6 @@ describe("workspace routes", () => {
       data: {
         workspaces: [
           {
-            hasMore: true,
-            id: "workspace-alpha",
-            name: "Alpha Workspace",
-            path: "/tmp/alpha",
-            tasks: [
-              expect.objectContaining({
-                id: "task-recent-1",
-                lastContinuedAt: "2026-06-08T08:00:00.000Z",
-                status: "running",
-                title: "今天继续的任务"
-              }),
-              expect.objectContaining({
-                id: "task-recent-2",
-                lastContinuedAt: "2026-06-07T08:00:00.000Z",
-                status: "completed",
-                title: "昨天继续的任务"
-              })
-            ]
-          },
-          {
             hasMore: false,
             id: "workspace-beta",
             name: "Beta Workspace",
@@ -159,6 +141,26 @@ describe("workspace routes", () => {
                 lastContinuedAt: "2026-06-06T08:00:00.000Z",
                 status: "completed",
                 title: "Beta 最近任务"
+              })
+            ]
+          },
+          {
+            hasMore: true,
+            id: "workspace-alpha",
+            name: "Alpha Workspace",
+            path: "/tmp/alpha",
+            tasks: [
+              expect.objectContaining({
+                id: "task-recent-2",
+                lastContinuedAt: "2026-06-07T08:00:00.000Z",
+                status: "completed",
+                title: "昨天继续的任务"
+              }),
+              expect.objectContaining({
+                id: "task-recent-1",
+                lastContinuedAt: "2026-06-08T08:00:00.000Z",
+                status: "running",
+                title: "今天继续的任务"
               })
             ]
           }
@@ -205,6 +207,7 @@ describe("workspace routes", () => {
 });
 
 function createTask(input: {
+  createdAt?: string;
   id: string;
   lastContinuedAt: string | null;
   status?: "running" | "completed" | "error";
@@ -212,7 +215,7 @@ function createTask(input: {
   workspaceId: string;
 }) {
   return {
-    createdAt: "2026-06-01T00:00:00.000Z",
+    createdAt: input.createdAt ?? "2026-06-01T00:00:00.000Z",
     id: input.id,
     initialUserMessage: input.title,
     lastContinuedAt: input.lastContinuedAt,

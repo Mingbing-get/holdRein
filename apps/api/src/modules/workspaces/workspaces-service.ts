@@ -68,14 +68,18 @@ export function createWorkspacesService({
     },
     listRecentWorkspaceTasks: () => {
       const cutoff = new Date(now().getTime() - RECENT_TASK_WINDOW_MS).toISOString();
-      const workspaceSummaries = repository.listWorkspaces().map((workspace) => {
+      const workspaceSummaries = sortWorkspacesByCreatedAtDescending(
+        repository.listWorkspaces()
+      ).map((workspace) => {
         const tasks = repository.listTasksByWorkspaceId({
           limit: RECENT_TASK_FETCH_LIMIT,
           workspaceId: workspace.id
         });
-        const recentTasks = tasks.filter(
-          (task) =>
-            task.lastContinuedAt !== null && task.lastContinuedAt >= cutoff
+        const recentTasks = sortTasksByCreatedAtDescending(
+          tasks.filter(
+            (task) =>
+              task.lastContinuedAt !== null && task.lastContinuedAt >= cutoff
+          )
         );
         const summary: WorkspaceWithTasksSummary = {
           hasMore: tasks.some(
@@ -185,4 +189,20 @@ function toTaskSummary(
     thinkingLevel: task.thinkingLevel,
     title: task.title
   };
+}
+
+function sortTasksByCreatedAtDescending(
+  tasks: WorkspaceNavigationTaskRow[]
+): WorkspaceNavigationTaskRow[] {
+  return [...tasks].sort((left, right) =>
+    right.createdAt.localeCompare(left.createdAt)
+  );
+}
+
+function sortWorkspacesByCreatedAtDescending<T extends { createdAt: string }>(
+  workspaces: T[]
+): T[] {
+  return [...workspaces].sort((left, right) =>
+    right.createdAt.localeCompare(left.createdAt)
+  );
 }
