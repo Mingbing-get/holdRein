@@ -13,8 +13,9 @@ the request. The proxy model itself is not counted in model usage charts.
 
 ## User Experience
 
-The model provider settings page gains a proxy model section. A user can create
-or edit a proxy with:
+The existing model provider settings page gains an embedded model proxy module.
+The feature should not add a new top-level page or navigation item. A user can
+create or edit a proxy from that module with:
 
 - proxy model id and display name;
 - ordered candidate models selected from providers that already have an API key;
@@ -139,9 +140,10 @@ models so the existing model selector can load them like provider models.
 
 ## Frontend
 
-The model providers view should add a proxy group separate from built-in and
-custom providers. The proxy editor should use existing Ant Design controls and
-theme variables. It should not hard-code colors.
+The existing model providers view should add a model proxy module alongside the
+current built-in and custom provider management areas. The proxy editor should
+use existing Ant Design controls and theme variables. It should not hard-code
+colors.
 
 The editor needs:
 
