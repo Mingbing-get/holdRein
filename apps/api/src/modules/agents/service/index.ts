@@ -15,8 +15,8 @@ import {
   type DeleteTaskResult,
   renameTask
 } from "../task/actions";
-import { interruptRunningSubagents } from "../subagent/lifecycle";
 import { startTaskRun } from "../task/run-monitor";
+import { interruptTaskRun } from "./interrupt-task";
 import type {
   AgentEventSubscription,
   AgentSessionMetadata,
@@ -139,36 +139,16 @@ export function createAgentsService(options: CreateAgentsServiceOptions): Agents
       return titleJobs.get(task.id) ?? { id: task.id, title: task.title };
     },
     interruptTask: async ({ taskId }) => {
-      const task = options.repository.findTaskById(taskId);
-
-      if (!task) {
-        return { status: "not_found", taskId };
-      }
-
-      const agentId = options.activeTaskRuns?.getAgentId(taskId);
-
-      if (task.status !== "running" || !agentId) {
-        return { status: "not_running", taskId };
-      }
-
-      const interrupted = await options.runtime.interrupt(agentId);
-
-      if (!interrupted) {
-        options.activeTaskRuns?.remove(taskId);
-        return { status: "not_running", taskId };
-      }
-
-      const interruptedAt = now().toISOString();
-      options.repository.updateTaskStatus(taskId, "error", interruptedAt);
-      await interruptRunningSubagents({
-        now: interruptedAt,
+      return interruptTaskRun({
+        ...(options.activeTaskRuns
+          ? { activeTaskRuns: options.activeTaskRuns }
+          : {}),
+        now,
+        repository: options.repository,
         runtime: options.runtime,
         subagentRepository,
         taskId
       });
-      options.activeTaskRuns?.remove(taskId);
-
-      return { agentId, status: "interrupted", taskId };
     },
     continueTask: async (input) => {
       const { prompt, taskId } = input;

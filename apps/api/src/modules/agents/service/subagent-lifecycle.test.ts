@@ -64,6 +64,44 @@ describe("agents service subagent lifecycle", () => {
     );
   });
 
+  it("interrupts running subagents after the parent task has completed", async () => {
+    const repository = createRepository({ status: "completed" });
+    const subagentRepository = createInMemorySubagentRepository([
+      createSubagent({ agentId: "agent-child-running", status: "running" }),
+      createSubagent({ agentId: "agent-child-completed", status: "completed" })
+    ]);
+    const runtime = {
+      interrupt: vi.fn().mockResolvedValue(true),
+      listMessages: vi.fn(),
+      start: vi.fn()
+    };
+    const service = createAgentsService({
+      approvalStore: createAgentApprovalStore(),
+      eventBus: createAgentEventBus(),
+      now: () => new Date("2026-06-18T00:00:00.000Z"),
+      repository,
+      runtime,
+      subagentRepository,
+      titleGenerator: { generateTitle: vi.fn() }
+    });
+
+    await expect(service.interruptTask({ taskId: "task-1" })).resolves.toEqual({
+      agentId: "agent-child-running",
+      status: "interrupted",
+      taskId: "task-1"
+    });
+
+    expect(runtime.interrupt).toHaveBeenCalledWith("agent-child-running");
+    expect(runtime.interrupt).not.toHaveBeenCalledWith("agent-child-completed");
+    expect(repository.findTaskById("task-1")?.status).toBe("completed");
+    expect(subagentRepository.findByAgentId("agent-child-running")).toEqual(
+      expect.objectContaining({
+        status: "interrupted",
+        updatedAt: "2026-06-18T00:00:00.000Z"
+      })
+    );
+  });
+
   it("deletes subagent rows and session files with a completed task", async () => {
     const rootPath = await mkdtemp(join(tmpdir(), "hold-rein-subagent-delete-"));
     temporaryPaths.push(rootPath);

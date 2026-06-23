@@ -8,7 +8,7 @@ export async function interruptRunningSubagents(input: {
   runtime: AgentRuntime;
   subagentRepository: SubagentRepository;
   taskId: string;
-}): Promise<void> {
+}): Promise<string[]> {
   const runningSubagents = input.subagentRepository
     .findByTaskId(input.taskId)
     .filter((subagent) => subagent.status === "running");
@@ -23,6 +23,8 @@ export async function interruptRunningSubagents(input: {
       );
     })
   );
+
+  return runningSubagents.map((subagent) => subagent.agentId);
 }
 
 export async function deleteSubagentsForTask(input: {
