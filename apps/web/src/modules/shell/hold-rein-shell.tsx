@@ -12,6 +12,7 @@ import { WorkspaceNav } from "../leftSide/workspace-nav";
 import { ModelProvidersView } from "../model-providers";
 import { RightSideAside } from "../rightSide/aside";
 import { WorkspaceTopBar } from "../top-bar/workspace-top-bar";
+import { UsageStatsView } from "../usage-stats";
 
 interface HoldReinShellProps {
   apiBaseUrl: string;
@@ -134,6 +135,8 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
             <ActivePluginSettingRender />
           ) : activeMainView === "modelProviders" ? (
             <ModelProvidersView apiBaseUrl={apiBaseUrl} />
+          ) : activeMainView === "usageStats" ? (
+            <UsageStatsView apiBaseUrl={apiBaseUrl} />
           ) : (
             <div
               style={{

@@ -17,6 +17,9 @@
   --app-color-danger: #c93c46;
   --app-color-danger-hover: #b4232d;
   --app-color-success: #2e9b55;
+  --app-color-chart-input: #1f6feb;
+  --app-color-chart-output: #2e9b55;
+  --app-color-chart-accent: #7a5af8;
   --app-color-fill-secondary: rgba(21, 32, 51, 0.06);
   --app-color-fill-tertiary: rgba(21, 32, 51, 0.04);
   --app-color-markdown-code-bg: rgba(21, 32, 51, 0.06);
@@ -39,6 +42,9 @@
   --app-color-danger: #ff9ca2;
   --app-color-danger-hover: #ffb4b9;
   --app-color-success: #65d98b;
+  --app-color-chart-input: #7cc7ff;
+  --app-color-chart-output: #65d98b;
+  --app-color-chart-accent: #b8a6ff;
   --app-color-fill-secondary: rgba(239, 245, 255, 0.09);
   --app-color-fill-tertiary: rgba(239, 245, 255, 0.06);
   --app-color-markdown-code-bg: rgba(239, 245, 255, 0.09);

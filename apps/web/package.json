@@ -11,14 +11,15 @@
   "dependencies": {
     "@ant-design/icons": "6.2.5",
     "@ant-design/x": "2.7.0",
-    "antd": "6.4.3",
+    "@hold-rein/plugin-web": "workspace:^",
+    "@hold-rein/plugins-base-web": "workspace:^",
     "@monaco-editor/react": "4.7.0",
+    "antd": "6.4.3",
+    "echarts": "^6.1.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "react-markdown": "10.1.0",
-    "remark-gfm": "4.0.1",
-    "@hold-rein/plugin-web": "workspace:^",
-    "@hold-rein/plugins-base-web": "workspace:^"
+    "remark-gfm": "4.0.1"
   },
   "devDependencies": {
     "@types/react": "19.2.15",

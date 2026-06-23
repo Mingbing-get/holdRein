@@ -17,11 +17,16 @@ import {
   createWorkspacesRouter,
   type CreateWorkspacesRouterOptions
 } from "../../modules/workspaces";
+import {
+  createUsageStatsRouter,
+  type CreateUsageStatsRouterOptions
+} from "../../modules/usage-stats";
 
 export interface CreateV1RouterOptions
   extends CreateAgentsRouterOptions,
     CreateFileSystemRouterOptions,
     CreateModelProvidersRouterOptions,
+    CreateUsageStatsRouterOptions,
     CreateWorkspacesRouterOptions {}
 
 export function createV1Router(options: CreateV1RouterOptions = {}): Router {
@@ -32,6 +37,7 @@ export function createV1Router(options: CreateV1RouterOptions = {}): Router {
   router.use(createFileSystemRouter(options));
   router.use(createWorkspacesRouter(options));
   router.use(createModelProvidersRouter(options));
+  router.use(createUsageStatsRouter(options));
 
   return router;
 }
