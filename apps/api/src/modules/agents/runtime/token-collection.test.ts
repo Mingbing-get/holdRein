@@ -67,49 +67,30 @@ describe("agent runtime token collection", () => {
     resolveContributions.mockResolvedValue(createContribution());
   });
 
-  it("collects input and output tokens for a task across active harnesses", async () => {
+  it("does not expose in-memory token usage totals from the runtime", async () => {
     const { repo } = createSessionRepo();
     const eventBus = createAgentEventBus();
     const subagentRepository = createInMemorySubagentRepository();
     const runtime = createRuntime(repo, eventBus, subagentRepository);
-    const result = await runtime.start(createRunInput());
-    const subagentTool = getHarnessTool(harnessConstructor, "call_subagent");
-    await subagentTool?.execute?.("tool-call-1", subagentInput());
+    await runtime.start(createRunInput());
 
-    await harnessSubscribers[0]?.({
-      message: assistantMessage({ input: 11, output: 5 }),
-      type: "message_end"
-    });
-    await harnessSubscribers[2]?.({
-      message: assistantMessage({ input: 7, output: 3 }),
-      type: "message_end"
-    });
-    await harnessSubscribers[2]?.({ type: "agent_end" });
-    await harnessSubscribers[2]?.({
-      message: assistantMessage({ input: 100, output: 100 }),
-      type: "message_end"
-    });
-
-    expect(runtime.getTokenUsage?.("task-1")).toEqual({
-      inputToken: 18,
-      outputToken: 8,
-      taskId: "task-1"
-    });
-    expect(result.agentId).toMatch(/^agent_/);
+    expect("getTokenUsage" in runtime).toBe(false);
   });
 
-  it("throttles database token usage writes and flushes the final delta", async () => {
+  it("stores task and model token usage from the token collection", async () => {
     vi.useFakeTimers();
     const { repo } = createSessionRepo();
     const eventBus = createAgentEventBus();
     const subagentRepository = createInMemorySubagentRepository();
     const addTaskTokenUsage = vi.fn();
+    const addModelTokenUsageHourly = vi.fn();
     const runtime = createRuntime(
       repo,
       eventBus,
       subagentRepository,
       undefined,
       {
+        addModelTokenUsageHourly,
         addTaskTokenUsage,
         tokenFlushIntervalMs: 1000
       }
@@ -136,6 +117,14 @@ describe("agent runtime token collection", () => {
       inputToken: 18,
       outputToken: 8
     });
+    expect(addModelTokenUsageHourly).toHaveBeenCalledTimes(1);
+    expect(addModelTokenUsageHourly).toHaveBeenLastCalledWith({
+      hour: "2026-06-23T08:00:00.000Z",
+      inputToken: 18,
+      modelName: "gpt-4.1",
+      outputToken: 8,
+      provider: "openai"
+    });
 
     await harnessSubscribers[0]?.({
       message: assistantMessage({ input: 2, output: 1 }),
@@ -148,10 +137,20 @@ describe("agent runtime token collection", () => {
       inputToken: 2,
       outputToken: 1
     });
+    expect(addModelTokenUsageHourly).toHaveBeenCalledTimes(2);
+    expect(addModelTokenUsageHourly).toHaveBeenLastCalledWith({
+      hour: "2026-06-23T08:00:00.000Z",
+      inputToken: 2,
+      modelName: "gpt-4.1",
+      outputToken: 1,
+      provider: "openai"
+    });
 
     vi.useRealTimers();
   });
 });
+
+const assistantTimestamp = Date.parse("2026-06-23T08:20:10.000Z");
 
 function assistantMessage(usage: {
   input: number;
@@ -164,7 +163,7 @@ function assistantMessage(usage: {
     provider: "openai",
     role: "assistant",
     stopReason: "stop",
-    timestamp: Date.now(),
+    timestamp: assistantTimestamp,
     usage: {
       cacheRead: 0,
       cacheWrite: 0,

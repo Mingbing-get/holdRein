@@ -9,13 +9,14 @@ import * as schema from "./schema";
 import { ensureDatabaseDirectory, migrateDatabase } from "./index";
 
 describe("database", () => {
-  it("exports the custom provider, workspace, and task tables", () => {
+  it("exports the custom provider, workspace, task, and model token usage tables", () => {
     expect(schema).toHaveProperty("customModelProviders");
     expect(schema).toHaveProperty("providerApiKeys");
     expect(schema).toHaveProperty("customProviderModels");
     expect(schema).toHaveProperty("workspaces");
     expect(schema).toHaveProperty("tasks");
     expect(schema).toHaveProperty("subagents");
+    expect(schema).toHaveProperty("modelTokenUsageHourly");
     expect(schema).not.toHaveProperty("taskMessages");
   });
 
@@ -24,7 +25,7 @@ describe("database", () => {
 
     migrateDatabase({ exec } as { exec: (sql: string) => void });
 
-    expect(exec).toHaveBeenCalledTimes(27);
+    expect(exec).toHaveBeenCalledTimes(29);
     expect(exec).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_model_providers")
@@ -130,7 +131,15 @@ describe("database", () => {
       expect.stringContaining("CREATE INDEX IF NOT EXISTS subagents_task_id_idx")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      23,
+      14,
+      expect.stringContaining("CREATE TABLE IF NOT EXISTS model_token_usage_hourly")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      15,
+      expect.stringContaining("CREATE UNIQUE INDEX IF NOT EXISTS model_token_usage_hourly_model_hour_idx")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      25,
       expect.stringContaining("ALTER TABLE subagents ADD COLUMN agent_name")
     );
     expect(exec).toHaveBeenLastCalledWith(
@@ -274,6 +283,30 @@ describe("database", () => {
           'agent-invalid', 'researcher', 'agent-parent', 'task-1', 'failed',
           'session-invalid', '/sessions/session-invalid.jsonl', 'created',
           'now', 'now'
+        )
+      `).run()).toThrow();
+      sqlite.prepare(`
+        INSERT INTO model_token_usage_hourly (
+          provider, model_name, hour, input_token, output_token
+        ) VALUES (
+          'openai', 'gpt-4.1', '2026-06-23T08:00:00.000Z', 11, 5
+        )
+      `).run();
+      expect(sqlite.prepare(`
+        SELECT provider, model_name, hour, input_token, output_token
+        FROM model_token_usage_hourly
+      `).get()).toEqual({
+        hour: "2026-06-23T08:00:00.000Z",
+        input_token: 11,
+        model_name: "gpt-4.1",
+        output_token: 5,
+        provider: "openai"
+      });
+      expect(() => sqlite.prepare(`
+        INSERT INTO model_token_usage_hourly (
+          provider, model_name, hour, input_token, output_token
+        ) VALUES (
+          'openai', 'gpt-4.1', '2026-06-23T08:00:00.000Z', 1, 1
         )
       `).run()).toThrow();
       sqlite.prepare("DELETE FROM tasks WHERE id = 'task-1'").run();

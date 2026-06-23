@@ -2,12 +2,14 @@ import { desc, eq, sql } from "drizzle-orm";
 
 import type {
   AppDatabase,
+  ModelTokenUsageHourlyRow,
+  NewModelTokenUsageHourlyRow,
   NewTaskRow,
   NewWorkspaceRow,
   TaskRow,
   WorkspaceRow
 } from "../../db";
-import { tasks, workspaces } from "../../db";
+import { modelTokenUsageHourly, tasks, workspaces } from "../../db";
 
 export interface WorkspaceRepositorySeed {
   tasks: NewTaskRow[];
@@ -24,6 +26,9 @@ export interface ListWorkspaceTasksAfterInput extends ListWorkspaceTasksInput {
 }
 
 export interface WorkspaceRepository {
+  addModelTokenUsageHourly: (
+    usage: NewModelTokenUsageHourlyRow
+  ) => ModelTokenUsageHourlyRow;
   addTaskTokenUsage: (
     taskId: string,
     usage: Pick<TaskRow, "inputToken" | "outputToken">
@@ -73,8 +78,34 @@ export function createInMemoryWorkspaceRepository(
 ): WorkspaceRepository {
   const workspaceRows = seed.workspaces.map((workspace) => workspace);
   const taskRows = seed.tasks.map(toTaskRow);
+  const modelTokenUsageHourlyRows: ModelTokenUsageHourlyRow[] = [];
 
   return {
+    addModelTokenUsageHourly: (usage) => {
+      const hour = normalizeUsageHour(usage.hour);
+      const existingIndex = modelTokenUsageHourlyRows.findIndex(
+        (row) =>
+          row.provider === usage.provider &&
+          row.modelName === usage.modelName &&
+          row.hour === hour
+      );
+      const existingUsage = modelTokenUsageHourlyRows[existingIndex];
+      const nextUsage = {
+        hour,
+        inputToken: (existingUsage?.inputToken ?? 0) + (usage.inputToken ?? 0),
+        modelName: usage.modelName,
+        outputToken: (existingUsage?.outputToken ?? 0) + (usage.outputToken ?? 0),
+        provider: usage.provider
+      };
+
+      if (existingIndex >= 0) {
+        modelTokenUsageHourlyRows[existingIndex] = nextUsage;
+      } else {
+        modelTokenUsageHourlyRows.push(nextUsage);
+      }
+
+      return nextUsage;
+    },
     addTaskTokenUsage: (taskId, usage) => {
       const taskIndex = taskRows.findIndex((task) => task.id === taskId);
       const existingTask = taskRows[taskIndex];
@@ -218,6 +249,40 @@ export function createSqliteWorkspaceRepository(
   database: AppDatabase
 ): WorkspaceRepository {
   return {
+    addModelTokenUsageHourly: (usage) => {
+      const row = {
+        ...usage,
+        hour: normalizeUsageHour(usage.hour),
+        inputToken: usage.inputToken ?? 0,
+        outputToken: usage.outputToken ?? 0
+      };
+
+      database.db
+        .insert(modelTokenUsageHourly)
+        .values(row)
+        .onConflictDoUpdate({
+          set: {
+            inputToken: sql`${modelTokenUsageHourly.inputToken} + ${row.inputToken}`,
+            outputToken: sql`${modelTokenUsageHourly.outputToken} + ${row.outputToken}`
+          },
+          target: [
+            modelTokenUsageHourly.provider,
+            modelTokenUsageHourly.modelName,
+            modelTokenUsageHourly.hour
+          ]
+        })
+        .run();
+
+      return database.db
+        .select()
+        .from(modelTokenUsageHourly)
+        .where(sql`
+          ${modelTokenUsageHourly.provider} = ${row.provider}
+          AND ${modelTokenUsageHourly.modelName} = ${row.modelName}
+          AND ${modelTokenUsageHourly.hour} = ${row.hour}
+        `)
+        .get() as ModelTokenUsageHourlyRow;
+    },
     addTaskTokenUsage: (taskId, usage) => {
       database.db
         .update(tasks)
@@ -365,6 +430,13 @@ function sortTasksDescending(taskRows: TaskRow[]): TaskRow[] {
   return [...taskRows].sort((left, right) =>
     String(right.lastContinuedAt).localeCompare(String(left.lastContinuedAt))
   );
+}
+
+function normalizeUsageHour(hour: string): string {
+  const date = new Date(hour);
+  date.setUTCMinutes(0, 0, 0);
+
+  return date.toISOString();
 }
 
 function toTaskRow(task: NewTaskRow): TaskRow {

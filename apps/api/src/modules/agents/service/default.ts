@@ -39,7 +39,7 @@ export function getDefaultAgentsService(): AgentsService {
       getCustomModel,
       subagentDatabase: database,
       subagentRepository,
-      tokenUsageSyncTarget: repository
+      tokenUsageStorageTarget: repository
     });
 
     service = createAgentsService({

@@ -122,6 +122,21 @@ const CREATE_SUBAGENTS_TASK_ID_INDEX_SQL = `
   ON subagents (task_id)
 `;
 
+const CREATE_MODEL_TOKEN_USAGE_HOURLY_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS model_token_usage_hourly (
+    provider TEXT NOT NULL,
+    model_name TEXT NOT NULL,
+    hour TEXT NOT NULL,
+    input_token INTEGER NOT NULL DEFAULT 0,
+    output_token INTEGER NOT NULL DEFAULT 0
+  ) STRICT
+`;
+
+const CREATE_MODEL_TOKEN_USAGE_HOURLY_MODEL_HOUR_INDEX_SQL = `
+  CREATE UNIQUE INDEX IF NOT EXISTS model_token_usage_hourly_model_hour_idx
+  ON model_token_usage_hourly (provider, model_name, hour)
+`;
+
 const ADD_TASKS_LAST_MODEL_ID_COLUMN_SQL = `
   ALTER TABLE tasks ADD COLUMN last_model_id TEXT
 `;
@@ -198,6 +213,8 @@ export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
   sqlite.exec(CREATE_TASKS_WORKSPACE_ID_INDEX_SQL);
   sqlite.exec(CREATE_SUBAGENTS_TABLE_SQL);
   sqlite.exec(CREATE_SUBAGENTS_TASK_ID_INDEX_SQL);
+  sqlite.exec(CREATE_MODEL_TOKEN_USAGE_HOURLY_TABLE_SQL);
+  sqlite.exec(CREATE_MODEL_TOKEN_USAGE_HOURLY_MODEL_HOUR_INDEX_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_LAST_MODEL_ID_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_SESSION_ID_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_SESSION_PATH_COLUMN_SQL);

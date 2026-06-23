@@ -146,6 +146,24 @@ export const subagents = sqliteTable(
   })
 );
 
+export const modelTokenUsageHourly = sqliteTable(
+  "model_token_usage_hourly",
+  {
+    hour: text("hour").notNull(),
+    inputToken: integer("input_token").notNull().default(0),
+    modelName: text("model_name").notNull(),
+    outputToken: integer("output_token").notNull().default(0),
+    provider: text("provider").notNull()
+  },
+  (table) => ({
+    modelHourUniqueIndex: uniqueIndex("model_token_usage_hourly_model_hour_idx").on(
+      table.provider,
+      table.modelName,
+      table.hour
+    )
+  })
+);
+
 export type CustomModelProviderRow = typeof customModelProviders.$inferSelect;
 export type NewCustomModelProviderRow = typeof customModelProviders.$inferInsert;
 export type ProviderApiKeyRow = typeof providerApiKeys.$inferSelect;
@@ -158,3 +176,5 @@ export type TaskRow = typeof tasks.$inferSelect;
 export type NewTaskRow = typeof tasks.$inferInsert;
 export type SubagentRow = typeof subagents.$inferSelect;
 export type NewSubagentRow = typeof subagents.$inferInsert;
+export type ModelTokenUsageHourlyRow = typeof modelTokenUsageHourly.$inferSelect;
+export type NewModelTokenUsageHourlyRow = typeof modelTokenUsageHourly.$inferInsert;

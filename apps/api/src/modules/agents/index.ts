@@ -12,8 +12,8 @@ export { createAgentRuntime } from "./runtime";
 export { type AgentRuntime } from './runtime/type';
 export {
   createTokenCollection,
-  type TaskTokenUsage,
-  type TokenCollection
+  type TokenCollection,
+  type TokenUsageStorageTarget
 } from "./runtime/token-collection";
 export {
   createAgentsRouter,

@@ -7,6 +7,7 @@ export { migrateDatabase } from "./migrate";
 export {
   customModelProviders,
   customProviderModels,
+  modelTokenUsageHourly,
   providerApiKeys,
   subagents,
   tasks,
@@ -15,11 +16,13 @@ export {
   type CustomProviderModelRow,
   type NewCustomModelProviderRow,
   type NewCustomProviderModelRow,
+  type NewModelTokenUsageHourlyRow,
   type NewProviderApiKeyRow,
   type NewSubagentRow,
   type NewTaskRow,
   type NewWorkspaceRow,
   type ProviderApiKeyRow,
+  type ModelTokenUsageHourlyRow,
   type SubagentRow,
   type TaskRow,
   type WorkspaceRow

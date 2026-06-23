@@ -10,7 +10,6 @@ import { createRuntimeRevokeSubagentTool, createRuntimeSubagentTools } from "./s
 import { startContinuationSubagent } from "./continuation-subagent";
 import { createSessionRepo, getEnvApiKey, getSkillDirs, interruptHarness, toAgentSessionMetadata } from "./support";
 import { createTokenCollection } from "./token-collection";
-import { createTokenUsageSync } from "./token-usage-sync";
 import { runToolBeforeExecute } from "../approval/tool-approval";
 import { extractAssistantText, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "../subagent";
 import { pluginRegistry } from '../../../plugin'
@@ -34,7 +33,6 @@ export function createAgentRuntime(
   const tokenCollections = new Map<string, ReturnType<typeof createTokenCollection>>();
 
   return {
-    getTokenUsage: (taskId) => tokenCollections.get(taskId)?.getUsage(),
     interrupt: async (agentId) => {
       const runningAgent = runningAgents.get(agentId);
 
@@ -140,7 +138,7 @@ export function createAgentRuntime(
         });
         const tokenCollection =
           tokenCollections.get(input.taskId) ??
-          createTokenCollection(input.taskId, createTokenCollectionOptions(input.taskId));
+          createTokenCollection(input.taskId, createTokenCollectionOptions());
         tokenCollections.set(input.taskId, tokenCollection);
         tokenCollection.appendHarness(harness);
 
@@ -446,20 +444,14 @@ export function createAgentRuntime(
     }
   };
 
-  function createTokenCollectionOptions(taskId: string) {
-    if (!options.tokenUsageSyncTarget) return {};
+  function createTokenCollectionOptions() {
+    if (!options.tokenUsageStorageTarget) return {};
 
-    const tokenUsageSync = createTokenUsageSync({
+    return {
       ...(options.tokenFlushIntervalMs === undefined
         ? {}
         : { flushIntervalMs: options.tokenFlushIntervalMs }),
-      syncTarget: options.tokenUsageSyncTarget,
-      taskId
-    });
-
-    return {
-      onUsage: tokenUsageSync.record,
-      onUsageEnd: tokenUsageSync.flush
+      storageTarget: options.tokenUsageStorageTarget
     };
   }
 }

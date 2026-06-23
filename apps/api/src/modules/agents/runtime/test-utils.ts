@@ -7,7 +7,7 @@ import type { ServerPlugin } from "@hold-rein/plugin-server";
 import { vi } from "vitest";
 
 import type { AppDatabase } from "../../../db";
-import type { TokenUsageSyncTarget } from "./token-usage-sync";
+import type { TokenUsageStorageTarget } from "./token-collection";
 import { createAgentApprovalStore } from "../approval/store";
 import { createAgentEventBus } from "../event/event-bus";
 import { createAgentRuntime } from ".";
@@ -110,7 +110,8 @@ export function createRuntime(
   subagentDatabase?: AppDatabase,
   tokenUsageOptions?: {
     tokenFlushIntervalMs?: number;
-    addTaskTokenUsage?: TokenUsageSyncTarget["addTaskTokenUsage"];
+    addModelTokenUsageHourly?: TokenUsageStorageTarget["addModelTokenUsageHourly"];
+    addTaskTokenUsage?: TokenUsageStorageTarget["addTaskTokenUsage"];
   }
 ) {
   return createAgentRuntime({
@@ -119,10 +120,12 @@ export function createRuntime(
     sessionRepo,
     ...(subagentDatabase === undefined ? {} : { subagentDatabase }),
     subagentRepository,
-    ...(tokenUsageOptions?.addTaskTokenUsage === undefined
+    ...(tokenUsageOptions?.addTaskTokenUsage === undefined ||
+    tokenUsageOptions.addModelTokenUsageHourly === undefined
       ? {}
       : {
-          tokenUsageSyncTarget: {
+          tokenUsageStorageTarget: {
+            addModelTokenUsageHourly: tokenUsageOptions.addModelTokenUsageHourly,
             addTaskTokenUsage: tokenUsageOptions.addTaskTokenUsage
           }
         }),
