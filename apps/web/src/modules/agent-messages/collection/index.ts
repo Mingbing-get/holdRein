@@ -182,7 +182,9 @@ function isToolCallStart(type: unknown): boolean {
     type === "tool_call_start" ||
     type === "toolCall_start" ||
     type === "tool_use_start" ||
-    type === "toolUse_start"
+    type === "toolUse_start" ||
+    type === "toolcall_start" ||
+    type === "tooluse_start"
   );
 }
 
@@ -191,7 +193,9 @@ function isToolCallDelta(type: unknown): boolean {
     type === "tool_call_delta" ||
     type === "toolCall_delta" ||
     type === "tool_use_delta" ||
-    type === "toolUse_delta"
+    type === "toolUse_delta" ||
+    type === "toolcall_delta" ||
+    type === "tooluse_delta"
   );
 }
 
