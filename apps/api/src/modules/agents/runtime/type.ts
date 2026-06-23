@@ -6,6 +6,7 @@ import type { AgentEventBus } from "../event/event-bus";
 import type { AgentModelLookup } from '../model/resolver'
 import type { SubagentRepository } from "../subagent/repository";
 import type { TaskTokenUsage } from "./token-collection";
+import type { TokenUsageSyncTarget } from "./token-usage-sync";
 
 export interface AgentRuntime {
   getTokenUsage?: (taskId: string) => TaskTokenUsage | undefined;
@@ -23,6 +24,8 @@ export interface CreateAgentRuntimeOptions {
   skillDirs?: string[];
   subagentDatabase?: AppDatabase;
   subagentRepository: SubagentRepository;
+  tokenFlushIntervalMs?: number;
+  tokenUsageSyncTarget?: TokenUsageSyncTarget;
 }
 
 export interface RunningAgent { harness: AgentHarness; sessionId: string }

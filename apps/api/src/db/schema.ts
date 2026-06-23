@@ -85,6 +85,7 @@ export const tasks = sqliteTable(
     createdAt: text("created_at").notNull(),
     id: text("id").primaryKey(),
     initialUserMessage: text("initial_user_message").notNull(),
+    inputToken: integer("input_token").notNull().default(0),
     approvalPolicy: text("approval_policy", {
       enum: ["approval", "run_all"]
     })
@@ -97,6 +98,7 @@ export const tasks = sqliteTable(
     lastModelProviderSource: text("last_model_provider_source", {
       enum: ["built_in", "custom"]
     }).notNull(),
+    outputToken: integer("output_token").notNull().default(0),
     sessionCreatedAt: text("session_created_at"),
     sessionId: text("session_id"),
     sessionPath: text("session_path"),

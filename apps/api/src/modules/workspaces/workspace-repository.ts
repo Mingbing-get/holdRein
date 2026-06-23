@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 
 import type {
   AppDatabase,
@@ -24,6 +24,10 @@ export interface ListWorkspaceTasksAfterInput extends ListWorkspaceTasksInput {
 }
 
 export interface WorkspaceRepository {
+  addTaskTokenUsage: (
+    taskId: string,
+    usage: Pick<TaskRow, "inputToken" | "outputToken">
+  ) => TaskRow | undefined;
   createTask: (task: NewTaskRow) => TaskRow;
   createWorkspace: (workspace: NewWorkspaceRow) => WorkspaceRow;
   deleteTaskById: (taskId: string) => void;
@@ -71,6 +75,18 @@ export function createInMemoryWorkspaceRepository(
   const taskRows = seed.tasks.map(toTaskRow);
 
   return {
+    addTaskTokenUsage: (taskId, usage) => {
+      const taskIndex = taskRows.findIndex((task) => task.id === taskId);
+      const existingTask = taskRows[taskIndex];
+      if (!existingTask) return undefined;
+      const nextTask = {
+        ...existingTask,
+        inputToken: existingTask.inputToken + usage.inputToken,
+        outputToken: existingTask.outputToken + usage.outputToken
+      };
+      taskRows[taskIndex] = nextTask;
+      return nextTask;
+    },
     createTask: (task) => {
       const row = toTaskRow(task);
       taskRows.push(row);
@@ -202,6 +218,18 @@ export function createSqliteWorkspaceRepository(
   database: AppDatabase
 ): WorkspaceRepository {
   return {
+    addTaskTokenUsage: (taskId, usage) => {
+      database.db
+        .update(tasks)
+        .set({
+          inputToken: sql`${tasks.inputToken} + ${usage.inputToken}`,
+          outputToken: sql`${tasks.outputToken} + ${usage.outputToken}`
+        })
+        .where(eq(tasks.id, taskId))
+        .run();
+
+      return database.db.select().from(tasks).where(eq(tasks.id, taskId)).get();
+    },
     createTask: (task) => {
       const row = toTaskRow(task);
       database.db.insert(tasks).values(row).run();
@@ -345,6 +373,8 @@ function toTaskRow(task: NewTaskRow): TaskRow {
     approvalPolicy: task.approvalPolicy ?? "approval",
     lastContinuedAt: task.lastContinuedAt ?? null,
     lastModelId: task.lastModelId ?? null,
+    inputToken: task.inputToken ?? 0,
+    outputToken: task.outputToken ?? 0,
     sessionCreatedAt: task.sessionCreatedAt ?? null,
     sessionId: task.sessionId ?? null,
     sessionPath: task.sessionPath ?? null,

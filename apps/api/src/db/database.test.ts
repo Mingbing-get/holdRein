@@ -24,7 +24,7 @@ describe("database", () => {
 
     migrateDatabase({ exec } as { exec: (sql: string) => void });
 
-    expect(exec).toHaveBeenCalledTimes(25);
+    expect(exec).toHaveBeenCalledTimes(27);
     expect(exec).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_model_providers")
@@ -64,6 +64,14 @@ describe("database", () => {
     expect(exec).toHaveBeenNthCalledWith(
       10,
       expect.stringContaining("last_model_provider_source TEXT NOT NULL")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      10,
+      expect.stringContaining("input_token INTEGER NOT NULL DEFAULT 0")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      10,
+      expect.stringContaining("output_token INTEGER NOT NULL DEFAULT 0")
     );
     expect(exec).toHaveBeenNthCalledWith(
       10,
@@ -122,7 +130,7 @@ describe("database", () => {
       expect.stringContaining("CREATE INDEX IF NOT EXISTS subagents_task_id_idx")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      21,
+      23,
       expect.stringContaining("ALTER TABLE subagents ADD COLUMN agent_name")
     );
     expect(exec).toHaveBeenLastCalledWith(
@@ -176,12 +184,14 @@ describe("database", () => {
 
       const task = sqlite
         .prepare(
-          "SELECT title, last_model_provider_source, session_id, session_path, session_created_at, status FROM tasks"
+          "SELECT title, input_token, output_token, last_model_provider_source, session_id, session_path, session_created_at, status FROM tasks"
         )
         .get();
 
       expect(task).toEqual({
+        input_token: 0,
         last_model_provider_source: "built_in",
+        output_token: 0,
         session_created_at: null,
         session_id: null,
         session_path: null,
@@ -317,11 +327,13 @@ describe("database", () => {
       expect(
         sqlite
           .prepare(
-            "SELECT id, session_id, session_path, session_created_at, status FROM tasks WHERE id = 'task-1'"
+            "SELECT id, input_token, output_token, session_id, session_path, session_created_at, status FROM tasks WHERE id = 'task-1'"
           )
           .get()
       ).toEqual({
         id: "task-1",
+        input_token: 0,
+        output_token: 0,
         session_created_at: null,
         session_id: null,
         session_path: null,

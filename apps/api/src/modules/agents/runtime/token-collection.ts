@@ -6,6 +6,11 @@ export interface TaskTokenUsage {
   taskId: string;
 }
 
+export interface TaskTokenUsageDelta {
+  inputToken: number;
+  outputToken: number;
+}
+
 export interface TokenCollection {
   appendHarness: (harness: TokenCollectableHarness) => void;
   getUsage: () => TaskTokenUsage;
@@ -17,7 +22,15 @@ interface TokenCollectableHarness {
   ) => () => void;
 }
 
-export function createTokenCollection(taskId: string): TokenCollection {
+export interface CreateTokenCollectionOptions {
+  onUsage?: (usage: TaskTokenUsageDelta) => void;
+  onUsageEnd?: () => void;
+}
+
+export function createTokenCollection(
+  taskId: string,
+  options: CreateTokenCollectionOptions = {}
+): TokenCollection {
   let inputToken = 0;
   let outputToken = 0;
   const subscriptions = new Map<TokenCollectableHarness, () => void>();
@@ -33,14 +46,22 @@ export function createTokenCollection(taskId: string): TokenCollection {
           const usage = event.message.role === "assistant"
             ? event.message.usage
             : undefined;
-          inputToken += usage?.input ?? 0;
-          outputToken += usage?.output ?? 0;
+          const usageDelta = {
+            inputToken: usage?.input ?? 0,
+            outputToken: usage?.output ?? 0
+          };
+          inputToken += usageDelta.inputToken;
+          outputToken += usageDelta.outputToken;
+          if (usageDelta.inputToken > 0 || usageDelta.outputToken > 0) {
+            options.onUsage?.(usageDelta);
+          }
           return;
         }
 
         if (event.type === "agent_end") {
           subscriptions.get(harness)?.();
           subscriptions.delete(harness);
+          options.onUsageEnd?.();
         }
       });
       subscriptions.set(harness, unsubscribe);

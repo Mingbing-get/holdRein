@@ -97,6 +97,60 @@ describe("agent runtime token collection", () => {
     });
     expect(result.agentId).toMatch(/^agent_/);
   });
+
+  it("throttles database token usage writes and flushes the final delta", async () => {
+    vi.useFakeTimers();
+    const { repo } = createSessionRepo();
+    const eventBus = createAgentEventBus();
+    const subagentRepository = createInMemorySubagentRepository();
+    const addTaskTokenUsage = vi.fn();
+    const runtime = createRuntime(
+      repo,
+      eventBus,
+      subagentRepository,
+      undefined,
+      {
+        addTaskTokenUsage,
+        tokenFlushIntervalMs: 1000
+      }
+    );
+    await runtime.start(createRunInput());
+
+    await harnessSubscribers[0]?.({
+      message: assistantMessage({ input: 11, output: 5 }),
+      type: "message_end"
+    });
+    await harnessSubscribers[0]?.({
+      message: assistantMessage({ input: 7, output: 3 }),
+      type: "message_end"
+    });
+
+    expect(addTaskTokenUsage).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(999);
+    expect(addTaskTokenUsage).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(addTaskTokenUsage).toHaveBeenCalledTimes(1);
+    expect(addTaskTokenUsage).toHaveBeenLastCalledWith("task-1", {
+      inputToken: 18,
+      outputToken: 8
+    });
+
+    await harnessSubscribers[0]?.({
+      message: assistantMessage({ input: 2, output: 1 }),
+      type: "message_end"
+    });
+    await harnessSubscribers[0]?.({ type: "agent_end" });
+
+    expect(addTaskTokenUsage).toHaveBeenCalledTimes(2);
+    expect(addTaskTokenUsage).toHaveBeenLastCalledWith("task-1", {
+      inputToken: 2,
+      outputToken: 1
+    });
+
+    vi.useRealTimers();
+  });
 });
 
 function assistantMessage(usage: {

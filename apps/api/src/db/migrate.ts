@@ -77,11 +77,13 @@ const CREATE_TASKS_TABLE_SQL = `
     workspace_id TEXT NOT NULL,
     title TEXT NOT NULL,
     initial_user_message TEXT NOT NULL,
+    input_token INTEGER NOT NULL DEFAULT 0,
     approval_policy TEXT NOT NULL DEFAULT 'approval' CHECK(approval_policy IN ('approval', 'run_all')),
     last_model_provider_source TEXT NOT NULL CHECK(last_model_provider_source IN ('built_in', 'custom')),
     last_model_provider TEXT NOT NULL,
     last_model_id TEXT,
     last_model_name TEXT NOT NULL,
+    output_token INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
     last_continued_at TEXT,
@@ -148,6 +150,14 @@ const ADD_TASKS_THINKING_LEVEL_COLUMN_SQL = `
   ALTER TABLE tasks ADD COLUMN thinking_level TEXT NOT NULL DEFAULT 'medium' CHECK(thinking_level IN ('off', 'minimal', 'low', 'medium', 'high', 'xhigh'))
 `;
 
+const ADD_TASKS_INPUT_TOKEN_COLUMN_SQL = `
+  ALTER TABLE tasks ADD COLUMN input_token INTEGER NOT NULL DEFAULT 0
+`;
+
+const ADD_TASKS_OUTPUT_TOKEN_COLUMN_SQL = `
+  ALTER TABLE tasks ADD COLUMN output_token INTEGER NOT NULL DEFAULT 0
+`;
+
 const ADD_SUBAGENTS_SESSION_ID_COLUMN_SQL = `
   ALTER TABLE subagents ADD COLUMN session_id TEXT
 `;
@@ -195,6 +205,8 @@ export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
   addColumnIfMissing(sqlite, ADD_TASKS_STATUS_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_APPROVAL_POLICY_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_THINKING_LEVEL_COLUMN_SQL);
+  addColumnIfMissing(sqlite, ADD_TASKS_INPUT_TOKEN_COLUMN_SQL);
+  addColumnIfMissing(sqlite, ADD_TASKS_OUTPUT_TOKEN_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_SUBAGENTS_AGENT_NAME_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_SUBAGENTS_SESSION_ID_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_SUBAGENTS_SESSION_PATH_COLUMN_SQL);

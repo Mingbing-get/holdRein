@@ -10,6 +10,7 @@ import { createRuntimeRevokeSubagentTool, createRuntimeSubagentTools } from "./s
 import { startContinuationSubagent } from "./continuation-subagent";
 import { createSessionRepo, getEnvApiKey, getSkillDirs, interruptHarness, toAgentSessionMetadata } from "./support";
 import { createTokenCollection } from "./token-collection";
+import { createTokenUsageSync } from "./token-usage-sync";
 import { runToolBeforeExecute } from "../approval/tool-approval";
 import { extractAssistantText, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "../subagent";
 import { pluginRegistry } from '../../../plugin'
@@ -138,7 +139,8 @@ export function createAgentRuntime(
           tools
         });
         const tokenCollection =
-          tokenCollections.get(input.taskId) ?? createTokenCollection(input.taskId);
+          tokenCollections.get(input.taskId) ??
+          createTokenCollection(input.taskId, createTokenCollectionOptions(input.taskId));
         tokenCollections.set(input.taskId, tokenCollection);
         tokenCollection.appendHarness(harness);
 
@@ -443,4 +445,21 @@ export function createAgentRuntime(
       };
     }
   };
+
+  function createTokenCollectionOptions(taskId: string) {
+    if (!options.tokenUsageSyncTarget) return {};
+
+    const tokenUsageSync = createTokenUsageSync({
+      ...(options.tokenFlushIntervalMs === undefined
+        ? {}
+        : { flushIntervalMs: options.tokenFlushIntervalMs }),
+      syncTarget: options.tokenUsageSyncTarget,
+      taskId
+    });
+
+    return {
+      onUsage: tokenUsageSync.record,
+      onUsageEnd: tokenUsageSync.flush
+    };
+  }
 }

@@ -7,6 +7,7 @@ import type { ServerPlugin } from "@hold-rein/plugin-server";
 import { vi } from "vitest";
 
 import type { AppDatabase } from "../../../db";
+import type { TokenUsageSyncTarget } from "./token-usage-sync";
 import { createAgentApprovalStore } from "../approval/store";
 import { createAgentEventBus } from "../event/event-bus";
 import { createAgentRuntime } from ".";
@@ -106,13 +107,27 @@ export function createRuntime(
   sessionRepo: JsonlSessionRepoApi,
   eventBus = createAgentEventBus(),
   subagentRepository: SubagentRepository = createInMemorySubagentRepository(),
-  subagentDatabase?: AppDatabase
+  subagentDatabase?: AppDatabase,
+  tokenUsageOptions?: {
+    tokenFlushIntervalMs?: number;
+    addTaskTokenUsage?: TokenUsageSyncTarget["addTaskTokenUsage"];
+  }
 ) {
   return createAgentRuntime({
     approvalStore: createAgentApprovalStore(),
     eventBus,
     sessionRepo,
     ...(subagentDatabase === undefined ? {} : { subagentDatabase }),
-    subagentRepository
+    subagentRepository,
+    ...(tokenUsageOptions?.addTaskTokenUsage === undefined
+      ? {}
+      : {
+          tokenUsageSyncTarget: {
+            addTaskTokenUsage: tokenUsageOptions.addTaskTokenUsage
+          }
+        }),
+    ...(tokenUsageOptions?.tokenFlushIntervalMs === undefined
+      ? {}
+      : { tokenFlushIntervalMs: tokenUsageOptions.tokenFlushIntervalMs })
   });
 }
