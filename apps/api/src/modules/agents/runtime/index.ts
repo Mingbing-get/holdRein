@@ -9,6 +9,7 @@ import { addPendingSubagentResult, appendSubagentResult, flushPendingSubagentRes
 import { createRuntimeRevokeSubagentTool, createRuntimeSubagentTools } from "./subagent-tools";
 import { startContinuationSubagent } from "./continuation-subagent";
 import { createSessionRepo, getEnvApiKey, getSkillDirs, interruptHarness, toAgentSessionMetadata } from "./support";
+import { createTokenCollection } from "./token-collection";
 import { runToolBeforeExecute } from "../approval/tool-approval";
 import { extractAssistantText, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "../subagent";
 import { pluginRegistry } from '../../../plugin'
@@ -29,8 +30,10 @@ export function createAgentRuntime(
   const harnessSessions = new Map<string, HarnessSession>();
   const harnessTools = new Map<string, ServerPlugin.PluginTool[]>();
   const interruptedHarnesses = new WeakSet<AgentHarness>();
+  const tokenCollections = new Map<string, ReturnType<typeof createTokenCollection>>();
 
   return {
+    getTokenUsage: (taskId) => tokenCollections.get(taskId)?.getUsage(),
     interrupt: async (agentId) => {
       const runningAgent = runningAgents.get(agentId);
 
@@ -134,6 +137,10 @@ export function createAgentRuntime(
           thinkingLevel: input.thinkingLevel,
           tools
         });
+        const tokenCollection =
+          tokenCollections.get(input.taskId) ?? createTokenCollection(input.taskId);
+        tokenCollections.set(input.taskId, tokenCollection);
+        tokenCollection.appendHarness(harness);
 
         harness.subscribe(async (event) => {
           try {

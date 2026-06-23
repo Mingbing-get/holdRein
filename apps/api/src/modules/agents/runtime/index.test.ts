@@ -34,7 +34,9 @@ vi.mock("@earendil-works/pi-agent-core/node", async (importOriginal) => {
       on = harnessOn;
       prompt = prompt;
       subscribe = vi.fn((listener: (event: { type: string }) => unknown) => {
-        harnessSubscribers.push(listener);
+        if (listener.constructor.name === "AsyncFunction") {
+          harnessSubscribers.push(listener);
+        }
         return vi.fn();
       });
 

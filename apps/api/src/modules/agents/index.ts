@@ -11,6 +11,11 @@ export { createAgentEventBus, type AgentEventBus } from "./event/event-bus";
 export { createAgentRuntime } from "./runtime";
 export { type AgentRuntime } from './runtime/type';
 export {
+  createTokenCollection,
+  type TaskTokenUsage,
+  type TokenCollection
+} from "./runtime/token-collection";
+export {
   createAgentsRouter,
   type CreateAgentsRouterOptions
 } from "./router";

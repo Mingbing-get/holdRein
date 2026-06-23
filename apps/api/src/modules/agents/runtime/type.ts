@@ -5,8 +5,10 @@ import type { AgentApprovalStore } from "../approval/store";
 import type { AgentEventBus } from "../event/event-bus";
 import type { AgentModelLookup } from '../model/resolver'
 import type { SubagentRepository } from "../subagent/repository";
+import type { TaskTokenUsage } from "./token-collection";
 
 export interface AgentRuntime {
+  getTokenUsage?: (taskId: string) => TaskTokenUsage | undefined;
   interrupt: (agentId: string) => Promise<boolean>;
   listMessages: (input: { session: AgentSessionMetadata; workspacePath: string }) => Promise<StoredAgentMessage[]>;
   start: (input: RunAgentInput) => Promise<AgentRunResult>;
