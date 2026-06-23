@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import type { ServerPlugin } from "@hold-rein/plugin-server";
 
 const VALIDATOR_MARKER = "[ts-standards-validator]";
+const VALIDATOR_AGENT_NAME = "ts-standards-validator";
 const VALIDATOR_SKILL_DIR = join(skillRootDir(), "validator");
 const PLANNING_SKILL_DIR = join(skillRootDir(), "planning");
 const STANDARDS_SKILL_DIR = join(skillRootDir(), "ts-standards");
@@ -64,7 +65,7 @@ const tsStandardsServerPlugin: ServerPlugin.Plugin = {
         }
 
         const changedFiles = extractChangedFilesFromMessages(input.messages, {
-          afterLatestMarker: VALIDATOR_MARKER
+          afterLatestCustomMessageFromAgent: VALIDATOR_AGENT_NAME
         });
 
         if (changedFiles.length === 0) {
@@ -72,6 +73,7 @@ const tsStandardsServerPlugin: ServerPlugin.Plugin = {
         }
 
         return {
+          agentName: VALIDATOR_AGENT_NAME,
           prompt: createValidationPrompt({
             changedFiles,
             originalPrompt: input.runInput.prompt
@@ -119,11 +121,11 @@ export async function detectTsProject(
 
 export function extractChangedFilesFromMessages(
   messages: readonly unknown[],
-  options: { afterLatestMarker?: string } = {}
+  options: { afterLatestCustomMessageFromAgent?: string } = {}
 ): ChangedFile[] {
-  const scopedMessages = scopeMessagesAfterLatestMarker(
+  const scopedMessages = scopeMessagesAfterLatestCustomMessageFromAgent(
     messages,
-    options.afterLatestMarker
+    options.afterLatestCustomMessageFromAgent
   );
   const calls = new Map<string, ToolCallRecord>();
   const changes: ChangedFile[] = [];
@@ -243,23 +245,25 @@ function hasTsJsPackageSignal(packageJson: unknown): boolean {
   );
 }
 
-function scopeMessagesAfterLatestMarker(
+function scopeMessagesAfterLatestCustomMessageFromAgent(
   messages: readonly unknown[],
-  marker: string | undefined
+  agentName: string | undefined
 ): readonly unknown[] {
-  if (!marker) {
+  if (!agentName) {
     return messages;
   }
 
-  let latestMarkerIndex = -1;
+  let latestAgentMessageIndex = -1;
   for (let index = messages.length - 1; index >= 0; index -= 1) {
-    if (getMessageText(messages[index]).includes(marker)) {
-      latestMarkerIndex = index;
+    if (getCustomMessageAgentName(messages[index]) === agentName) {
+      latestAgentMessageIndex = index;
       break;
     }
   }
 
-  return latestMarkerIndex === -1 ? messages : messages.slice(latestMarkerIndex + 1);
+  return latestAgentMessageIndex === -1
+    ? messages
+    : messages.slice(latestAgentMessageIndex + 1);
 }
 
 function getToolCalls(message: unknown): ToolCallRecord[] {
@@ -316,24 +320,14 @@ function getToolResult(message: unknown):
   };
 }
 
-function getMessageText(message: unknown): string {
-  if (!isRecord(message)) {
-    return "";
+function getCustomMessageAgentName(message: unknown): string | undefined {
+  if (!isRecord(message) || message.role !== "custom" || !isRecord(message.extra)) {
+    return undefined;
   }
 
-  if (typeof message.content === "string") {
-    return message.content;
-  }
-
-  if (!Array.isArray(message.content)) {
-    return "";
-  }
-
-  return message.content
-    .map((content) =>
-      isRecord(content) && typeof content.text === "string" ? content.text : ""
-    )
-    .join("\n");
+  return typeof message.extra.agentName === "string"
+    ? message.extra.agentName
+    : undefined;
 }
 
 function dedupeChangedFiles(changes: ChangedFile[]): ChangedFile[] {

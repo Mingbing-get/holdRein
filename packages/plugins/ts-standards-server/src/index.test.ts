@@ -111,6 +111,45 @@ describe("tsStandardsServerPlugin", () => {
     ]);
   });
 
+  it("extracts only file changes after the latest custom message from the agent", () => {
+    const messages = [
+      assistantToolCall("call-old", "edit_file", {
+        path: "src/old.ts",
+        oldText: "old",
+        newText: "new"
+      }),
+      toolResult("call-old", "edit_file", false, {
+        path: "/workspace/src/old.ts"
+      }),
+      {
+        content: "Status: failed\nFix the style issue.",
+        extra: { agentName: "ts-standards-validator" },
+        role: "custom"
+      },
+      assistantToolCall("call-new", "edit_file", {
+        path: "src/new.ts",
+        oldText: "old",
+        newText: "new"
+      }),
+      toolResult("call-new", "edit_file", false, {
+        path: "/workspace/src/new.ts"
+      })
+    ] as ServerPlugin.AgentEndInput["messages"];
+
+    expect(
+      extractChangedFilesFromMessages(messages, {
+        afterLatestCustomMessageFromAgent: "ts-standards-validator"
+      })
+    ).toEqual([
+      {
+        absolutePath: "/workspace/src/new.ts",
+        operation: "edit",
+        path: "src/new.ts",
+        toolCallId: "call-new"
+      }
+    ]);
+  });
+
   it("starts an independent validator subagent when code changed", async () => {
     const workspacePath = await createWorkspace({
       "AGENTS.md": "Run tests and keep files below 500 lines.",
@@ -150,6 +189,7 @@ describe("tsStandardsServerPlugin", () => {
     });
 
     expect(continuation).toMatchObject({ useSubagent: true });
+    expect(continuation).toMatchObject({ agentName: "ts-standards-validator" });
     expect(continuation?.prompt).toContain("Original task");
     expect(continuation?.prompt).toContain("Add a health endpoint");
     expect(continuation?.prompt).toContain("apps/api/src/health.ts");
@@ -198,7 +238,7 @@ describe("tsStandardsServerPlugin", () => {
     expect(continuation).toBeUndefined();
   });
 
-  it("does not revalidate unchanged files after a validator result", async () => {
+  it("does not revalidate unchanged files after a validator result from the same agent", async () => {
     const workspacePath = await createWorkspace({
       "package.json": JSON.stringify({
         devDependencies: { typescript: "5.8.3" }
@@ -217,8 +257,8 @@ describe("tsStandardsServerPlugin", () => {
           path: join(workspacePath, "src/file.ts")
         }),
         {
-          content:
-            "[ts-standards-validator]\nStatus: failed\nFix the style issue.",
+          content: "Status: failed\nFix the style issue.",
+          extra: { agentName: "ts-standards-validator" },
           role: "custom"
         }
       ] as ServerPlugin.AgentEndInput["messages"],
