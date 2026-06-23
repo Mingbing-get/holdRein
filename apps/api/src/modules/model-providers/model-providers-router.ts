@@ -4,8 +4,11 @@ import { sendError, sendSuccess } from "../../response";
 import { RESPONSE_CODE_DEFINITIONS } from "../../response/response-codes";
 import { getDefaultModelProvidersService } from "./default-model-provider-service";
 import type { ModelProvidersService } from "./model-providers-service";
+import { getDefaultModelProxiesService } from "../model-proxies/default-model-proxies-service";
+import type { ModelProxiesService } from "../model-proxies/model-proxies-service";
 
 export interface CreateModelProvidersRouterOptions {
+  modelProxiesService?: ModelProxiesService;
   service?: ModelProvidersService;
 }
 
@@ -34,11 +37,29 @@ export function createModelProvidersRouter(
   const router = Router();
   const getService = (): ModelProvidersService =>
     options.service ?? getDefaultModelProvidersService();
+  const getProxyService = (): ModelProxiesService | undefined =>
+    options.modelProxiesService ??
+    (options.service ? undefined : getDefaultModelProxiesService());
 
   router.get(
     "/model-providers",
     (_request: Request, response: Response): void => {
-      sendSuccess(response, getService().listModelProviders());
+      const providers = getService().listModelProviders();
+      const proxyCount = getProxyService()?.listProxies().length ?? 0;
+
+      sendSuccess(response, [
+        ...providers,
+        ...(proxyCount > 0 && !providers.some((provider) => provider.id === "local")
+          ? [
+              {
+                hasApiKey: true,
+                id: "local",
+                modelCount: proxyCount,
+                source: "proxy" as const
+              }
+            ]
+          : [])
+      ]);
     }
   );
 
@@ -150,6 +171,20 @@ export function createModelProvidersRouter(
     (request: Request, response: Response): void => {
       const provider = String(request.params.provider ?? "");
       const service = getService();
+
+      if (provider === "local") {
+        const proxyService = getProxyService();
+        if (proxyService) {
+          sendSuccess(response, proxyService.listProxyModels());
+          return;
+        }
+        if (!service.hasProvider(provider)) {
+          sendError(response, RESPONSE_CODE_DEFINITIONS.notFound, "Unknown provider");
+          return;
+        }
+        sendSuccess(response, service.listModelsForProvider(provider));
+        return;
+      }
 
       if (!service.hasProvider(provider)) {
         sendError(response, RESPONSE_CODE_DEFINITIONS.notFound, "Unknown provider");

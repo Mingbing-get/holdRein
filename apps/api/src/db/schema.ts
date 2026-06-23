@@ -65,6 +65,63 @@ export const customProviderModels = sqliteTable(
   })
 );
 
+export const modelProxies = sqliteTable(
+  "model_proxies",
+  {
+    createdAt: text("created_at").notNull(),
+    id: text("id").primaryKey(),
+    modelId: text("model_id").notNull(),
+    name: text("name").notNull(),
+    updatedAt: text("updated_at").notNull()
+  },
+  (table) => ({
+    modelIdUniqueIndex: uniqueIndex("model_proxies_model_id_idx").on(
+      table.modelId
+    )
+  })
+);
+
+export const modelProxyCandidates = sqliteTable(
+  "model_proxy_candidates",
+  {
+    createdAt: text("created_at").notNull(),
+    id: text("id").primaryKey(),
+    modelId: text("model_id").notNull(),
+    priority: integer("priority").notNull(),
+    provider: text("provider").notNull(),
+    proxyId: text("proxy_id")
+      .notNull()
+      .references(() => modelProxies.id, { onDelete: "cascade" }),
+    updatedAt: text("updated_at").notNull()
+  },
+  (table) => ({
+    proxyPriorityIndex: index("model_proxy_candidates_proxy_priority_idx").on(
+      table.proxyId,
+      table.priority
+    )
+  })
+);
+
+export const modelProxyCandidateLimits = sqliteTable(
+  "model_proxy_candidate_limits",
+  {
+    candidateId: text("candidate_id")
+      .notNull()
+      .references(() => modelProxyCandidates.id, { onDelete: "cascade" }),
+    createdAt: text("created_at").notNull(),
+    id: text("id").primaryKey(),
+    maxTokens: integer("max_tokens").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    windowHours: integer("window_hours"),
+    windowType: text("window_type", { enum: ["hours", "day", "week"] }).notNull()
+  },
+  (table) => ({
+    candidateIndex: index("model_proxy_candidate_limits_candidate_idx").on(
+      table.candidateId
+    )
+  })
+);
+
 export const workspaces = sqliteTable(
   "workspaces",
   {
@@ -170,6 +227,14 @@ export type ProviderApiKeyRow = typeof providerApiKeys.$inferSelect;
 export type NewProviderApiKeyRow = typeof providerApiKeys.$inferInsert;
 export type CustomProviderModelRow = typeof customProviderModels.$inferSelect;
 export type NewCustomProviderModelRow = typeof customProviderModels.$inferInsert;
+export type ModelProxyRow = typeof modelProxies.$inferSelect;
+export type NewModelProxyRow = typeof modelProxies.$inferInsert;
+export type ModelProxyCandidateRow = typeof modelProxyCandidates.$inferSelect;
+export type NewModelProxyCandidateRow = typeof modelProxyCandidates.$inferInsert;
+export type ModelProxyCandidateLimitRow =
+  typeof modelProxyCandidateLimits.$inferSelect;
+export type NewModelProxyCandidateLimitRow =
+  typeof modelProxyCandidateLimits.$inferInsert;
 export type WorkspaceRow = typeof workspaces.$inferSelect;
 export type NewWorkspaceRow = typeof workspaces.$inferInsert;
 export type TaskRow = typeof tasks.$inferSelect;

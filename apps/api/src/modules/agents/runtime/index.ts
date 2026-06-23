@@ -14,8 +14,10 @@ import { runToolBeforeExecute } from "../approval/tool-approval";
 import { extractAssistantText, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "../subagent";
 import { pluginRegistry } from '../../../plugin'
 import { formatWorkspaceAgentInstructionsForSystemPrompt, readWorkspaceAgentInstructions } from "./workspace-agent-instructions";
+import { createModelProxyRuntimeController, type ModelProxyRuntimeController } from "../../model-proxies/model-proxy-runtime";
 
 import type { AgentRuntime, CreateAgentRuntimeOptions, RunningAgent, HarnessSession, CreateHarnessOptions, PendingVisibleCustomMessage, StartHarnessOptions, StartHarnessResult } from './type'
+import type { Api, Model } from "@earendil-works/pi-ai";
 
 const AGENT_CONTINUATION_CUSTOM_TYPE = "agent_continuation";
 const AGENT_CONTINUE_PROMPT = "";
@@ -55,11 +57,17 @@ export function createAgentRuntime(
     },
     start: async (input) => {
       const env = new NodeExecutionEnv({ cwd: input.workspacePath });
-      const model = await resolveAgentModel(
-        input.provider,
-        input.modelId,
-        options.getCustomModel
-      );
+      const proxyCandidate = input.provider === "local"
+        ? options.modelProxiesService?.selectCandidate(input.modelId)
+        : undefined;
+      if (input.provider === "local" && !proxyCandidate) {
+        throw new Error(
+          options.modelProxiesService ? "No available model for proxy" : "Unknown proxy model"
+        );
+      }
+      const initialProvider = proxyCandidate?.provider ?? input.provider;
+      const initialModelId = proxyCandidate?.modelId ?? input.modelId;
+      const model = await resolveAgentModel(initialProvider, initialModelId, options.getCustomModel);
 
       if (!model) {
         throw new Error("Unknown model");
@@ -70,6 +78,8 @@ export function createAgentRuntime(
 
       const createHarness = async (harnessOptions: CreateHarnessOptions) => {
         let activeMessageId: string | undefined;
+        let activeModel: Model<Api> = model;
+        let proxyController: ModelProxyRuntimeController | undefined;
         const pendingVisibleMessages = new Map<string, PendingVisibleCustomMessage[]>();
         const pluginContext: ServerPlugin.RuntimeContext = {
           agentName: harnessOptions.agentName ?? "main",
@@ -78,7 +88,7 @@ export function createAgentRuntime(
           session: harnessOptions.session,
           prompt: harnessOptions.pluginPrompt,
           thinkingLevel: input.thinkingLevel,
-          model
+          model: activeModel
         }
         const contribution = await pluginRegistry.resolveContributions(pluginContext)
         const skillDirs = getSkillDirs(
@@ -111,14 +121,15 @@ export function createAgentRuntime(
         const harness = new AgentHarness({
           activeToolNames: tools.map(tool => tool.name),
           env,
-          getApiKeyAndHeaders: async () => {
+          getApiKeyAndHeaders: async (requestedModel?: Model<Api>) => {
+            const apiModel = requestedModel ?? proxyController?.getActiveModel() ?? activeModel;
             const apiKey =
-              (await options.getApiKey?.(input.provider, input.modelId)) ??
-              getEnvApiKey(input.provider);
+              (await options.getApiKey?.(apiModel.provider, apiModel.id)) ??
+              getEnvApiKey(apiModel.provider);
 
             return apiKey ? { apiKey } : undefined;
           },
-          model: contribution.model || model,
+          model: contribution.model || activeModel,
           resources: { skills },
           session: harnessOptions.session,
           systemPrompt: ({ resources }) =>
@@ -136,6 +147,19 @@ export function createAgentRuntime(
           thinkingLevel: input.thinkingLevel,
           tools
         });
+        if (proxyCandidate && options.modelProxiesService) {
+          proxyController = createModelProxyRuntimeController({
+            activeCandidate: proxyCandidate,
+            activeModel,
+            proxyModelId: input.modelId,
+            resolveModel: (provider, modelId) => resolveAgentModel(provider, modelId, options.getCustomModel),
+            service: options.modelProxiesService,
+            setModel: async (nextModel) => {
+              activeModel = nextModel;
+              await harness.setModel(nextModel);
+            }
+          });
+        }
         const tokenCollection =
           tokenCollections.get(input.taskId) ??
           createTokenCollection(input.taskId, createTokenCollectionOptions());
@@ -182,6 +206,24 @@ export function createAgentRuntime(
               type: "message_end"
             });
             activeMessageId = undefined;
+            if (proxyController && event.message.role === "assistant") {
+              try {
+                await proxyController.recordAssistantUsage({
+                  inputToken: event.message.usage?.input ?? 0,
+                  modelId: event.message.model,
+                  outputToken: event.message.usage?.output ?? 0,
+                  provider: event.message.provider
+                });
+              } catch (error) {
+                options.eventBus.emit({
+                  agentId: harnessOptions.agentId,
+                  payload: {
+                    message: error instanceof Error ? error.message : "Proxy fallback unavailable"
+                  },
+                  type: "agent_error"
+                });
+              }
+            }
             if (event.message.role === "toolResult") {
               const pendingMessages = pendingVisibleMessages.get(
                 event.message.toolCallId

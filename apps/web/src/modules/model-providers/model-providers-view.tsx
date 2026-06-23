@@ -16,6 +16,7 @@ import {
   type CustomModelProviderFormValues
 } from "./custom-model-provider-modal";
 import { ModelProviderGroups } from "./model-provider-groups";
+import { ModelProxyPanel } from "./model-proxy-panel";
 import { ProviderApiKeyModal } from "./provider-api-key-modal";
 import { ProviderModelsModal, type ProviderModelFormValues } from "./provider-models-modal";
 import type { ModelProviderSummary, ModelSummary } from "./model-provider-types";
@@ -391,38 +392,45 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
       ) : null}
 
       {loadState.status === "success" ? (
-        <ModelProviderGroups
-          groupedProviders={groupedProviders}
-          hoveredProviderKey={hoveredProviderKey}
-          onAddProvider={() => {
-            setCustomProviderModalState({
-              mode: "create",
-              open: true
-            });
-          }}
-          onDeleteProvider={(nextProviderId) => {
-            void deleteCustomProvider(nextProviderId);
-          }}
-          onEditApiKey={(nextProviderId) => {
-            setEditingProviderId(nextProviderId);
-            setApiKeyInput("");
-          }}
-          onEditProvider={(nextProvider) => {
-            setCustomProviderModalState({
-              initialValues: {
-                baseUrl: nextProvider.baseUrl ?? "",
-                provider: nextProvider.id
-              },
-              mode: "edit",
-              open: true,
-              providerId: nextProvider.id
-            });
-          }}
-          onHoverChange={setHoveredProviderKey}
-          onViewModels={(nextProvider) => {
-            void refreshProviderModels(nextProvider);
-          }}
-        />
+        <>
+          <ModelProxyPanel
+            apiBaseUrl={apiBaseUrl}
+            onChanged={refreshProviders}
+            providers={loadState.providers}
+          />
+          <ModelProviderGroups
+            groupedProviders={groupedProviders}
+            hoveredProviderKey={hoveredProviderKey}
+            onAddProvider={() => {
+              setCustomProviderModalState({
+                mode: "create",
+                open: true
+              });
+            }}
+            onDeleteProvider={(nextProviderId) => {
+              void deleteCustomProvider(nextProviderId);
+            }}
+            onEditApiKey={(nextProviderId) => {
+              setEditingProviderId(nextProviderId);
+              setApiKeyInput("");
+            }}
+            onEditProvider={(nextProvider) => {
+              setCustomProviderModalState({
+                initialValues: {
+                  baseUrl: nextProvider.baseUrl ?? "",
+                  provider: nextProvider.id
+                },
+                mode: "edit",
+                open: true,
+                providerId: nextProvider.id
+              });
+            }}
+            onHoverChange={setHoveredProviderKey}
+            onViewModels={(nextProvider) => {
+              void refreshProviderModels(nextProvider);
+            }}
+          />
+        </>
       ) : null}
 
       <ProviderApiKeyModal

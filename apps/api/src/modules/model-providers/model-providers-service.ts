@@ -6,13 +6,14 @@ import {
   encryptProviderApiKey
 } from "./model-provider-api-key-crypto";
 import type { ModelProviderRepository } from "./model-provider-repository";
+import type { ModelProxiesService } from "../model-proxies/model-proxies-service";
 
 export interface ModelProviderSummary {
   baseUrl?: string;
   hasApiKey: boolean;
   id: string;
   modelCount: number;
-  source: "builtin" | "custom";
+  source: "builtin" | "custom" | "proxy";
 }
 
 export interface CustomModelProviderSummary {
@@ -35,6 +36,7 @@ export interface ModelSummary {
 }
 
 export interface ModelProvidersServiceOptions {
+  modelProxiesService?: ModelProxiesService;
   providerApiKeyEncryptionKey: string;
   repository: ModelProviderRepository;
 }
@@ -77,8 +79,12 @@ export interface ModelProvidersService {
 export function createModelProvidersService(
   options: ModelProvidersServiceOptions
 ): ModelProvidersService {
-  const { providerApiKeyEncryptionKey, repository } = options;
+  const { modelProxiesService, providerApiKeyEncryptionKey, repository } = options;
   const listModelsForProvider = (provider: string): ModelSummary[] => {
+    if (provider === "local") {
+      return modelProxiesService?.listProxyModels() ?? [];
+    }
+
     if (hasBuiltInProvider(provider)) {
       return getModels(provider).map(mapBuiltInModel);
     }
@@ -158,6 +164,10 @@ export function createModelProvidersService(
       return repository.deleteCustomProviderModel(customProvider.id, modelId);
     },
     getConfiguredModelForProvider: (provider, modelId) => {
+      if (provider === "local") {
+        return null;
+      }
+
       const model = findModel(provider, modelId, repository);
       const baseUrl = findModelBaseUrl(provider, modelId, repository);
 
@@ -184,7 +194,10 @@ export function createModelProvidersService(
         model
       };
     },
-    hasProvider: (provider) => hasBuiltInProvider(provider) || hasCustomProvider(provider, repository),
+    hasProvider: (provider) =>
+      provider === "local"
+        ? (modelProxiesService?.listProxies().length ?? 0) > 0
+        : hasBuiltInProvider(provider) || hasCustomProvider(provider, repository),
     listModelsForProvider,
     listModelProviders: () => {
       const builtInProviders = getProviders().map((provider) => ({
@@ -202,7 +215,19 @@ export function createModelProvidersService(
         source: "custom" as const
       }));
 
-      return [...builtInProviders, ...customProviders];
+      const proxyProviders =
+        (modelProxiesService?.listProxies().length ?? 0) > 0
+          ? [
+              {
+                hasApiKey: true,
+                id: "local",
+                modelCount: modelProxiesService?.listProxies().length ?? 0,
+                source: "proxy" as const
+              }
+            ]
+          : [];
+
+      return [...builtInProviders, ...customProviders, ...proxyProviders];
     },
     storeProviderApiKey: (provider, apiKey) => {
       if (!hasBuiltInProvider(provider) && !hasCustomProvider(provider, repository)) {

@@ -52,6 +52,57 @@ const CREATE_CUSTOM_PROVIDER_MODELS_PROVIDER_MODEL_INDEX_SQL = `
   ON custom_provider_models (provider_id, model_id)
 `;
 
+const CREATE_MODEL_PROXIES_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS model_proxies (
+    id TEXT PRIMARY KEY NOT NULL,
+    model_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  ) STRICT
+`;
+
+const CREATE_MODEL_PROXIES_MODEL_ID_INDEX_SQL = `
+  CREATE UNIQUE INDEX IF NOT EXISTS model_proxies_model_id_idx
+  ON model_proxies (model_id)
+`;
+
+const CREATE_MODEL_PROXY_CANDIDATES_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS model_proxy_candidates (
+    id TEXT PRIMARY KEY NOT NULL,
+    proxy_id TEXT NOT NULL,
+    priority INTEGER NOT NULL,
+    provider TEXT NOT NULL,
+    model_id TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (proxy_id) REFERENCES model_proxies(id) ON DELETE CASCADE
+  ) STRICT
+`;
+
+const CREATE_MODEL_PROXY_CANDIDATES_PRIORITY_INDEX_SQL = `
+  CREATE INDEX IF NOT EXISTS model_proxy_candidates_proxy_priority_idx
+  ON model_proxy_candidates (proxy_id, priority)
+`;
+
+const CREATE_MODEL_PROXY_CANDIDATE_LIMITS_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS model_proxy_candidate_limits (
+    id TEXT PRIMARY KEY NOT NULL,
+    candidate_id TEXT NOT NULL,
+    window_type TEXT NOT NULL CHECK(window_type IN ('hours', 'day', 'week')),
+    window_hours INTEGER,
+    max_tokens INTEGER NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (candidate_id) REFERENCES model_proxy_candidates(id) ON DELETE CASCADE
+  ) STRICT
+`;
+
+const CREATE_MODEL_PROXY_CANDIDATE_LIMITS_CANDIDATE_INDEX_SQL = `
+  CREATE INDEX IF NOT EXISTS model_proxy_candidate_limits_candidate_idx
+  ON model_proxy_candidate_limits (candidate_id)
+`;
+
 const ADD_CUSTOM_PROVIDER_MODELS_NAME_COLUMN_SQL = `
   ALTER TABLE custom_provider_models ADD COLUMN name TEXT NOT NULL DEFAULT ''
 `;
@@ -207,6 +258,12 @@ export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
     }
   }
   sqlite.exec(CREATE_CUSTOM_PROVIDER_MODELS_PROVIDER_MODEL_INDEX_SQL);
+  sqlite.exec(CREATE_MODEL_PROXIES_TABLE_SQL);
+  sqlite.exec(CREATE_MODEL_PROXIES_MODEL_ID_INDEX_SQL);
+  sqlite.exec(CREATE_MODEL_PROXY_CANDIDATES_TABLE_SQL);
+  sqlite.exec(CREATE_MODEL_PROXY_CANDIDATES_PRIORITY_INDEX_SQL);
+  sqlite.exec(CREATE_MODEL_PROXY_CANDIDATE_LIMITS_TABLE_SQL);
+  sqlite.exec(CREATE_MODEL_PROXY_CANDIDATE_LIMITS_CANDIDATE_INDEX_SQL);
   sqlite.exec(CREATE_WORKSPACES_TABLE_SQL);
   sqlite.exec(CREATE_WORKSPACES_PATH_INDEX_SQL);
   sqlite.exec(CREATE_TASKS_TABLE_SQL);

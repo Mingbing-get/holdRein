@@ -1,5 +1,6 @@
 import type {
   ApiResponse,
+  ModelProxySummary,
   ModelProviderSummary,
   ModelSummary
 } from "./model-provider-types";
@@ -33,8 +34,30 @@ export async function fetchProviderModels(
   return payload.data;
 }
 
+export async function fetchModelProxies(
+  apiBaseUrl: string
+): Promise<ModelProxySummary[]> {
+  const response = await fetch(createModelProxiesUrl(apiBaseUrl));
+
+  if (!response.ok) {
+    throw new Error("Failed to load model proxies");
+  }
+
+  const payload = (await response.json()) as ApiResponse<ModelProxySummary[]>;
+
+  return payload.data;
+}
+
 export function createModelProvidersUrl(apiBaseUrl: string): string {
   return `${apiBaseUrl.replace(/\/$/, "")}/api/v1/model-providers`;
+}
+
+export function createModelProxiesUrl(apiBaseUrl: string): string {
+  return `${apiBaseUrl.replace(/\/$/, "")}/api/v1/model-proxies`;
+}
+
+export function createModelProxyUrl(apiBaseUrl: string, modelId: string): string {
+  return `${createModelProxiesUrl(apiBaseUrl)}/${modelId}`;
 }
 
 export function createCustomModelProviderUrl(apiBaseUrl: string): string {
@@ -73,6 +96,8 @@ export function createProviderModelUrl(
 function sortProviders(providers: ModelProviderSummary[]): ModelProviderSummary[] {
   return [...providers].sort((left, right) => {
     if (left.source !== right.source) {
+      if (left.source === "proxy") return -1;
+      if (right.source === "proxy") return 1;
       return left.source === "custom" ? -1 : 1;
     }
 

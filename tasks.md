@@ -1,3 +1,9 @@
+## 待修改任务
+
+1. api端runtime在修改activeModel的同时需要修改最外层的model，这样下一次调用子agent的时候才能直接选到最新可用的模型
+2. 前端代理模型配置的地方不应该从外界接收provider，而是直接从接口获取，这里平铺到最外层的已经时model了，
+3. 前端sender在选择代理的时候需要默认就获取一下代理模型列表，因为选中的模型是记录的id，不获取列表就无法显示出正确的名称
+
 ## 待考虑任务
 
 1. 文件长期记忆系统，提供search_memory、read_memory，默认嵌入记忆文件夹的结构，任务完成后重新启动一个agent来整理记忆提供write_memory、update_memory、search_memory、read_memory、list_memory_structure等工具

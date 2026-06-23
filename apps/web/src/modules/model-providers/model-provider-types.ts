@@ -9,7 +9,7 @@ export interface ModelProviderSummary {
   hasApiKey: boolean;
   id: string;
   modelCount: number;
-  source: "builtin" | "custom";
+  source: "builtin" | "custom" | "proxy";
 }
 
 export interface ModelSummary {
@@ -21,4 +21,30 @@ export interface ModelSummary {
   name: string;
   provider: string;
   reasoning: boolean;
+}
+
+export type ModelProxyWindowType = "hours" | "day" | "week";
+
+export interface ModelProxyLimit {
+  id?: string;
+  maxTokens: number;
+  windowHours?: number | null;
+  windowType: ModelProxyWindowType;
+}
+
+export interface ModelProxyCandidate {
+  id?: string;
+  limits: ModelProxyLimit[];
+  modelId: string;
+  priority: number;
+  provider: string;
+}
+
+export interface ModelProxySummary {
+  candidates: ModelProxyCandidate[];
+  createdAt?: string;
+  id?: string;
+  modelId: string;
+  name: string;
+  updatedAt?: string;
 }

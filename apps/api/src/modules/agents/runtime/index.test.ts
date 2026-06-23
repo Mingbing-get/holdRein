@@ -344,6 +344,60 @@ describe("agent runtime sessions", () => {
     );
   });
 
+  it("starts a local proxy run with the selected real candidate model", async () => {
+    const { repo } = createSessionRepo();
+    const runtime = createAgentRuntime({
+      approvalStore: createAgentApprovalStore(),
+      eventBus: createAgentEventBus(),
+      modelProxiesService: {
+        selectCandidate: vi.fn().mockReturnValue({
+          modelId: "gpt-4.1-mini",
+          provider: "openai"
+        })
+      } as never,
+      sessionRepo: repo,
+      subagentRepository: createInMemorySubagentRepository()
+    });
+
+    await runtime.start({
+      ...createRunInput(),
+      modelId: "coding-agent",
+      provider: "local"
+    });
+
+    expect(harnessConstructor.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        model: expect.objectContaining({
+          id: "gpt-4.1-mini",
+          provider: "openai"
+        })
+      })
+    );
+  });
+
+  it("looks up api keys for the current harness model", async () => {
+    const { repo } = createSessionRepo();
+    const getApiKey = vi.fn().mockResolvedValue("real-key");
+    const runtime = createAgentRuntime({
+      approvalStore: createAgentApprovalStore(),
+      eventBus: createAgentEventBus(),
+      getApiKey,
+      sessionRepo: repo,
+      subagentRepository: createInMemorySubagentRepository()
+    });
+
+    await runtime.start(createRunInput());
+    const getApiKeyAndHeaders = harnessConstructor.mock.calls[0]?.[0]
+      ?.getApiKeyAndHeaders as
+      | ((model: { id: string; provider: string }) => Promise<{ apiKey?: string } | undefined>)
+      | undefined;
+
+    await expect(
+      getApiKeyAndHeaders?.({ id: "gpt-4.1-mini", provider: "openai" })
+    ).resolves.toEqual({ apiKey: "real-key" });
+    expect(getApiKey).toHaveBeenCalledWith("openai", "gpt-4.1-mini");
+  });
+
   it("starts a subagent tool and records immutable call metadata without status", async () => {
     const { appendCustomMessageEntry, repo } = createSessionRepo();
     const eventBus = createAgentEventBus();

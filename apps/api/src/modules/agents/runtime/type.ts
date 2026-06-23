@@ -4,6 +4,7 @@ import type { AgentRunResult, AgentSessionMetadata, StoredAgentMessage, RunAgent
 import type { AgentApprovalStore } from "../approval/store";
 import type { AgentEventBus } from "../event/event-bus";
 import type { AgentModelLookup } from '../model/resolver'
+import type { ModelProxiesService } from "../../model-proxies/model-proxies-service";
 import type { SubagentRepository } from "../subagent/repository";
 import type { TokenUsageStorageTarget } from "./token-collection";
 
@@ -18,6 +19,7 @@ export interface CreateAgentRuntimeOptions {
   eventBus: AgentEventBus;
   getApiKey?: (provider: string, modelId: string) => Promise<string | undefined>;
   getCustomModel?: AgentModelLookup;
+  modelProxiesService?: ModelProxiesService;
   sessionRepo?: JsonlSessionRepoApi;
   skillDirs?: string[];
   subagentDatabase?: AppDatabase;

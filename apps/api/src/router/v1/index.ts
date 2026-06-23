@@ -14,6 +14,10 @@ import {
   type CreateModelProvidersRouterOptions
 } from "../../modules/model-providers/model-providers-router";
 import {
+  createModelProxiesRouter,
+  type CreateModelProxiesRouterOptions
+} from "../../modules/model-proxies";
+import {
   createWorkspacesRouter,
   type CreateWorkspacesRouterOptions
 } from "../../modules/workspaces";
@@ -26,6 +30,7 @@ export interface CreateV1RouterOptions
   extends CreateAgentsRouterOptions,
     CreateFileSystemRouterOptions,
     CreateModelProvidersRouterOptions,
+    CreateModelProxiesRouterOptions,
     CreateUsageStatsRouterOptions,
     CreateWorkspacesRouterOptions {}
 
@@ -36,6 +41,7 @@ export function createV1Router(options: CreateV1RouterOptions = {}): Router {
   router.use(createHealthRouter());
   router.use(createFileSystemRouter(options));
   router.use(createWorkspacesRouter(options));
+  router.use(createModelProxiesRouter(options));
   router.use(createModelProvidersRouter(options));
   router.use(createUsageStatsRouter(options));
 

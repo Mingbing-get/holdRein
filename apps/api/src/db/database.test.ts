@@ -9,10 +9,13 @@ import * as schema from "./schema";
 import { ensureDatabaseDirectory, migrateDatabase } from "./index";
 
 describe("database", () => {
-  it("exports the custom provider, workspace, task, and model token usage tables", () => {
+  it("exports the provider, proxy, workspace, task, and model token usage tables", () => {
     expect(schema).toHaveProperty("customModelProviders");
     expect(schema).toHaveProperty("providerApiKeys");
     expect(schema).toHaveProperty("customProviderModels");
+    expect(schema).toHaveProperty("modelProxies");
+    expect(schema).toHaveProperty("modelProxyCandidates");
+    expect(schema).toHaveProperty("modelProxyCandidateLimits");
     expect(schema).toHaveProperty("workspaces");
     expect(schema).toHaveProperty("tasks");
     expect(schema).toHaveProperty("subagents");
@@ -25,7 +28,25 @@ describe("database", () => {
 
     migrateDatabase({ exec } as { exec: (sql: string) => void });
 
-    expect(exec).toHaveBeenCalledTimes(29);
+    expect(exec).toHaveBeenCalledWith(
+      expect.stringContaining("CREATE TABLE IF NOT EXISTS model_proxies")
+    );
+    expect(exec).toHaveBeenCalledWith(
+      expect.stringContaining("CREATE TABLE IF NOT EXISTS model_proxy_candidates")
+    );
+    expect(exec).toHaveBeenCalledWith(
+      expect.stringContaining("CREATE TABLE IF NOT EXISTS model_proxy_candidate_limits")
+    );
+    expect(exec).toHaveBeenCalledWith(
+      expect.stringContaining("CREATE UNIQUE INDEX IF NOT EXISTS model_proxies_model_id_idx")
+    );
+    expect(exec).toHaveBeenCalledWith(
+      expect.stringContaining("CREATE INDEX IF NOT EXISTS model_proxy_candidates_proxy_priority_idx")
+    );
+    expect(exec).toHaveBeenCalledWith(
+      expect.stringContaining("CREATE INDEX IF NOT EXISTS model_proxy_candidate_limits_candidate_idx")
+    );
+    expect(exec).toHaveBeenCalledTimes(35);
     expect(exec).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_model_providers")
@@ -43,103 +64,103 @@ describe("database", () => {
       expect.stringContaining("ALTER TABLE custom_provider_models ADD COLUMN name")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      8,
+      14,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS workspaces")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      9,
+      15,
       expect.stringContaining("CREATE UNIQUE INDEX IF NOT EXISTS workspaces_path_idx")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      10,
+      16,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS tasks")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      10,
+      16,
       expect.stringContaining("approval_policy TEXT NOT NULL")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      10,
+      16,
       expect.stringContaining("thinking_level TEXT NOT NULL")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      10,
+      16,
       expect.stringContaining("last_model_provider_source TEXT NOT NULL")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      10,
+      16,
       expect.stringContaining("input_token INTEGER NOT NULL DEFAULT 0")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      10,
+      16,
       expect.stringContaining("output_token INTEGER NOT NULL DEFAULT 0")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      10,
+      16,
       expect.stringContaining("CHECK(last_model_provider_source IN ('built_in', 'custom'))")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      10,
+      16,
       expect.stringContaining("last_continued_at TEXT")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      10,
+      16,
       expect.stringContaining("session_id TEXT")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      10,
+      16,
       expect.stringContaining("session_path TEXT")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      10,
+      16,
       expect.stringContaining("session_created_at TEXT")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      10,
+      16,
       expect.stringContaining("status TEXT NOT NULL")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      12,
+      18,
       expect.stringContaining("CHECK(status IN ('running', 'completed', 'interrupted'))")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      11,
+      17,
       expect.stringContaining("CREATE INDEX IF NOT EXISTS tasks_workspace_id_idx")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      12,
+      18,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS subagents")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      12,
+      18,
       expect.stringContaining("agent_name TEXT NOT NULL")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      12,
+      18,
       expect.stringContaining("session_id TEXT")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      12,
+      18,
       expect.stringContaining("session_path TEXT")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      12,
+      18,
       expect.stringContaining("session_created_at TEXT")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      13,
+      19,
       expect.stringContaining("CREATE INDEX IF NOT EXISTS subagents_task_id_idx")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      14,
+      20,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS model_token_usage_hourly")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      15,
+      21,
       expect.stringContaining("CREATE UNIQUE INDEX IF NOT EXISTS model_token_usage_hourly_model_hour_idx")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      25,
+      31,
       expect.stringContaining("ALTER TABLE subagents ADD COLUMN agent_name")
     );
     expect(exec).toHaveBeenLastCalledWith(

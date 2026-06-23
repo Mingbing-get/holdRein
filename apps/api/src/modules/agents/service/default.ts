@@ -12,6 +12,7 @@ import { createAgentsService, type AgentsService } from ".";
 import { toCustomAgentModel } from "../model/custom-model";
 import { createSqliteSubagentRepository } from "../subagent/repository";
 import { getDefaultModelProvidersService } from "../../model-providers";
+import { getDefaultModelProxiesService } from "../../model-proxies";
 
 let service: AgentsService | undefined;
 
@@ -25,6 +26,7 @@ export function getDefaultAgentsService(): AgentsService {
     const approvalStore = createAgentApprovalStore();
     const eventBus = createAgentEventBus();
     const modelProvidersService = getDefaultModelProvidersService();
+    const modelProxiesService = getDefaultModelProxiesService();
     const getCustomModel = createCustomModelLookup(modelProvidersService);
     migrateDatabase(database.sqlite);
     const repository = createSqliteWorkspaceRepository(database);
@@ -37,6 +39,7 @@ export function getDefaultAgentsService(): AgentsService {
         modelProvidersService.getConfiguredModelForProvider(provider, modelId)
           ?.apiKey,
       getCustomModel,
+      modelProxiesService,
       subagentDatabase: database,
       subagentRepository,
       tokenUsageStorageTarget: repository
