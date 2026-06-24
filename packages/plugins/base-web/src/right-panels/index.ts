@@ -1,1 +1,1 @@
-export { ShellProcessesPanel } from "./shell-processes";
+export { createShellProcesses, ShellProcessesPanel } from "./shell-processes";

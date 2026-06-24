@@ -5,7 +5,28 @@ import React from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { ShellProcessesPanel } from ".";
+import { createShellProcesses, ShellProcessesPanel } from ".";
+
+describe("createShellProcesses", () => {
+  it("returns a shell processes right panel wired with the runtime request", () => {
+    const request = vi.fn();
+    const panel = createShellProcesses({ request });
+
+    expect(panel.id).toBe("shell-processes");
+    expect(panel.title).toBe("Shell commands");
+    expect(panel.icon).toBeTruthy();
+
+    render(
+      React.createElement(panel.Render, {
+        messages: [],
+        status: "idle"
+      })
+    );
+
+    expect(request).not.toHaveBeenCalled();
+    expect(screen.getByText("No task selected")).toBeInTheDocument();
+  });
+});
 
 describe("ShellProcessesPanel", () => {
   afterEach(() => {

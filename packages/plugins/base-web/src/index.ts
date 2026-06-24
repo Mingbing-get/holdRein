@@ -1,6 +1,4 @@
-import { CodeOutlined } from '@ant-design/icons'
 import type { WebPlugin } from '@hold-rein/plugin-web'
-import React from 'react'
 import {
   deleteFileTool,
   editFileTool,
@@ -12,7 +10,7 @@ import {
   callSubagentTool,
   revokeSubagentTool
 } from './tools'
-import { ShellProcessesPanel } from './right-panels'
+import { createShellProcesses } from './right-panels'
 import { fileChangeSummaryTurnFooter } from './turn-footers'
 
 const baseWebPlugin: WebPlugin.Plugin = {
@@ -63,15 +61,7 @@ const baseWebPlugin: WebPlugin.Plugin = {
     //   }
     // ],
     rightPanels: [
-      {
-        id: 'shell-processes',
-        icon: React.createElement(CodeOutlined, { "aria-hidden": "true" }),
-        title: 'Shell commands',
-        Render: (props) => React.createElement(ShellProcessesPanel, {
-          ...props,
-          request
-        })
-      }
+      createShellProcesses({ request })
     ],
     turnFooterRenders: [
       fileChangeSummaryTurnFooter
