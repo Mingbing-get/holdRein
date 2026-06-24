@@ -31,7 +31,7 @@ describe("AppPluginProvider", () => {
     });
   });
 
-  it("ignores stale async plugin loads after the plugin list is reloaded", async () => {
+  it("does not reload function contributions when app ui changes", async () => {
     const resolverQueue: Array<(contribution: WebPlugin.Contribution) => void> =
       [];
     let toggleThemeMode: (() => void) | undefined;
@@ -64,13 +64,10 @@ describe("AppPluginProvider", () => {
       toggleThemeMode?.();
     });
 
-    await waitFor(() => {
-      expect(resolverQueue).toHaveLength(2);
-    });
+    expect(resolverQueue).toHaveLength(1);
 
     await act(async () => {
       resolverQueue[0]?.(contribution);
-      resolverQueue[1]?.(contribution);
     });
 
     await waitFor(() => {
@@ -80,6 +77,39 @@ describe("AppPluginProvider", () => {
         .filter((id) => id === "async-demo_task-summary");
 
       expect(renderIds).toEqual(["async-demo_task-summary"]);
+    });
+  });
+
+  it("lets function contributions subscribe to app ui changes", async () => {
+    const observedThemeModes: WebPlugin.ThemeMode[] = [];
+    let toggleThemeMode: (() => void) | undefined;
+
+    render(
+      <AppUiProvider>
+        <AppPluginProvider>
+          <RegisterSubscriptionPlugin onThemeMode={(themeMode) => {
+            observedThemeModes.push(themeMode);
+          }} />
+          <CaptureToggleThemeMode onCapture={(toggle) => {
+            toggleThemeMode = toggle;
+          }} />
+        </AppPluginProvider>
+      </AppUiProvider>
+    );
+
+    await waitFor(() => {
+      expect(observedThemeModes).toHaveLength(1);
+    });
+
+    const initialThemeMode = observedThemeModes[0];
+    const nextThemeMode = initialThemeMode === "light" ? "dark" : "light";
+
+    act(() => {
+      toggleThemeMode?.();
+    });
+
+    await waitFor(() => {
+      expect(observedThemeModes).toEqual([initialThemeMode, nextThemeMode]);
     });
   });
 });
@@ -128,6 +158,33 @@ function RegisterAsyncPlugin({
       pluginRegistry.register(plugin);
     }
   }, [pluginRegistry, resolverQueue]);
+
+  return null;
+}
+
+function RegisterSubscriptionPlugin({
+  onThemeMode
+}: {
+  onThemeMode: (themeMode: WebPlugin.ThemeMode) => void;
+}) {
+  const { pluginRegistry } = useAppPlugins();
+
+  useEffect(() => {
+    const plugin: WebPlugin.Plugin = {
+      contributionResolver: ({ subscribeAppUi }) => {
+        subscribeAppUi((appUi) => {
+          onThemeMode(appUi.state.themeMode);
+        });
+
+        return {};
+      },
+      id: "subscription-demo"
+    };
+
+    if (!pluginRegistry.has(plugin.id)) {
+      pluginRegistry.register(plugin);
+    }
+  }, [onThemeMode, pluginRegistry]);
 
   return null;
 }

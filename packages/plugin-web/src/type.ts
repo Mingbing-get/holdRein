@@ -62,11 +62,13 @@ export namespace WebPlugin {
   }
 
   export interface RuntimeContext {
-    readonly appUi: AppUiContextValue;
     readonly request: <TData>(
       options: RequestOptions
     ) => Promise<Result<TData>>;
+    readonly subscribeAppUi: (callback: AppUiSubscriber) => () => void;
   }
+
+  export type AppUiSubscriber = (appUi: AppUiContextValue) => void;
 
   export interface TextContent {
     text: string;

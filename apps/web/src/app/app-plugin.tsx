@@ -38,6 +38,17 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
   const [turnFooterRenders, setTurnFooterRenders] = useState<WebPlugin.TurnFooterRender[]>([])
 
   const appUi = useAppUi()
+  const appUiRef = useRef(appUi)
+  const appUiSubscribers = useRef(new Set<WebPlugin.AppUiSubscriber>())
+
+  const subscribeAppUi = useCallback((callback: WebPlugin.AppUiSubscriber) => {
+    appUiSubscribers.current.add(callback)
+    callback(appUiRef.current)
+
+    return () => {
+      appUiSubscribers.current.delete(callback)
+    }
+  }, [])
 
   const addContributionToState = useCallback((pluginId: string, contribution: WebPlugin.Contribution) => {
     if (contribution.rightPanels?.length) {
@@ -98,8 +109,8 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
 
       if (typeof plugin.contributionResolver === 'function') {
         const pluginInfo = await plugin.contributionResolver({
-          appUi,
-          request
+          request,
+          subscribeAppUi
         })
         if (generation !== loadGeneration.current) return
         addContributionToState(plugin.id, pluginInfo)
@@ -108,7 +119,14 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
         addContributionToState(plugin.id, plugin.contributionResolver)
       }
     }
-  }, [addContributionToState, appUi])
+  }, [addContributionToState, subscribeAppUi])
+
+  useEffect(() => {
+    appUiRef.current = appUi
+    for (const subscriber of appUiSubscribers.current) {
+      subscriber(appUi)
+    }
+  }, [appUi])
 
   useEffect(() => {
     if (!pluginRegistry.current.has(baseWebPlugin.id)) {
