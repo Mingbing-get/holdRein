@@ -396,7 +396,6 @@ export function ModelProvidersView({ apiBaseUrl }: ModelProvidersViewProps) {
           <ModelProxyPanel
             apiBaseUrl={apiBaseUrl}
             onChanged={refreshProviders}
-            providers={loadState.providers}
           />
           <ModelProviderGroups
             groupedProviders={groupedProviders}

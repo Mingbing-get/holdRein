@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   Button,
@@ -18,6 +18,7 @@ import {
   createModelProxiesUrl,
   createModelProxyUrl,
   fetchModelProxies,
+  fetchModelProviders,
   fetchProviderModels
 } from "./model-provider-api";
 import {
@@ -34,7 +35,6 @@ import type {
 interface ModelProxyPanelProps {
   apiBaseUrl: string;
   onChanged: () => Promise<void> | void;
-  providers: ModelProviderSummary[];
 }
 
 interface ProxyFormValues {
@@ -52,14 +52,15 @@ interface ProxyFormValues {
 
 export function ModelProxyPanel({
   apiBaseUrl,
-  onChanged,
-  providers
+  onChanged
 }: ModelProxyPanelProps) {
   const [form] = Form.useForm<ProxyFormValues>();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingModelId, setEditingModelId] = useState<string | null>(null);
   const [hoveredProxyId, setHoveredProxyId] = useState<string | null>(null);
   const [modelOptions, setModelOptions] = useState<Record<string, ModelSummary[]>>({});
+  const [providers, setProviders] = useState<ModelProviderSummary[]>([]);
+  const [proxies, setProxies] = useState<ModelProxySummary[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const candidateProviders = useMemo(
     () =>
@@ -68,17 +69,18 @@ export function ModelProxyPanel({
       ),
     [providers]
   );
-  const proxies = useMemo(
-    () =>
-      providers
-        .filter((provider) => provider.source === "proxy")
-        .map((provider) => ({
-          candidates: [],
-          modelId: provider.id,
-          name: provider.id
-        })),
-    [providers]
-  );
+
+  const refreshProxies = useCallback(async () => {
+    setProxies(await fetchModelProxies(apiBaseUrl));
+  }, [apiBaseUrl]);
+
+  const refreshProviders = useCallback(async () => {
+    setProviders(await fetchModelProviders(apiBaseUrl));
+  }, [apiBaseUrl]);
+
+  useEffect(() => {
+    void refreshProxies();
+  }, [refreshProxies]);
 
   const loadProviderModels = async (providerId: string): Promise<ModelSummary[]> => {
     if (modelOptions[providerId]) return modelOptions[providerId];
@@ -88,7 +90,12 @@ export function ModelProxyPanel({
   };
 
   const buildInitialCandidate = async () => {
-    const providerId = candidateProviders[0]?.id ?? "";
+    const latestProviders = await fetchModelProviders(apiBaseUrl);
+    setProviders(latestProviders);
+    const providerId =
+      latestProviders.find(
+        (provider) => provider.source !== "proxy" && provider.hasApiKey
+      )?.id ?? "";
     const models = providerId ? await loadProviderModels(providerId) : [];
     return {
       limits: [{ ...DEFAULT_MODEL_PROXY_LIMIT }],
@@ -107,6 +114,7 @@ export function ModelProxyPanel({
   };
 
   const startEdit = async (proxy: ModelProxySummary) => {
+    await refreshProviders();
     const proxyDetails =
       proxy.candidates.length > 0
         ? proxy
@@ -171,6 +179,7 @@ export function ModelProxyPanel({
         }
       );
       if (!response.ok) throw new Error("Failed to save model proxy");
+      await refreshProxies();
       await onChanged();
       closeModal();
     } finally {
@@ -183,6 +192,7 @@ export function ModelProxyPanel({
       method: "DELETE"
     });
     if (!response.ok) throw new Error("Failed to delete model proxy");
+    await refreshProxies();
     await onChanged();
   };
 
@@ -199,7 +209,7 @@ export function ModelProxyPanel({
       {proxies.length === 0 ? (
         <Empty description="还没有模型代理。" />
       ) : (
-        <Flex gap={10} vertical>
+        <Flex gap={12} wrap>
           {proxies.map((proxy) => (
             <Card
               data-testid="model-proxy-card"
@@ -214,10 +224,17 @@ export function ModelProxyPanel({
                   hoveredProxyId === proxy.modelId
                     ? "0 14px 30px var(--app-color-shadow)"
                     : "0 8px 18px color-mix(in srgb, var(--app-color-shadow) 40%, transparent)",
+                flex: "1 1 260px",
+                minWidth: 260,
                 transform:
                   hoveredProxyId === proxy.modelId ? "translateY(-4px)" : "translateY(0)",
                 transition:
                   "transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease"
+              }}
+              styles={{
+                body: {
+                  padding: 14
+                }
               }}
             >
               <Flex align="center" justify="space-between">

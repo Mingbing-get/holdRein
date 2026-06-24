@@ -28,6 +28,40 @@ class ResizeObserverMock {
 
 const fetchMock = vi.fn<typeof fetch>();
 
+const emptyProxyResponse = {
+  json: async () => ({ code: 0, data: [], msg: "ok" }),
+  ok: true
+} as Response;
+
+const openAiProviderResponse = {
+  json: async () => ({
+    code: 0,
+    data: [{ hasApiKey: true, id: "openai", modelCount: 1, source: "builtin" }],
+    msg: "ok"
+  }),
+  ok: true
+} as Response;
+
+const openAiModelsResponse = {
+  json: async () => ({
+    code: 0,
+    data: [
+      {
+        api: "openai-responses",
+        contextWindow: 128000,
+        id: "gpt-4.1",
+        input: ["text"],
+        maxTokens: 4096,
+        name: "GPT-4.1",
+        provider: "openai",
+        reasoning: false
+      }
+    ],
+    msg: "ok"
+  }),
+  ok: true
+} as Response;
+
 describe("ModelProxyPanel", () => {
   beforeAll(() => {
     vi.stubGlobal("ResizeObserver", ResizeObserverMock);
@@ -52,78 +86,113 @@ describe("ModelProxyPanel", () => {
     cleanup();
   });
 
-  it("lists configured local proxy models from provider summaries", () => {
+  it("lists configured local proxy models from the model proxy API", async () => {
+    fetchMock.mockResolvedValueOnce({
+      json: async () => ({
+        code: 0,
+        data: [
+          {
+            candidates: [],
+            modelId: "local-coding-agent",
+            name: "Coding Agent"
+          }
+        ],
+        msg: "ok"
+      }),
+      ok: true
+    } as Response);
+
     render(
       <ModelProxyPanel
         apiBaseUrl="http://localhost:4000"
         onChanged={vi.fn()}
-        providers={[
-          { hasApiKey: true, id: "coding-agent", modelCount: 1, source: "proxy" }
-        ]}
       />
     );
 
-    expect(screen.getByText("coding-agent")).toBeVisible();
-    expect(screen.getByText("local/coding-agent")).toBeVisible();
-    expect(screen.getByLabelText("编辑代理 coding-agent")).toBeVisible();
-    expect(screen.getByLabelText("删除代理 coding-agent")).toBeVisible();
+    expect(await screen.findByText("Coding Agent")).toBeVisible();
+    expect(screen.getByText("local/local-coding-agent")).toBeVisible();
+    expect(screen.getByLabelText("编辑代理 local-coding-agent")).toBeVisible();
+    expect(screen.getByLabelText("删除代理 local-coding-agent")).toBeVisible();
     expect(screen.queryByRole("button", { name: "编辑" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "删除" })).not.toBeInTheDocument();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:4000/api/v1/model-proxies"
+    );
   });
 
-  it("floats proxy cards on hover like provider cards", () => {
+  it("floats proxy cards on hover like provider cards", async () => {
+    fetchMock.mockResolvedValueOnce({
+      json: async () => ({
+        code: 0,
+        data: [
+          {
+            candidates: [],
+            modelId: "coding-agent",
+            name: "coding-agent"
+          }
+        ],
+        msg: "ok"
+      }),
+      ok: true
+    } as Response);
+
     render(
       <ModelProxyPanel
         apiBaseUrl="http://localhost:4000"
         onChanged={vi.fn()}
-        providers={[
-          { hasApiKey: true, id: "coding-agent", modelCount: 1, source: "proxy" }
-        ]}
       />
     );
 
-    const card = screen.getByTestId("model-proxy-card");
+    const card = await screen.findByTestId("model-proxy-card");
     expect(card).toHaveStyle({ transform: "translateY(0)" });
 
     fireEvent.mouseEnter(card);
     expect(card).toHaveStyle({ transform: "translateY(-4px)" });
   });
 
+  it("wraps proxy cards with the same card sizing as provider cards", async () => {
+    fetchMock.mockResolvedValueOnce({
+      json: async () => ({
+        code: 0,
+        data: [
+          {
+            candidates: [],
+            modelId: "coding-agent",
+            name: "coding-agent"
+          }
+        ],
+        msg: "ok"
+      }),
+      ok: true
+    } as Response);
+
+    render(
+      <ModelProxyPanel
+        apiBaseUrl="http://localhost:4000"
+        onChanged={vi.fn()}
+      />
+    );
+
+    const card = await screen.findByTestId("model-proxy-card");
+    expect(card).toHaveStyle({ flex: "1 1 260px", minWidth: "260px" });
+  });
+
   it("serializes candidate priority and limit rows when creating a proxy", async () => {
     const onChanged = vi.fn();
     fetchMock
-      .mockResolvedValueOnce({
-        json: async () => ({
-          code: 0,
-          data: [
-            {
-              api: "openai-responses",
-              contextWindow: 128000,
-              id: "gpt-4.1",
-              input: ["text"],
-              maxTokens: 4096,
-              name: "GPT-4.1",
-              provider: "openai",
-              reasoning: false
-            }
-          ],
-          msg: "ok"
-        }),
-        ok: true
-      } as Response)
+      .mockResolvedValueOnce(emptyProxyResponse)
+      .mockResolvedValueOnce(openAiProviderResponse)
+      .mockResolvedValueOnce(openAiModelsResponse)
       .mockResolvedValueOnce({
         json: async () => ({ code: 0, data: {}, msg: "ok" }),
         ok: true
-      } as Response);
+      } as Response)
+      .mockResolvedValueOnce(emptyProxyResponse);
 
     render(
       <ModelProxyPanel
         apiBaseUrl="http://localhost:4000"
         onChanged={onChanged}
-        providers={[
-          { hasApiKey: true, id: "openai", modelCount: 1, source: "builtin" }
-        ]}
       />
     );
 
@@ -137,7 +206,7 @@ describe("ModelProxyPanel", () => {
     });
     await waitFor(() => {
       expect(fetchMock).toHaveBeenNthCalledWith(
-        1,
+        3,
         "http://localhost:4000/api/v1/model-providers/openai/models"
       );
     });
@@ -145,7 +214,7 @@ describe("ModelProxyPanel", () => {
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenNthCalledWith(
-        2,
+        4,
         "http://localhost:4000/api/v1/model-proxies",
         {
           body: JSON.stringify({
@@ -174,33 +243,15 @@ describe("ModelProxyPanel", () => {
   });
 
   it("hides window hours when the limit uses day or week windows", async () => {
-    fetchMock.mockResolvedValueOnce({
-      json: async () => ({
-        code: 0,
-        data: [
-          {
-            api: "openai-responses",
-            contextWindow: 128000,
-            id: "gpt-4.1",
-            input: ["text"],
-            maxTokens: 4096,
-            name: "GPT-4.1",
-            provider: "openai",
-            reasoning: false
-          }
-        ],
-        msg: "ok"
-      }),
-      ok: true
-    } as Response);
+    fetchMock
+      .mockResolvedValueOnce(emptyProxyResponse)
+      .mockResolvedValueOnce(openAiProviderResponse)
+      .mockResolvedValueOnce(openAiModelsResponse);
 
     render(
       <ModelProxyPanel
         apiBaseUrl="http://localhost:4000"
         onChanged={vi.fn()}
-        providers={[
-          { hasApiKey: true, id: "openai", modelCount: 1, source: "builtin" }
-        ]}
       />
     );
 
@@ -216,33 +267,17 @@ describe("ModelProxyPanel", () => {
   });
 
   it("uses icon-only buttons for removing candidates and limits", async () => {
-    fetchMock.mockResolvedValue({
-      json: async () => ({
-        code: 0,
-        data: [
-          {
-            api: "openai-responses",
-            contextWindow: 128000,
-            id: "gpt-4.1",
-            input: ["text"],
-            maxTokens: 4096,
-            name: "GPT-4.1",
-            provider: "openai",
-            reasoning: false
-          }
-        ],
-        msg: "ok"
-      }),
-      ok: true
-    } as Response);
+    fetchMock
+      .mockResolvedValueOnce(emptyProxyResponse)
+      .mockResolvedValueOnce(openAiProviderResponse)
+      .mockResolvedValueOnce(openAiModelsResponse)
+      .mockResolvedValueOnce(openAiProviderResponse)
+      .mockResolvedValueOnce(openAiModelsResponse);
 
     render(
       <ModelProxyPanel
         apiBaseUrl="http://localhost:4000"
         onChanged={vi.fn()}
-        providers={[
-          { hasApiKey: true, id: "openai", modelCount: 1, source: "builtin" }
-        ]}
       />
     );
 
@@ -282,24 +317,18 @@ describe("ModelProxyPanel", () => {
       .mockResolvedValueOnce({
         json: async () => ({
           code: 0,
-          data: [
-            {
-              api: "openai-responses",
-              contextWindow: 128000,
-              id: "gpt-4.1",
-              input: ["text"],
-              maxTokens: 4096,
-              name: "GPT-4.1",
-              provider: "openai",
-              reasoning: false
-            }
-          ],
+          data: [{ hasApiKey: true, id: "openai", modelCount: 1, source: "builtin" }],
           msg: "ok"
         }),
         ok: true
       } as Response)
+      .mockResolvedValueOnce(openAiModelsResponse)
       .mockResolvedValueOnce({
         json: async () => ({ code: 0, data: {}, msg: "ok" }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({ code: 0, data: [], msg: "ok" }),
         ok: true
       } as Response);
 
@@ -307,14 +336,10 @@ describe("ModelProxyPanel", () => {
       <ModelProxyPanel
         apiBaseUrl="http://localhost:4000"
         onChanged={onChanged}
-        providers={[
-          { hasApiKey: true, id: "local-existing", modelCount: 1, source: "proxy" },
-          { hasApiKey: true, id: "openai", modelCount: 1, source: "builtin" }
-        ]}
       />
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /编辑/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /编辑/ }));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(screen.queryByLabelText("代理模型 ID")).not.toBeInTheDocument();
     fireEvent.change(await screen.findByLabelText("代理名称"), {
@@ -324,7 +349,7 @@ describe("ModelProxyPanel", () => {
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenNthCalledWith(
-        3,
+        4,
         "http://localhost:4000/api/v1/model-proxies/local-existing",
         expect.objectContaining({
           body: expect.stringContaining('"modelId":"local-existing"'),
