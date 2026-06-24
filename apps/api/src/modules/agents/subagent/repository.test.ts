@@ -103,6 +103,50 @@ describe.each([
       expect.objectContaining({ agentId: "agent-child-2" })
     ]);
   });
+
+  it("interrupts every running subagent", () => {
+    const repository = createRepository() as SubagentRepository;
+
+    repository.create({
+      agentId: "agent-running",
+      createdAt: "created",
+      parentAgentId: "agent-parent",
+      sessionCreatedAt: null,
+      sessionId: null,
+      sessionPath: null,
+      status: "running",
+      taskId: "task-1",
+      updatedAt: "created"
+    });
+    repository.create({
+      agentId: "agent-completed",
+      createdAt: "created",
+      parentAgentId: "agent-parent",
+      sessionCreatedAt: null,
+      sessionId: null,
+      sessionPath: null,
+      status: "completed",
+      taskId: "task-1",
+      updatedAt: "created"
+    });
+
+    expect(repository.interruptRunning("interrupted-at")).toEqual([
+      expect.objectContaining({
+        agentId: "agent-running",
+        status: "interrupted",
+        updatedAt: "interrupted-at"
+      })
+    ]);
+    expect(repository.findByAgentId("agent-running")).toEqual(
+      expect.objectContaining({
+        status: "interrupted",
+        updatedAt: "interrupted-at"
+      })
+    );
+    expect(repository.findByAgentId("agent-completed")?.status).toBe(
+      "completed"
+    );
+  });
 });
 
 function createSqliteFixture(): SubagentRepository {

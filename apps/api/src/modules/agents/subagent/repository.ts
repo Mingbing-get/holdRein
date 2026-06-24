@@ -12,6 +12,7 @@ export interface SubagentRepository {
   delete: (agentId: string) => void;
   findByAgentId: (agentId: string) => SubagentRow | undefined;
   findByTaskId: (taskId: string) => SubagentRow[];
+  interruptRunning: (updatedAt: string) => SubagentRow[];
   updateStatus: (
     agentId: string,
     status: SubagentRow["status"],
@@ -39,6 +40,18 @@ export function createInMemorySubagentRepository(
     findByAgentId: (agentId) => rows.get(agentId),
     findByTaskId: (taskId) =>
       Array.from(rows.values()).filter((row) => row.taskId === taskId),
+    interruptRunning: (updatedAt) =>
+      Array.from(rows.values())
+        .filter((row) => row.status === "running")
+        .map((row) => {
+          const interruptedRow: SubagentRow = {
+            ...row,
+            status: "interrupted",
+            updatedAt
+          };
+          rows.set(row.agentId, interruptedRow);
+          return interruptedRow;
+        }),
     updateStatus: (agentId, status, updatedAt) => {
       const existing = rows.get(agentId);
       if (!existing) return undefined;
@@ -76,6 +89,25 @@ export function createSqliteSubagentRepository(
         .from(subagents)
         .where(eq(subagents.taskId, taskId))
         .all(),
+    interruptRunning: (updatedAt) => {
+      const runningSubagents = database.db
+        .select()
+        .from(subagents)
+        .where(eq(subagents.status, "running"))
+        .all();
+
+      database.db
+        .update(subagents)
+        .set({ status: "interrupted", updatedAt })
+        .where(eq(subagents.status, "running"))
+        .run();
+
+      return runningSubagents.map((row) => ({
+        ...row,
+        status: "interrupted",
+        updatedAt
+      }));
+    },
     updateStatus: (agentId, status, updatedAt) => {
       database.db
         .update(subagents)

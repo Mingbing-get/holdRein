@@ -3,8 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import { createInMemoryWorkspaceRepository } from "../../workspaces";
 import { createAgentApprovalStore } from "../approval/store";
 import { createAgentEventBus } from "../event/event-bus";
+import { createInMemorySubagentRepository } from "../subagent/repository";
 import { createActiveTaskRunRegistry } from "../task/active-run-registry";
 import { createAgentsService } from ".";
+import { recoverInterruptedAgentRuns } from "./startup-recovery";
 
 describe("agents service task status", () => {
   it("keeps a started task running when only the agent run ends", async () => {
@@ -221,14 +223,101 @@ describe("agents service task status", () => {
 
     expect(repository.findTaskById("task-1")?.status).toBe("error");
   });
+
+  it("marks persisted running task state interrupted during startup recovery", () => {
+    const repository = createInMemoryWorkspaceRepository({
+      tasks: [
+        createCompletedTask({ status: "running" }),
+        createCompletedTask({ id: "task-2", status: "completed" })
+      ],
+      workspaces: [
+        {
+          createdAt: "now",
+          id: "workspace-1",
+          name: "workspace",
+          path: "/tmp/workspace",
+          updatedAt: "now"
+        }
+      ]
+    });
+    const subagentRepository = createInMemorySubagentRepository([
+      createSubagent({ agentId: "agent-running", status: "running" }),
+      createSubagent({ agentId: "agent-completed", status: "completed" })
+    ]);
+
+    expect(
+      recoverInterruptedAgentRuns({
+        now: "2026-06-11T01:00:00.000Z",
+        repository,
+        subagentRepository
+      })
+    ).toEqual({
+      interruptedSubagentIds: ["agent-running"],
+      interruptedTaskIds: ["task-1"]
+    });
+
+    expect(repository.findTaskById("task-1")).toEqual(
+      expect.objectContaining({
+        status: "error",
+        updatedAt: "2026-06-11T01:00:00.000Z"
+      })
+    );
+    expect(repository.findTaskById("task-2")?.status).toBe("completed");
+    expect(subagentRepository.findByAgentId("agent-running")).toEqual(
+      expect.objectContaining({
+        status: "interrupted",
+        updatedAt: "2026-06-11T01:00:00.000Z"
+      })
+    );
+    expect(subagentRepository.findByAgentId("agent-completed")?.status).toBe(
+      "completed"
+    );
+  });
+
+  it("keeps in-process active tasks running during startup recovery", () => {
+    const repository = createInMemoryWorkspaceRepository({
+      tasks: [createCompletedTask({ status: "running" })],
+      workspaces: [
+        {
+          createdAt: "now",
+          id: "workspace-1",
+          name: "workspace",
+          path: "/tmp/workspace",
+          updatedAt: "now"
+        }
+      ]
+    });
+    const activeTaskRuns = createActiveTaskRunRegistry();
+    activeTaskRuns.register("task-1", "agent-1");
+
+    expect(
+      recoverInterruptedAgentRuns({
+        activeTaskRuns,
+        now: "2026-06-11T01:00:00.000Z",
+        repository,
+        subagentRepository: createInMemorySubagentRepository()
+      })
+    ).toEqual({
+      interruptedSubagentIds: [],
+      interruptedTaskIds: []
+    });
+
+    expect(repository.findTaskById("task-1")).toEqual(
+      expect.objectContaining({
+        status: "running",
+        updatedAt: "now"
+      })
+    );
+  });
 });
 
 function createCompletedTask(input: {
+  id?: string;
   status?: "running" | "completed" | "error";
 } = {}) {
   return {
     createdAt: "now",
-    id: "task-1",
+    id: input.id ?? "task-1",
     initialUserMessage: "Initial",
     lastContinuedAt: "now",
     lastModelId: "gpt-4.1",
@@ -242,6 +331,24 @@ function createCompletedTask(input: {
     title: "Task",
     updatedAt: "now",
     workspaceId: "workspace-1"
+  };
+}
+
+function createSubagent(input: {
+  agentId: string;
+  status: "completed" | "interrupted" | "running";
+}) {
+  return {
+    agentId: input.agentId,
+    agentName: "subagent",
+    createdAt: "now",
+    parentAgentId: "agent-parent",
+    sessionCreatedAt: null,
+    sessionId: null,
+    sessionPath: null,
+    status: input.status,
+    taskId: "task-1",
+    updatedAt: "now"
   };
 }
 

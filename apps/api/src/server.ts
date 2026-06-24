@@ -3,6 +3,7 @@ import tsStandardsServerPlugin from '@hold-rein/plugins-ts-standards-server'
 
 import { createApp } from "./app";
 import { loadApiEnv } from "./config/env";
+import { getDefaultAgentsService } from "./modules/agents";
 import { pluginRegistry } from './plugin'
 
 loadApiEnv();
@@ -13,6 +14,7 @@ const port = Number(process.env.PORT ?? DEFAULT_PORT);
 async function main() {
   pluginRegistry.register(baseServerPlugin);
   pluginRegistry.register(tsStandardsServerPlugin);
+  getDefaultAgentsService();
 
   const app = await createApp()
   app.listen(port, () => {

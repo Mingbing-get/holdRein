@@ -13,6 +13,7 @@ import { toCustomAgentModel } from "../model/custom-model";
 import { createSqliteSubagentRepository } from "../subagent/repository";
 import { getDefaultModelProvidersService } from "../../model-providers";
 import { getDefaultModelProxiesService } from "../../model-proxies";
+import { recoverInterruptedAgentRuns } from "./startup-recovery";
 
 let service: AgentsService | undefined;
 
@@ -31,6 +32,11 @@ export function getDefaultAgentsService(): AgentsService {
     migrateDatabase(database.sqlite);
     const repository = createSqliteWorkspaceRepository(database);
     const subagentRepository = createSqliteSubagentRepository(database);
+    recoverInterruptedAgentRuns({
+      now: new Date().toISOString(),
+      repository,
+      subagentRepository
+    });
 
     const runtime = createAgentRuntime({
       approvalStore,
