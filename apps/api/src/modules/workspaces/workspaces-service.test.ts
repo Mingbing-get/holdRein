@@ -129,6 +129,29 @@ describe("workspaces service navigation", () => {
     });
   });
 
+  it("includes the task model id in navigation summaries", () => {
+    const repository = createRepository({
+      projectPath: "/project",
+      tasks: [
+        createTask({
+          lastModelId: "proxy-coding-agent",
+          lastModelName: "Coding Agent"
+        })
+      ]
+    });
+    const service = createWorkspacesService({
+      now: () => new Date("2026-06-12T00:00:00.000Z"),
+      repository
+    });
+
+    expect(
+      service.listRecentWorkspaceTasks().workspaces[0]?.tasks[0]
+    ).toMatchObject({
+      lastModelId: "proxy-coding-agent",
+      lastModelName: "Coding Agent"
+    });
+  });
+
   it("marks a stale running task as error when no active agent exists", () => {
     const repository = createRepository({
       projectPath: "/project",
@@ -200,6 +223,8 @@ function createWorkspace(path: string): WorkspaceRow {
 
 function createTask(
   input: {
+    lastModelId?: string | null;
+    lastModelName?: string;
     sessionPath?: string;
     status?: TaskRow["status"];
   } = {}
@@ -211,8 +236,8 @@ function createTask(
     initialUserMessage: "Hello",
     inputToken: 0,
     lastContinuedAt: "2026-06-11T00:00:00.000Z",
-    lastModelId: "gpt-4.1",
-    lastModelName: "gpt-4.1",
+    lastModelId: input.lastModelId ?? "gpt-4.1",
+    lastModelName: input.lastModelName ?? "gpt-4.1",
     lastModelProvider: "openai",
     lastModelProviderSource: "built_in",
     outputToken: 0,

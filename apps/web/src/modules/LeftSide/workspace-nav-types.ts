@@ -9,6 +9,7 @@ export interface WorkspaceTaskSummary {
   id: string;
   initialUserMessage: string;
   lastContinuedAt: string;
+  lastModelId?: string | null;
   lastModelName: string;
   lastModelProvider: string;
   lastModelProviderSource: "built_in" | "custom";

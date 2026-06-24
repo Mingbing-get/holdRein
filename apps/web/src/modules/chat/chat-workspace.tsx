@@ -57,13 +57,29 @@ export function ChatWorkspace({
   const shouldFollowMessagesRef = useRef(true);
   const [thinkingLevel, setThinkingLevel] = useState(DEFAULT_THINKING_LEVEL);
   const [approvalPolicy, setApprovalPolicy] = useState(DEFAULT_APPROVAL_POLICY);
+  const activeWorkspaceTaskModelId =
+    activeWorkspaceTask?.lastModelId ?? activeWorkspaceTask?.lastModelName;
+  const activeWorkspaceTaskProvider = activeWorkspaceTask?.lastModelProvider;
 
   useEffect(() => {
     setThinkingLevel(normalizeThinkingLevel(activeWorkspaceTask?.thinkingLevel));
     setApprovalPolicy(
       normalizeApprovalPolicy(activeWorkspaceTask?.approvalPolicy)
     );
-  }, [activeTaskId, activeWorkspaceTask?.approvalPolicy, activeWorkspaceTask?.thinkingLevel]);
+    if (activeWorkspaceTaskModelId && activeWorkspaceTaskProvider) {
+      setActiveAgent({
+        modelId: activeWorkspaceTaskModelId,
+        providerId: activeWorkspaceTaskProvider
+      });
+    }
+  }, [
+    activeTaskId,
+    activeWorkspaceTask?.approvalPolicy,
+    activeWorkspaceTask?.thinkingLevel,
+    activeWorkspaceTaskModelId,
+    activeWorkspaceTaskProvider,
+    setActiveAgent
+  ]);
 
   useLayoutEffect(() => {
     if (previousTaskIdRef.current !== activeTaskId) {

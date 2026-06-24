@@ -182,6 +182,7 @@ function toTaskSummary(
     id: task.id,
     initialUserMessage: task.initialUserMessage,
     lastContinuedAt: task.lastContinuedAt,
+    lastModelId: task.lastModelId,
     lastModelName: task.lastModelName,
     lastModelProvider: task.lastModelProvider,
     lastModelProviderSource: task.lastModelProviderSource,

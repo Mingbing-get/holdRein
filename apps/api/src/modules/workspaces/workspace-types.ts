@@ -6,6 +6,7 @@ export interface WorkspaceTaskSummary {
   id: string;
   initialUserMessage: string;
   lastContinuedAt: string;
+  lastModelId: TaskRow["lastModelId"];
   lastModelName: string;
   lastModelProvider: string;
   lastModelProviderSource: TaskRow["lastModelProviderSource"];
