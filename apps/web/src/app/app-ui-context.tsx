@@ -50,6 +50,21 @@ const ANTD_THEME_TOKEN = {
 } as const;
 
 const ANTD_COMPONENT_TOKENS = {
+  Button: {
+    defaultActiveBg: "var(--app-color-fill-secondary)",
+    defaultActiveBorderColor: "var(--app-color-border-secondary)",
+    defaultActiveColor: "var(--app-color-text)",
+    defaultBg: "transparent",
+    defaultBorderColor: "var(--app-color-border-secondary)",
+    defaultColor: "var(--app-color-text)",
+    defaultHoverBg: "var(--app-color-fill-tertiary)",
+    defaultHoverBorderColor: "var(--app-color-border-secondary)",
+    defaultHoverColor: "var(--app-color-text)",
+    textHoverBg: "var(--app-color-fill-tertiary)",
+    textTextActiveColor: "var(--app-color-text)",
+    textTextColor: "var(--app-color-text)",
+    textTextHoverColor: "var(--app-color-text)"
+  },
   Tag: {
     defaultBg: "var(--app-color-fill-secondary)",
     defaultColor: "var(--app-color-text-secondary)"
