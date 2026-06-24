@@ -7,6 +7,7 @@ import type { ServerPlugin } from "@hold-rein/plugin-server";
 import { vi } from "vitest";
 
 import type { AppDatabase } from "../../../db";
+import type { SkillsService } from "../../skills";
 import type { TokenUsageStorageTarget } from "./token-collection";
 import { createAgentApprovalStore } from "../approval/store";
 import { createAgentEventBus } from "../event/event-bus";
@@ -112,12 +113,18 @@ export function createRuntime(
     tokenFlushIntervalMs?: number;
     addModelTokenUsageHourly?: TokenUsageStorageTarget["addModelTokenUsageHourly"];
     addTaskTokenUsage?: TokenUsageStorageTarget["addTaskTokenUsage"];
+  },
+  runtimeOptions?: {
+    skillsService?: SkillsService;
   }
 ) {
   return createAgentRuntime({
     approvalStore: createAgentApprovalStore(),
     eventBus,
     sessionRepo,
+    ...(runtimeOptions?.skillsService === undefined
+      ? {}
+      : { skillsService: runtimeOptions.skillsService }),
     ...(subagentDatabase === undefined ? {} : { subagentDatabase }),
     subagentRepository,
     ...(tokenUsageOptions?.addTaskTokenUsage === undefined ||

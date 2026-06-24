@@ -5,6 +5,7 @@ import type { AgentApprovalStore } from "../approval/store";
 import type { AgentEventBus } from "../event/event-bus";
 import type { AgentModelLookup } from '../model/resolver'
 import type { ModelProxiesService } from "../../model-proxies/model-proxies-service";
+import type { SkillsService } from "../../skills";
 import type { SubagentRepository } from "../subagent/repository";
 import type { TokenUsageStorageTarget } from "./token-collection";
 
@@ -22,6 +23,7 @@ export interface CreateAgentRuntimeOptions {
   modelProxiesService?: ModelProxiesService;
   sessionRepo?: JsonlSessionRepoApi;
   skillDirs?: string[];
+  skillsService?: SkillsService;
   subagentDatabase?: AppDatabase;
   subagentRepository: SubagentRepository;
   tokenFlushIntervalMs?: number;

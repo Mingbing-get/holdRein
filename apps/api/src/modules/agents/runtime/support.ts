@@ -10,6 +10,7 @@ import {
 } from "@earendil-works/pi-agent-core/node";
 
 import { SESSIONS_DIR, SKILL_DIR } from "../../../config/const";
+import type { SkillsService } from "../../skills";
 import type { AgentSessionMetadata } from "../agent-types";
 
 interface InterruptibleHarness {
@@ -53,6 +54,25 @@ export function getSkillDirs(
     join(workspacePath, ".agents", "skills"),
     join(workspacePath, ".hold-rein", "skills"),
     SKILL_DIR,
+    ...(configuredSkillDirs ?? [])
+  ]));
+}
+
+export async function getRuntimeSkillDirs(
+  workspacePath: string,
+  configuredSkillDirs?: string[],
+  skillsService?: SkillsService
+): Promise<string[]> {
+  const enabledGlobalSkillDirs = await skillsService?.listEnabledSkillDirs();
+
+  if (!enabledGlobalSkillDirs) {
+    return getSkillDirs(workspacePath, configuredSkillDirs);
+  }
+
+  return Array.from(new Set([
+    join(workspacePath, ".agents", "skills"),
+    join(workspacePath, ".hold-rein", "skills"),
+    ...enabledGlobalSkillDirs,
     ...(configuredSkillDirs ?? [])
   ]));
 }

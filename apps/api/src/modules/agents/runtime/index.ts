@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-
 import { AgentHarness, NodeExecutionEnv, formatSkillsForSystemPrompt, loadSkills } from "@earendil-works/pi-agent-core/node";
 import type { ServerPlugin } from '@hold-rein/plugin-server'
 import { toStoredAgentMessage } from "../message/storage";
@@ -8,7 +7,7 @@ import { appendVisibleCustomMessage } from "./messages";
 import { addPendingSubagentResult, appendSubagentResult, flushPendingSubagentResults } from "./subagent-results";
 import { createRuntimeRevokeSubagentTool, createRuntimeSubagentTools } from "./subagent-tools";
 import { startContinuationSubagent } from "./continuation-subagent";
-import { createSessionRepo, getEnvApiKey, getSkillDirs, interruptHarness, toAgentSessionMetadata } from "./support";
+import { createSessionRepo, getEnvApiKey, getRuntimeSkillDirs, interruptHarness, toAgentSessionMetadata } from "./support";
 import { createTokenCollection } from "./token-collection";
 import { runToolBeforeExecute } from "../approval/tool-approval";
 import { extractAssistantText, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "../subagent";
@@ -92,9 +91,10 @@ export function createAgentRuntime(
           model: activeModel
         }
         const contribution = await pluginRegistry.resolveContributions(pluginContext)
-        const skillDirs = getSkillDirs(
+        const skillDirs = await getRuntimeSkillDirs(
           input.workspacePath,
-          [...(options.skillDirs || []), ...(contribution.skillDirs || [])]
+          [...(options.skillDirs || []), ...(contribution.skillDirs || [])],
+          options.skillsService
         );
         const { skills: loadedSkills } = await loadSkills(env, skillDirs);
         const skills = [...loadedSkills, ...(contribution.skills || [])];

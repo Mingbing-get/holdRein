@@ -11,6 +11,7 @@ import { fetchWorkspaceNavigation } from "../leftSide/workspace-nav-api";
 import { WorkspaceNav } from "../leftSide/workspace-nav";
 import { ModelProvidersView } from "../model-providers";
 import { RightSideAside } from "../rightSide/aside";
+import { SkillManagementView } from "../skills";
 import { WorkspaceTopBar } from "../top-bar/workspace-top-bar";
 import { UsageStatsView } from "../usage-stats";
 
@@ -135,6 +136,8 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
             <ActivePluginSettingRender />
           ) : activeMainView === "modelProviders" ? (
             <ModelProvidersView apiBaseUrl={apiBaseUrl} />
+          ) : activeMainView === "skills" ? (
+            <SkillManagementView apiBaseUrl={apiBaseUrl} />
           ) : activeMainView === "usageStats" ? (
             <UsageStatsView apiBaseUrl={apiBaseUrl} />
           ) : (

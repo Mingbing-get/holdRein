@@ -108,6 +108,7 @@ describe("HoldReinShell plugin settings", () => {
     expect(settingsButtons.map((button) => button.textContent)).toEqual([
       "返回",
       "模型配置",
+      "技能管理",
       "用量统计",
       "插件设置"
     ]);

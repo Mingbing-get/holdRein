@@ -18,6 +18,10 @@ import {
   type CreateModelProxiesRouterOptions
 } from "../../modules/model-proxies";
 import {
+  createSkillsRouter,
+  type CreateSkillsRouterOptions
+} from "../../modules/skills";
+import {
   createWorkspacesRouter,
   type CreateWorkspacesRouterOptions
 } from "../../modules/workspaces";
@@ -31,6 +35,7 @@ export interface CreateV1RouterOptions
     CreateFileSystemRouterOptions,
     CreateModelProvidersRouterOptions,
     CreateModelProxiesRouterOptions,
+    CreateSkillsRouterOptions,
     CreateUsageStatsRouterOptions,
     CreateWorkspacesRouterOptions {}
 
@@ -43,6 +48,7 @@ export function createV1Router(options: CreateV1RouterOptions = {}): Router {
   router.use(createWorkspacesRouter(options));
   router.use(createModelProxiesRouter(options));
   router.use(createModelProvidersRouter(options));
+  router.use(createSkillsRouter(options));
   router.use(createUsageStatsRouter(options));
 
   return router;

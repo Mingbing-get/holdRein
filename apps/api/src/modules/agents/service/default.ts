@@ -13,6 +13,7 @@ import { toCustomAgentModel } from "../model/custom-model";
 import { createSqliteSubagentRepository } from "../subagent/repository";
 import { getDefaultModelProvidersService } from "../../model-providers";
 import { getDefaultModelProxiesService } from "../../model-proxies";
+import { getDefaultSkillsService } from "../../skills";
 import { recoverInterruptedAgentRuns } from "./startup-recovery";
 
 let service: AgentsService | undefined;
@@ -46,6 +47,7 @@ export function getDefaultAgentsService(): AgentsService {
           ?.apiKey,
       getCustomModel,
       modelProxiesService,
+      skillsService: getDefaultSkillsService(),
       subagentDatabase: database,
       subagentRepository,
       tokenUsageStorageTarget: repository
