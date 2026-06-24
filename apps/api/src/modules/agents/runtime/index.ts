@@ -67,7 +67,7 @@ export function createAgentRuntime(
       }
       const initialProvider = proxyCandidate?.provider ?? input.provider;
       const initialModelId = proxyCandidate?.modelId ?? input.modelId;
-      const model = await resolveAgentModel(initialProvider, initialModelId, options.getCustomModel);
+      let model = await resolveAgentModel(initialProvider, initialModelId, options.getCustomModel);
 
       if (!model) {
         throw new Error("Unknown model");
@@ -78,7 +78,7 @@ export function createAgentRuntime(
 
       const createHarness = async (harnessOptions: CreateHarnessOptions) => {
         let activeMessageId: string | undefined;
-        let activeModel: Model<Api> = model;
+        let activeModel: Model<Api> = model!;
         let proxyController: ModelProxyRuntimeController | undefined;
         const pendingVisibleMessages = new Map<string, PendingVisibleCustomMessage[]>();
         const pluginContext: ServerPlugin.RuntimeContext = {
@@ -155,6 +155,7 @@ export function createAgentRuntime(
             resolveModel: (provider, modelId) => resolveAgentModel(provider, modelId, options.getCustomModel),
             service: options.modelProxiesService,
             setModel: async (nextModel) => {
+              model = nextModel;
               activeModel = nextModel;
               await harness.setModel(nextModel);
             }
