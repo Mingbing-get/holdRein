@@ -43,10 +43,31 @@
 }
 
 .shell-processes-item-header {
-  align-items: flex-start;
+  align-items: center;
   display: flex;
   gap: 8px;
   justify-content: space-between;
+}
+
+.shell-processes-item-title {
+  align-items: center;
+  background: none;
+  border: 0;
+  color: var(--app-color-text);
+  cursor: pointer;
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  text-align: start;
+}
+
+.shell-processes-item-title .anticon {
+  color: var(--app-color-text-tertiary);
+  flex: 0 0 auto;
+  font-size: 10px;
+  line-height: 1.68;
 }
 
 .shell-processes-command {

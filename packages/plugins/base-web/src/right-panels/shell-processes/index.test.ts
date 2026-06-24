@@ -77,11 +77,58 @@ describe("ShellProcessesPanel", () => {
 
     await screen.findByText("npm run dev");
     expect(screen.getByText("running")).toBeInTheDocument();
-    expect(screen.getByText("ready")).toBeInTheDocument();
+    expect(screen.queryByText("ready")).not.toBeInTheDocument();
     expect(request).toHaveBeenCalledWith({
       path: "/plugin/__base/shells",
       query: { taskId: "task-1" }
     });
+  });
+
+  it("collapses shell process details by default and toggles them from the title", async () => {
+    const request = vi.fn().mockResolvedValue({
+      code: 0,
+      data: [
+        {
+          command: "npm run dev",
+          cwd: "/workspace",
+          id: "shell-1",
+          startedAt: "2026-06-24T00:00:00.000Z",
+          status: "completed",
+          stderr: "",
+          stdout: "ready\n",
+          taskId: "task-1",
+          toolCallId: "tool-call-1",
+          truncated: false
+        }
+      ],
+      msg: "ok"
+    });
+
+    render(
+      React.createElement(ShellProcessesPanel, {
+        request,
+        status: "idle",
+        taskId: "task-1"
+      })
+    );
+
+    const title = await screen.findByRole("button", { name: /npm run dev/ });
+
+    expect(title).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("/workspace")).not.toBeInTheDocument();
+    expect(screen.queryByText("ready")).not.toBeInTheDocument();
+
+    fireEvent.click(title);
+
+    expect(title).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("/workspace")).toBeInTheDocument();
+    expect(screen.getByText("ready")).toBeInTheDocument();
+
+    fireEvent.click(title);
+
+    expect(title).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("/workspace")).not.toBeInTheDocument();
+    expect(screen.queryByText("ready")).not.toBeInTheDocument();
   });
 
   it("stops a running shell and refreshes the list", async () => {

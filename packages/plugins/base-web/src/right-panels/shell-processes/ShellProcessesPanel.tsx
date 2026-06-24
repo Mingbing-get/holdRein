@@ -1,4 +1,9 @@
-import { StopOutlined, SyncOutlined } from "@ant-design/icons";
+import {
+  DownOutlined,
+  RightOutlined,
+  StopOutlined,
+  SyncOutlined
+} from "@ant-design/icons";
 import { Button, Empty, Space, Tag, Tooltip } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import type { WebPlugin } from "@hold-rein/plugin-web";
@@ -32,6 +37,7 @@ export function ShellProcessesPanel({
   taskId
 }: ShellProcessesPanelProps) {
   const [items, setItems] = useState<ShellProcessRecord[]>([]);
+  const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [stoppingId, setStoppingId] = useState<string>("");
 
@@ -87,6 +93,20 @@ export function ShellProcessesPanel({
     [loadShells, request]
   );
 
+  const toggleShell = useCallback((shellId: string) => {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(shellId)) {
+        next.delete(shellId);
+      } else {
+        next.add(shellId);
+      }
+
+      return next;
+    });
+  }, []);
+
   if (!taskId) {
     return (
       <div className="shell-processes-empty">
@@ -117,35 +137,53 @@ export function ShellProcessesPanel({
         </div>
       ) : (
         <div className="shell-processes-list">
-          {items.map((item) => (
-            <article className="shell-processes-item" key={item.id}>
-              <div className="shell-processes-item-header">
-                <code className="shell-processes-command">{item.command}</code>
-                <Space size={4}>
-                  <Tag className="shell-processes-status">{item.status}</Tag>
-                  {item.status === "running" ? (
-                    <Tooltip title="Stop">
-                      <Button
-                        aria-label="Stop shell"
-                        danger
-                        icon={<StopOutlined />}
-                        loading={stoppingId === item.id}
-                        onClick={() => {
-                          void stopShell(item.id);
-                        }}
-                        size="small"
-                        type="text"
-                      />
-                    </Tooltip>
-                  ) : null}
-                </Space>
-              </div>
-              <div className="shell-processes-meta">{item.cwd}</div>
-              <pre className="shell-processes-output">
-                {formatOutput(item)}
-              </pre>
-            </article>
-          ))}
+          {items.map((item) => {
+            const isExpanded = expandedIds.has(item.id);
+
+            return (
+              <article className="shell-processes-item" key={item.id}>
+                <div className="shell-processes-item-header">
+                  <button
+                    aria-expanded={isExpanded}
+                    className="shell-processes-item-title"
+                    onClick={() => {
+                      toggleShell(item.id);
+                    }}
+                    type="button"
+                  >
+                    {isExpanded ? <DownOutlined /> : <RightOutlined />}
+                    <code className="shell-processes-command">{item.command}</code>
+                  </button>
+                  <Space size={4}>
+                    <Tag className="shell-processes-status">{item.status}</Tag>
+                    {item.status === "running" ? (
+                      <Tooltip title="Stop">
+                        <Button
+                          aria-label="Stop shell"
+                          danger
+                          icon={<StopOutlined />}
+                          loading={stoppingId === item.id}
+                          onClick={() => {
+                            void stopShell(item.id);
+                          }}
+                          size="small"
+                          type="text"
+                        />
+                      </Tooltip>
+                    ) : null}
+                  </Space>
+                </div>
+                {isExpanded ? (
+                  <>
+                    <div className="shell-processes-meta">{item.cwd}</div>
+                    <pre className="shell-processes-output">
+                      {formatOutput(item)}
+                    </pre>
+                  </>
+                ) : null}
+              </article>
+            );
+          })}
         </div>
       )}
     </div>
