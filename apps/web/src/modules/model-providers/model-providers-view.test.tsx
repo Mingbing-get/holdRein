@@ -42,6 +42,11 @@ function createMatchMediaMock(): typeof window.matchMedia {
 
 const fetchMock = vi.fn<typeof fetch>();
 
+const emptyModelProxyResponse = {
+  json: async () => ({ code: 0, data: [], msg: "success" }),
+  ok: true
+} as Response;
+
 describe("ModelProvidersView", () => {
   beforeAll(() => {
     vi.stubGlobal("ResizeObserver", ResizeObserverMock);
@@ -58,23 +63,25 @@ describe("ModelProvidersView", () => {
   });
 
   it("renders custom providers before built-in providers", async () => {
-    fetchMock.mockResolvedValueOnce({
-      json: async () => ({
-        code: 0,
-        data: [
-          { hasApiKey: false, id: "openai", modelCount: 12, source: "builtin" },
-          {
-            baseUrl: "https://api.acme.ai/v1",
-            hasApiKey: true,
-            id: "acme-ai",
-            modelCount: 3,
-            source: "custom"
-          }
-        ],
-        msg: "success"
-      }),
-      ok: true
-    } as Response);
+    fetchMock
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: [
+            { hasApiKey: false, id: "openai", modelCount: 12, source: "builtin" },
+            {
+              baseUrl: "https://api.acme.ai/v1",
+              hasApiKey: true,
+              id: "acme-ai",
+              modelCount: 3,
+              source: "custom"
+            }
+          ],
+          msg: "success"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce(emptyModelProxyResponse);
 
     render(<ModelProvidersView apiBaseUrl="http://localhost:4000" />);
 
@@ -91,16 +98,18 @@ describe("ModelProvidersView", () => {
   });
 
   it("keeps the custom provider group visible and shows an empty hint when there are no custom providers", async () => {
-    fetchMock.mockResolvedValueOnce({
-      json: async () => ({
-        code: 0,
-        data: [
-          { hasApiKey: false, id: "openai", modelCount: 12, source: "builtin" }
-        ],
-        msg: "success"
-      }),
-      ok: true
-    } as Response);
+    fetchMock
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: [
+            { hasApiKey: false, id: "openai", modelCount: 12, source: "builtin" }
+          ],
+          msg: "success"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce(emptyModelProxyResponse);
 
     render(<ModelProvidersView apiBaseUrl="http://localhost:4000" />);
 
@@ -123,6 +132,7 @@ describe("ModelProvidersView", () => {
         }),
         ok: true
       } as Response)
+      .mockResolvedValueOnce(emptyModelProxyResponse)
       .mockResolvedValueOnce({
         json: async () => ({
           code: 0,
@@ -153,7 +163,8 @@ describe("ModelProvidersView", () => {
           msg: "success"
         }),
         ok: true
-      } as Response);
+      } as Response)
+      .mockResolvedValueOnce(emptyModelProxyResponse);
 
     render(<ModelProvidersView apiBaseUrl="http://localhost:4000" />);
 
@@ -170,8 +181,7 @@ describe("ModelProvidersView", () => {
     fireEvent.click(screen.getByRole("button", { name: /创\s*建/ }));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenNthCalledWith(
-        2,
+      expect(fetchMock).toHaveBeenCalledWith(
         "http://localhost:4000/api/v1/model-providers/custom",
         {
           body: JSON.stringify({
@@ -207,6 +217,7 @@ describe("ModelProvidersView", () => {
         }),
         ok: true
       } as Response)
+      .mockResolvedValueOnce(emptyModelProxyResponse)
       .mockResolvedValueOnce({
         json: async () => ({
           code: 0,
@@ -237,7 +248,8 @@ describe("ModelProvidersView", () => {
           msg: "success"
         }),
         ok: true
-      } as Response);
+      } as Response)
+      .mockResolvedValueOnce(emptyModelProxyResponse);
 
     render(<ModelProvidersView apiBaseUrl="http://localhost:4000" />);
 
@@ -257,8 +269,7 @@ describe("ModelProvidersView", () => {
     fireEvent.click(screen.getByRole("button", { name: /保\s*存/ }));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenNthCalledWith(
-        2,
+      expect(fetchMock).toHaveBeenCalledWith(
         "http://localhost:4000/api/v1/model-providers/custom/acme-ai",
         {
           body: JSON.stringify({
@@ -294,6 +305,7 @@ describe("ModelProvidersView", () => {
         }),
         ok: true
       } as Response)
+      .mockResolvedValueOnce(emptyModelProxyResponse)
       .mockResolvedValueOnce({
         json: async () => ({
           code: 0,
@@ -313,7 +325,8 @@ describe("ModelProvidersView", () => {
           msg: "success"
         }),
         ok: true
-      } as Response);
+      } as Response)
+      .mockResolvedValueOnce(emptyModelProxyResponse);
 
     render(<ModelProvidersView apiBaseUrl="http://localhost:4000" />);
 
@@ -323,8 +336,7 @@ describe("ModelProvidersView", () => {
     fireEvent.click(await screen.findByRole("button", { name: /删\s*除/ }));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenNthCalledWith(
-        2,
+      expect(fetchMock).toHaveBeenCalledWith(
         "http://localhost:4000/api/v1/model-providers/custom/acme-ai",
         {
           method: "DELETE"
@@ -346,6 +358,7 @@ describe("ModelProvidersView", () => {
         }),
         ok: true
       } as Response)
+      .mockResolvedValueOnce(emptyModelProxyResponse)
       .mockResolvedValueOnce({
         json: async () => ({
           code: 0,
@@ -371,8 +384,7 @@ describe("ModelProvidersView", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /提\s*交/ }));
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
+    expect(fetchMock).toHaveBeenCalledWith(
       "http://localhost:4000/api/v1/model-providers/openai/api-key",
       {
         body: JSON.stringify({ apiKey: "sk-test-123" }),
@@ -397,6 +409,7 @@ describe("ModelProvidersView", () => {
         }),
         ok: true
       } as Response)
+      .mockResolvedValueOnce(emptyModelProxyResponse)
       .mockResolvedValueOnce({
         json: async () => ({
           code: 0,
@@ -426,8 +439,7 @@ describe("ModelProvidersView", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: /提\s*交/ }));
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
+    expect(fetchMock).toHaveBeenCalledWith(
       "http://localhost:4000/api/v1/model-providers/openai/api-key",
       {
         body: JSON.stringify({ apiKey: "sk-updated-456" }),
@@ -452,6 +464,7 @@ describe("ModelProvidersView", () => {
         }),
         ok: true
       } as Response)
+      .mockResolvedValueOnce(emptyModelProxyResponse)
       .mockResolvedValueOnce({
         json: async () => ({
           code: 0,
@@ -491,8 +504,7 @@ describe("ModelProvidersView", () => {
     expect(await screen.findByText("openai 支持的模型")).toBeInTheDocument();
     expect(await screen.findByText("GPT-5")).toBeInTheDocument();
     expect(screen.getByText("GPT-4.1")).toBeInTheDocument();
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
+    expect(fetchMock).toHaveBeenCalledWith(
       "http://localhost:4000/api/v1/model-providers/openai/models"
     );
   });
@@ -515,6 +527,7 @@ describe("ModelProvidersView", () => {
         }),
         ok: true
       } as Response)
+      .mockResolvedValueOnce(emptyModelProxyResponse)
       .mockResolvedValueOnce({
         json: async () => ({
           code: 0,
@@ -684,8 +697,7 @@ describe("ModelProvidersView", () => {
     fireEvent.click(screen.getByRole("button", { name: /创\s*建模型/ }));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenNthCalledWith(
-        3,
+      expect(fetchMock).toHaveBeenCalledWith(
         "http://localhost:4000/api/v1/model-providers/acme-ai/models",
         {
           body: JSON.stringify({
@@ -725,8 +737,7 @@ describe("ModelProvidersView", () => {
     fireEvent.click(screen.getByRole("button", { name: /保存模型/ }));
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenNthCalledWith(
-        5,
+      expect(fetchMock).toHaveBeenCalledWith(
         "http://localhost:4000/api/v1/model-providers/acme-ai/models/acme-chat",
         {
           body: JSON.stringify({
@@ -755,8 +766,7 @@ describe("ModelProvidersView", () => {
     fireEvent.click(confirmDeleteButton as HTMLElement);
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenNthCalledWith(
-        7,
+      expect(fetchMock).toHaveBeenCalledWith(
         "http://localhost:4000/api/v1/model-providers/acme-ai/models/acme-vision",
         {
           method: "DELETE"
