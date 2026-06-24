@@ -3,7 +3,7 @@
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { WebPlugin } from "@hold-rein/plugin-web";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppPluginProvider, useAppPlugins } from "../../../app/app-plugin";
@@ -143,6 +143,25 @@ describe("RightPanel", () => {
     expect(shell.style.background).toBe("");
     expect(shell.style.border).toBe("");
   });
+
+  it("keeps the active plugin panel after the right panel remounts", async () => {
+    renderRightPanelWithToggle();
+
+    const runsTab = await screen.findByRole("tab", { name: "运行详情" });
+
+    fireEvent.click(runsTab);
+
+    expect(screen.getByTestId("runs-panel")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle right panel" }));
+    fireEvent.click(screen.getByRole("button", { name: "Toggle right panel" }));
+
+    expect(screen.getByRole("tab", { name: "运行详情" })).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    expect(screen.getByTestId("runs-panel")).toBeInTheDocument();
+  });
 });
 
 function renderRightPanel() {
@@ -158,6 +177,40 @@ function renderRightPanel() {
         </AgentTasksProvider>
       </AppWorkspaceProvider>
     </AppUiProvider>
+  );
+}
+
+function renderRightPanelWithToggle() {
+  render(
+    <AppUiProvider>
+      <AppWorkspaceProvider>
+        <AgentTasksProvider apiBaseUrl="http://localhost:4000">
+          <AppPluginProvider>
+            <RegisterRightPanels />
+            <SelectWorkspace />
+            <ToggleableRightPanel />
+          </AppPluginProvider>
+        </AgentTasksProvider>
+      </AppWorkspaceProvider>
+    </AppUiProvider>
+  );
+}
+
+function ToggleableRightPanel() {
+  const [isVisible, setIsVisible] = useState(true);
+
+  return (
+    <>
+      <button
+        onClick={() => {
+          setIsVisible((currentIsVisible) => !currentIsVisible);
+        }}
+        type="button"
+      >
+        Toggle right panel
+      </button>
+      {isVisible ? <RightPanel /> : null}
+    </>
   );
 }
 

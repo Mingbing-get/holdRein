@@ -35,6 +35,7 @@ export namespace WebPlugin {
   export interface AppUiState {
     activeMainView: MainContentView;
     activeSidebarView: SidebarView;
+    rightActiveView: string;
     rightSidebarCollapsed: boolean;
     rightSidebarResizing: boolean;
     rightSidebarWidth: number;
@@ -50,6 +51,7 @@ export namespace WebPlugin {
     state: AppUiState; 
     setActiveMainView: (view: MainContentView) => void;
     setActiveSidebarView: (view: SidebarView) => void;
+    setRightActiveView: (view: string) => void;
     setRightSidebarResizing: (rightSidebarResizing: boolean) => void;
     setRightSidebarWidth: (rightSidebarWidth: number) => void;
     setSidebarResizing: (sidebarResizing: boolean) => void;

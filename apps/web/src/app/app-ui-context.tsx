@@ -17,6 +17,7 @@ const THEME_MODE_STORAGE_KEY = "hold-rein.theme-mode";
 const DEFAULT_APP_UI_STATE: WebPlugin.AppUiState = {
   activeMainView: "chat",
   activeSidebarView: "workspace",
+  rightActiveView: "",
   rightSidebarCollapsed: true,
   rightSidebarResizing: false,
   rightSidebarWidth: 320,
@@ -146,6 +147,13 @@ export function AppUiProvider({ children }: PropsWithChildren) {
     }));
   }, []);
 
+  const setRightActiveView = useCallback((rightActiveView: string) => {
+    setState((currentState) => ({
+      ...currentState,
+      rightActiveView
+    }));
+  }, []);
+
   const setRightSidebarResizing = useCallback(
     (rightSidebarResizing: boolean) => {
       setState((currentState) => ({
@@ -210,6 +218,7 @@ export function AppUiProvider({ children }: PropsWithChildren) {
       state,
       setActiveMainView,
       setActiveSidebarView,
+      setRightActiveView,
       setRightSidebarResizing,
       setRightSidebarWidth,
       setSidebarResizing,
@@ -223,6 +232,7 @@ export function AppUiProvider({ children }: PropsWithChildren) {
       openWorkspaceNavigation,
       setActiveMainView,
       setActiveSidebarView,
+      setRightActiveView,
       setRightSidebarResizing,
       setRightSidebarWidth,
       setSidebarResizing,

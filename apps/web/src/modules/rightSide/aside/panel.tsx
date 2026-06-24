@@ -4,6 +4,7 @@ import type { WebPlugin } from "@hold-rein/plugin-web";
 import { Fragment } from "react";
 import { useEffect, useMemo, useState } from "react";
 
+import { useAppUi } from "../../../app/app-ui-context";
 import { useAppPlugins } from "../../../app/app-plugin";
 import { useAppWorkspace } from "../../../app/app-workspace-context";
 import { useAgentTasks } from "../../agent-messages";
@@ -12,10 +13,13 @@ import { WorkspaceFileTree } from "../file-tree";
 export default function RightPanel() {
   const { rightPanels } = useAppPlugins();
   const {
+    setRightActiveView,
+    state: { rightActiveView }
+  } = useAppUi();
+  const {
     state: { activeAgent, activeTaskId, activeWorkspaceId, workspaces },
   } = useAppWorkspace();
   const { getTaskState } = useAgentTasks();
-  const [activePanelId, setActivePanelId] = useState<string>("");
   const [hoveredPanelId, setHoveredPanelId] = useState<string>("");
 
   const taskState = getTaskState(activeTaskId);
@@ -38,14 +42,14 @@ export default function RightPanel() {
 
   useEffect(() => {
     if (!panels.length) {
-      setActivePanelId("");
+      setRightActiveView("");
       return;
     }
 
-    if (!panels.some((panel) => panel.id === activePanelId)) {
-      setActivePanelId(firstPanelId);
+    if (!panels.some((panel) => panel.id === rightActiveView)) {
+      setRightActiveView(firstPanelId);
     }
-  }, [activePanelId, firstPanelId, panels]);
+  }, [firstPanelId, panels, rightActiveView, setRightActiveView]);
 
   const panelProps = useMemo<WebPlugin.RightPanelProps>(
     () => ({
@@ -69,14 +73,14 @@ export default function RightPanel() {
   );
 
   const activePanel =
-    panels.find((panel) => panel.id === (activePanelId || firstPanelId)) ??
+    panels.find((panel) => panel.id === (rightActiveView || firstPanelId)) ??
     panels[0];
   const ActivePanelRender = activePanel?.Render;
 
   const tabButtons = useMemo(
     () =>
       panels.map((panel, index) => {
-        const isActive = panel.id === (activePanelId || firstPanelId);
+        const isActive = panel.id === (rightActiveView || firstPanelId);
         const isHovered = panel.id === hoveredPanelId;
 
         return (
@@ -99,7 +103,7 @@ export default function RightPanel() {
                 aria-label={panel.title}
                 aria-selected={isActive}
                 onClick={() => {
-                  setActivePanelId(panel.id);
+                  setRightActiveView(panel.id);
                 }}
                 onMouseEnter={() => {
                   setHoveredPanelId(panel.id);
@@ -140,7 +144,7 @@ export default function RightPanel() {
           </Fragment>
         );
       }),
-    [activePanelId, firstPanelId, hoveredPanelId, panels]
+    [firstPanelId, hoveredPanelId, panels, rightActiveView, setRightActiveView]
   );
 
   if (!panels.length) {
