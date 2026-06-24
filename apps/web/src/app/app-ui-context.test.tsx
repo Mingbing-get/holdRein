@@ -92,6 +92,46 @@ describe("AppUiProvider", () => {
     expect(document.documentElement.dataset.themeMode).toBe("light");
   });
 
+  it("restores and stores sidebar layout state in local storage", () => {
+    window.localStorage.setItem("hold-rein.sidebar-width", "280");
+    window.localStorage.setItem("hold-rein.right-sidebar-width", "420");
+    window.localStorage.setItem("hold-rein.sidebar-collapsed", "true");
+    window.localStorage.setItem("hold-rein.right-sidebar-collapsed", "false");
+
+    render(
+      <AppUiProvider>
+        <SidebarLayoutControls />
+      </AppUiProvider>
+    );
+
+    expect(screen.getByTestId("sidebar-width")).toHaveTextContent("280");
+    expect(screen.getByTestId("right-sidebar-width")).toHaveTextContent("420");
+    expect(screen.getByTestId("sidebar-collapsed")).toHaveTextContent("true");
+    expect(screen.getByTestId("right-sidebar-collapsed")).toHaveTextContent(
+      "false"
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Set sidebar width" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Set right sidebar width" })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Toggle sidebar" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Toggle right sidebar" })
+    );
+
+    expect(window.localStorage.getItem("hold-rein.sidebar-width")).toBe("300");
+    expect(window.localStorage.getItem("hold-rein.right-sidebar-width")).toBe(
+      "460"
+    );
+    expect(window.localStorage.getItem("hold-rein.sidebar-collapsed")).toBe(
+      "false"
+    );
+    expect(
+      window.localStorage.getItem("hold-rein.right-sidebar-collapsed")
+    ).toBe("true");
+  });
+
   it("keeps default button hover text readable in dark mode", () => {
     render(
       <AppUiProvider>
@@ -122,5 +162,40 @@ function ThemeModeToggle() {
     <button onClick={toggleThemeMode} type="button">
       Toggle dark mode
     </button>
+  );
+}
+
+function SidebarLayoutControls() {
+  const {
+    setRightSidebarWidth,
+    setSidebarWidth,
+    state,
+    toggleRightSidebar,
+    toggleSidebar
+  } = useAppUi();
+
+  return (
+    <>
+      <span data-testid="sidebar-width">{state.sidebarWidth}</span>
+      <span data-testid="right-sidebar-width">{state.rightSidebarWidth}</span>
+      <span data-testid="sidebar-collapsed">
+        {String(state.sidebarCollapsed)}
+      </span>
+      <span data-testid="right-sidebar-collapsed">
+        {String(state.rightSidebarCollapsed)}
+      </span>
+      <button onClick={() => setSidebarWidth(300)} type="button">
+        Set sidebar width
+      </button>
+      <button onClick={() => setRightSidebarWidth(460)} type="button">
+        Set right sidebar width
+      </button>
+      <button onClick={toggleSidebar} type="button">
+        Toggle sidebar
+      </button>
+      <button onClick={toggleRightSidebar} type="button">
+        Toggle right sidebar
+      </button>
+    </>
   );
 }

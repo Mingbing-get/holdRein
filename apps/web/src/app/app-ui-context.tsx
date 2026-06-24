@@ -12,7 +12,13 @@ import type { WebPlugin } from '@hold-rein/plugin-web'
 
 import "./theme.css";
 
-const THEME_MODE_STORAGE_KEY = "hold-rein.theme-mode";
+const APP_UI_STORAGE_KEYS = {
+  rightSidebarCollapsed: "hold-rein.right-sidebar-collapsed",
+  rightSidebarWidth: "hold-rein.right-sidebar-width",
+  sidebarCollapsed: "hold-rein.sidebar-collapsed",
+  sidebarWidth: "hold-rein.sidebar-width",
+  themeMode: "hold-rein.theme-mode"
+} as const;
 
 const DEFAULT_APP_UI_STATE: WebPlugin.AppUiState = {
   activeMainView: "chat",
@@ -42,31 +48,99 @@ function isThemeMode(value: unknown): value is WebPlugin.AppUiState["themeMode"]
   return value === "dark" || value === "light";
 }
 
-function readStoredThemeMode(): WebPlugin.AppUiState["themeMode"] {
-  if (!canUseLocalStorage()) {
-    return DEFAULT_APP_UI_STATE.themeMode;
+function isBoolean(value: unknown): value is boolean {
+  return typeof value === "boolean";
+}
+
+function isNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function parseStoredBoolean(value: string | null): boolean | null {
+  if (value === "true") {
+    return true;
   }
 
-  const storedThemeMode = window.localStorage.getItem(THEME_MODE_STORAGE_KEY);
+  if (value === "false") {
+    return false;
+  }
 
-  return isThemeMode(storedThemeMode)
-    ? storedThemeMode
-    : DEFAULT_APP_UI_STATE.themeMode;
+  return null;
+}
+
+function parseStoredNumber(value: string | null): number | null {
+  if (value === null) {
+    return null;
+  }
+
+  const parsedValue = Number(value);
+
+  return Number.isFinite(parsedValue) ? parsedValue : null;
+}
+
+function parseStoredThemeMode(
+  value: string | null
+): WebPlugin.AppUiState["themeMode"] | null {
+  return isThemeMode(value) ? value : null;
+}
+
+function readStoredAppUiValue<Value>(
+  storageKey: string,
+  defaultValue: Value,
+  parseValue: (value: string | null) => Value | null
+): Value {
+  if (!canUseLocalStorage()) {
+    return defaultValue;
+  }
+
+  const storedValue = parseValue(window.localStorage.getItem(storageKey));
+
+  return storedValue ?? defaultValue;
 }
 
 function getInitialAppUiState(): WebPlugin.AppUiState {
   return {
     ...DEFAULT_APP_UI_STATE,
-    themeMode: readStoredThemeMode()
+    rightSidebarCollapsed: readStoredAppUiValue(
+      APP_UI_STORAGE_KEYS.rightSidebarCollapsed,
+      DEFAULT_APP_UI_STATE.rightSidebarCollapsed,
+      parseStoredBoolean
+    ),
+    rightSidebarWidth: readStoredAppUiValue(
+      APP_UI_STORAGE_KEYS.rightSidebarWidth,
+      DEFAULT_APP_UI_STATE.rightSidebarWidth,
+      parseStoredNumber
+    ),
+    sidebarCollapsed: readStoredAppUiValue(
+      APP_UI_STORAGE_KEYS.sidebarCollapsed,
+      DEFAULT_APP_UI_STATE.sidebarCollapsed,
+      parseStoredBoolean
+    ),
+    sidebarWidth: readStoredAppUiValue(
+      APP_UI_STORAGE_KEYS.sidebarWidth,
+      DEFAULT_APP_UI_STATE.sidebarWidth,
+      parseStoredNumber
+    ),
+    themeMode: readStoredAppUiValue(
+      APP_UI_STORAGE_KEYS.themeMode,
+      DEFAULT_APP_UI_STATE.themeMode,
+      parseStoredThemeMode
+    )
   };
 }
 
-function storeThemeMode(themeMode: WebPlugin.AppUiState["themeMode"]): void {
+function storeAppUiValue<Value>(
+  storageKey: string,
+  value: Value,
+  isValidValue: (value: unknown) => value is Value
+): void {
   if (!canUseLocalStorage()) {
     return;
   }
 
-  window.localStorage.setItem(THEME_MODE_STORAGE_KEY, themeMode);
+  if (isValidValue(value)) {
+    window.localStorage.setItem(storageKey, String(value));
+  }
 }
 
 const ANTD_THEME_TOKEN = {
@@ -165,6 +239,11 @@ export function AppUiProvider({ children }: PropsWithChildren) {
   );
 
   const setRightSidebarWidth = useCallback((rightSidebarWidth: number) => {
+    storeAppUiValue(
+      APP_UI_STORAGE_KEYS.rightSidebarWidth,
+      rightSidebarWidth,
+      isNumber
+    );
     setState((currentState) => ({
       ...currentState,
       rightSidebarWidth
@@ -179,6 +258,7 @@ export function AppUiProvider({ children }: PropsWithChildren) {
   }, []);
 
   const setSidebarWidth = useCallback((sidebarWidth: number) => {
+    storeAppUiValue(APP_UI_STORAGE_KEYS.sidebarWidth, sidebarWidth, isNumber);
     setState((currentState) => ({
       ...currentState,
       sidebarWidth
@@ -186,23 +266,41 @@ export function AppUiProvider({ children }: PropsWithChildren) {
   }, []);
 
   const toggleRightSidebar = useCallback(() => {
-    setState((currentState) => ({
-      ...currentState,
-      rightSidebarCollapsed: !currentState.rightSidebarCollapsed
-    }));
+    setState((currentState) => {
+      const rightSidebarCollapsed = !currentState.rightSidebarCollapsed;
+      storeAppUiValue(
+        APP_UI_STORAGE_KEYS.rightSidebarCollapsed,
+        rightSidebarCollapsed,
+        isBoolean
+      );
+
+      return {
+        ...currentState,
+        rightSidebarCollapsed
+      };
+    });
   }, []);
 
   const toggleSidebar = useCallback(() => {
-    setState((currentState) => ({
-      ...currentState,
-      sidebarCollapsed: !currentState.sidebarCollapsed
-    }));
+    setState((currentState) => {
+      const sidebarCollapsed = !currentState.sidebarCollapsed;
+      storeAppUiValue(
+        APP_UI_STORAGE_KEYS.sidebarCollapsed,
+        sidebarCollapsed,
+        isBoolean
+      );
+
+      return {
+        ...currentState,
+        sidebarCollapsed
+      };
+    });
   }, []);
 
   const toggleThemeMode = useCallback(() => {
     setState((currentState) => {
       const themeMode = currentState.themeMode === "light" ? "dark" : "light";
-      storeThemeMode(themeMode);
+      storeAppUiValue(APP_UI_STORAGE_KEYS.themeMode, themeMode, isThemeMode);
 
       return {
         ...currentState,
