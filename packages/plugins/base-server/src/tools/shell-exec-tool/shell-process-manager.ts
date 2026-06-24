@@ -126,6 +126,17 @@ export class ShellProcessManager {
       .filter((record): record is ShellProcessRecord => record !== undefined);
   }
 
+  killAndRemoveByTask(taskId: string): ShellProcessRecord[] {
+    const taskRecords = this.list(taskId);
+
+    return taskRecords
+      .map((record) => {
+        const killedRecord = this.kill(record.id) ?? record;
+        this.records.delete(record.id);
+        return killedRecord;
+      });
+  }
+
   list(taskId?: string): ShellProcessRecord[] {
     return Array.from(this.records.values())
       .filter((record) => taskId === undefined || record.taskId === taskId)
