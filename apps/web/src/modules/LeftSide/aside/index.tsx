@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import type { PropsWithChildren } from "react";
 
 import { useAppUi } from "../../../app/app-ui-context";
+import { disableBodyTextSelection } from "../../sidebar/resize-text-selection";
 
 const MIN_SIDEBAR_WIDTH = 120;
 const MAX_SIDEBAR_WIDTH = 680;
@@ -21,8 +22,10 @@ export function LeftSideAside({ children }: PropsWithChildren) {
 
   const startResizing = useCallback(
     (event: React.MouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
       const startX = event.clientX;
       const startWidth = sidebarWidth;
+      const restoreBodyTextSelection = disableBodyTextSelection();
       setSidebarResizing(true);
 
       const resizeSidebar = (moveEvent: MouseEvent) => {
@@ -32,6 +35,7 @@ export function LeftSideAside({ children }: PropsWithChildren) {
       };
 
       const stopResizing = () => {
+        restoreBodyTextSelection();
         setSidebarResizing(false);
         document.removeEventListener("mousemove", resizeSidebar);
         document.removeEventListener("mouseup", stopResizing);

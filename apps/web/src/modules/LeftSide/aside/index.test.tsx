@@ -76,6 +76,23 @@ describe("LeftSideAside", () => {
     fireEvent.mouseUp(document);
   });
 
+  it("prevents text selection while resizing", () => {
+    document.body.style.userSelect = "text";
+    renderLeftSideAside(<div />);
+
+    const resizeHandle = screen.getByRole("separator", {
+      name: "Resize workspace sidebar"
+    });
+
+    fireEvent.mouseDown(resizeHandle, { clientX: 240 });
+
+    expect(document.body).toHaveStyle({ userSelect: "none" });
+
+    fireEvent.mouseUp(document);
+
+    expect(document.body).toHaveStyle({ userSelect: "text" });
+  });
+
   it("hides the shell when the app sidebar is collapsed", () => {
     render(
       <AppUiProvider>
