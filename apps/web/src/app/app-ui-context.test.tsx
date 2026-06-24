@@ -48,10 +48,48 @@ import { AppUiProvider, useAppUi } from "./app-ui-context";
 describe("AppUiProvider", () => {
   beforeEach(() => {
     capturedTheme = null;
+    window.localStorage.clear();
   });
 
   afterEach(() => {
     cleanup();
+    window.localStorage.clear();
+  });
+
+  it("restores the saved theme mode from local storage", () => {
+    window.localStorage.setItem("hold-rein.theme-mode", "dark");
+
+    render(
+      <AppUiProvider>
+        <ThemeModeToggle />
+      </AppUiProvider>
+    );
+
+    expect(document.documentElement.dataset.themeMode).toBe("dark");
+  });
+
+  it("stores the selected theme mode in local storage", () => {
+    render(
+      <AppUiProvider>
+        <ThemeModeToggle />
+      </AppUiProvider>
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Toggle dark mode" }));
+
+    expect(window.localStorage.getItem("hold-rein.theme-mode")).toBe("dark");
+  });
+
+  it("ignores invalid saved theme modes", () => {
+    window.localStorage.setItem("hold-rein.theme-mode", "midnight");
+
+    render(
+      <AppUiProvider>
+        <ThemeModeToggle />
+      </AppUiProvider>
+    );
+
+    expect(document.documentElement.dataset.themeMode).toBe("light");
   });
 
   it("keeps default button hover text readable in dark mode", () => {

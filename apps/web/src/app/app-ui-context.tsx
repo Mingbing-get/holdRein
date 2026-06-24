@@ -12,6 +12,8 @@ import type { WebPlugin } from '@hold-rein/plugin-web'
 
 import "./theme.css";
 
+const THEME_MODE_STORAGE_KEY = "hold-rein.theme-mode";
+
 const DEFAULT_APP_UI_STATE: WebPlugin.AppUiState = {
   activeMainView: "chat",
   activeSidebarView: "workspace",
@@ -30,6 +32,41 @@ const THEME_ALGORITHMS = {
   dark: theme.darkAlgorithm,
   light: theme.defaultAlgorithm
 } as const;
+
+function canUseLocalStorage(): boolean {
+  return typeof window !== "undefined" && Boolean(window.localStorage);
+}
+
+function isThemeMode(value: unknown): value is WebPlugin.AppUiState["themeMode"] {
+  return value === "dark" || value === "light";
+}
+
+function readStoredThemeMode(): WebPlugin.AppUiState["themeMode"] {
+  if (!canUseLocalStorage()) {
+    return DEFAULT_APP_UI_STATE.themeMode;
+  }
+
+  const storedThemeMode = window.localStorage.getItem(THEME_MODE_STORAGE_KEY);
+
+  return isThemeMode(storedThemeMode)
+    ? storedThemeMode
+    : DEFAULT_APP_UI_STATE.themeMode;
+}
+
+function getInitialAppUiState(): WebPlugin.AppUiState {
+  return {
+    ...DEFAULT_APP_UI_STATE,
+    themeMode: readStoredThemeMode()
+  };
+}
+
+function storeThemeMode(themeMode: WebPlugin.AppUiState["themeMode"]): void {
+  if (!canUseLocalStorage()) {
+    return;
+  }
+
+  window.localStorage.setItem(THEME_MODE_STORAGE_KEY, themeMode);
+}
 
 const ANTD_THEME_TOKEN = {
   borderRadius: 18,
@@ -72,7 +109,7 @@ const ANTD_COMPONENT_TOKENS = {
 } as const;
 
 export function AppUiProvider({ children }: PropsWithChildren) {
-  const [state, setState] = useState<WebPlugin.AppUiState>(DEFAULT_APP_UI_STATE);
+  const [state, setState] = useState<WebPlugin.AppUiState>(getInitialAppUiState);
 
   useEffect(() => {
     document.documentElement.dataset.themeMode = state.themeMode;
@@ -155,10 +192,15 @@ export function AppUiProvider({ children }: PropsWithChildren) {
   }, []);
 
   const toggleThemeMode = useCallback(() => {
-    setState((currentState) => ({
-      ...currentState,
-      themeMode: currentState.themeMode === "light" ? "dark" : "light"
-    }));
+    setState((currentState) => {
+      const themeMode = currentState.themeMode === "light" ? "dark" : "light";
+      storeThemeMode(themeMode);
+
+      return {
+        ...currentState,
+        themeMode
+      };
+    });
   }, []);
 
   const contextValue = useMemo<WebPlugin.AppUiContextValue>(
