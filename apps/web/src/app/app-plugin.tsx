@@ -29,6 +29,7 @@ const AppPluginContext = createContext<AppPluginContextValue | null>(null);
 
 export function AppPluginProvider({ children }: PropsWithChildren) {
   const pluginRegistry = useRef<WebPluginRegistry>(createWebPluginRegistry())
+  const loadGeneration = useRef(0)
   const [rightPanels, setRightPanels] = useState<WebPlugin.RightPanel[]>([])
   const [settings, setSettings] = useState<WebPlugin.SettingsItem[]>([])
   const [senderActions, setSenderActions] = useState<WebPlugin.SenderAction[]>([])
@@ -88,7 +89,10 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
     setSenderSuggestions([])
   }, [])
 
-  const loadFromPlugins = useCallback(async (plugins: readonly WebPlugin.Plugin[]) => {
+  const loadFromPlugins = useCallback(async (
+    plugins: readonly WebPlugin.Plugin[],
+    generation: number
+  ) => {
     for (const plugin of plugins) {
       if (!plugin.contributionResolver) continue
 
@@ -97,12 +101,14 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
           appUi,
           request
         })
+        if (generation !== loadGeneration.current) return
         addContributionToState(plugin.id, pluginInfo)
       } else {
+        if (generation !== loadGeneration.current) return
         addContributionToState(plugin.id, plugin.contributionResolver)
       }
     }
-  }, [appUi])
+  }, [addContributionToState, appUi])
 
   useEffect(() => {
     if (!pluginRegistry.current.has(baseWebPlugin.id)) {
@@ -110,14 +116,16 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
     }
 
     const plugins = pluginRegistry.current.list()
+    const generation = loadGeneration.current + 1
+    loadGeneration.current = generation
 
     clear()
-    loadFromPlugins(plugins)
+    loadFromPlugins(plugins, generation)
     
     return pluginRegistry.current.on((plugin) => {
-      loadFromPlugins([plugin])
+      loadFromPlugins([plugin], loadGeneration.current)
     })
-  }, [loadFromPlugins])
+  }, [clear, loadFromPlugins])
 
   const contextValue = useMemo(() => ({
     pluginRegistry: pluginRegistry.current,
