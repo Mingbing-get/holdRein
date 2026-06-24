@@ -29,3 +29,70 @@
   background: var(--app-color-bg-elevated);
   border-radius: var(--usage-stats-segmented-radius);
 }
+
+.usage-stats-model-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.usage-stats-model-legend {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  justify-content: center;
+  list-style: none;
+  margin: 0;
+  padding: 0 8px;
+}
+
+.usage-stats-model-legend-item {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.usage-stats-model-legend-button {
+  align-items: center;
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--app-color-text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+  line-height: 18px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.usage-stats-model-legend-button:hover,
+.usage-stats-model-legend-button:focus-visible {
+  color: var(--app-color-text);
+}
+
+.usage-stats-model-legend-button[aria-pressed="false"] {
+  color: var(--app-color-text-tertiary);
+}
+
+.usage-stats-model-legend-button[aria-pressed="false"]
+  .usage-stats-model-legend-swatch {
+  opacity: 0.35;
+}
+
+.usage-stats-model-legend-swatch {
+  border-radius: 999px;
+  flex: 0 0 auto;
+  height: 8px;
+  width: 18px;
+}
+
+.usage-stats-model-legend-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

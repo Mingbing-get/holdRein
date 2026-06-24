@@ -1,4 +1,5 @@
 import { Card, Empty, Segmented, Space, Typography } from "antd";
+import type { EChartsOption } from "echarts";
 import { useEffect, useMemo, useState } from "react";
 
 import "./usage-stats-view.css";
@@ -29,8 +30,24 @@ type ModelDisplayMode = "model" | "total";
 
 const FALLBACK_CHART_THEME: UsageChartTheme = {
   borderSecondaryColor: "var(--app-color-border-secondary)",
+  seriesColors: [
+    "var(--app-color-chart-series-1)",
+    "var(--app-color-chart-series-2)",
+    "var(--app-color-chart-series-3)",
+    "var(--app-color-chart-series-4)",
+    "var(--app-color-chart-series-5)",
+    "var(--app-color-chart-series-6)",
+    "var(--app-color-chart-series-7)",
+    "var(--app-color-chart-series-8)",
+    "var(--app-color-chart-series-9)"
+  ],
   textSecondaryColor: "var(--app-color-text-secondary)"
 };
+
+interface ModelLegendItem {
+  color: string;
+  name: string;
+}
 
 export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
   const [modelRange, setModelRange] = useState<ModelUsageRange>("24h");
@@ -122,6 +139,13 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
         : null,
     [chartTheme, mergeModels, mergeTokenTypes, modelStats]
   );
+  const modelLegendItems = useMemo(
+    () =>
+      modelChartOption
+        ? createModelLegendItems(modelChartOption, chartTheme.seriesColors)
+        : [],
+    [chartTheme.seriesColors, modelChartOption]
+  );
   const taskChartOption = useMemo(
     () =>
       taskStats
@@ -191,7 +215,10 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
         {modelError ? (
           <Empty description="模型用量加载失败" />
         ) : modelStats && modelStats.points.length > 0 && modelChartOption ? (
-          <EChartsPanel ariaLabel="模型 Token 用量折线图" option={modelChartOption} />
+          <ModelUsageChartPanel
+            legendItems={modelLegendItems}
+            option={modelChartOption}
+          />
         ) : (
           <Empty description="暂无模型用量" />
         )}
@@ -234,6 +261,135 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
   );
 }
 
+function ModelUsageChartPanel({
+  legendItems,
+  option
+}: {
+  legendItems: ModelLegendItem[];
+  option: EChartsOption;
+}) {
+  const [hiddenSeriesNames, setHiddenSeriesNames] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [highlightedSeriesName, setHighlightedSeriesName] = useState<string | null>(
+    null
+  );
+  const visibleOption = useMemo(
+    () => filterModelChartOption(option, hiddenSeriesNames),
+    [hiddenSeriesNames, option]
+  );
+
+  useEffect(() => {
+    setHiddenSeriesNames((current) => {
+      const visibleNames = new Set(legendItems.map((item) => item.name));
+      const next = new Set(
+        [...current].filter((seriesName) => visibleNames.has(seriesName))
+      );
+
+      return next.size === current.size ? current : next;
+    });
+  }, [legendItems]);
+
+  return (
+    <div className="usage-stats-model-chart">
+      <ul aria-label="模型图例" className="usage-stats-model-legend">
+        {legendItems.map((item) => {
+          const isActive = !hiddenSeriesNames.has(item.name);
+
+          return (
+            <li className="usage-stats-model-legend-item" key={item.name}>
+              <button
+                aria-pressed={isActive}
+                className="usage-stats-model-legend-button"
+                onClick={() => {
+                  setHiddenSeriesNames((current) => {
+                    const next = new Set(current);
+
+                    if (next.has(item.name)) {
+                      next.delete(item.name);
+                    } else {
+                      next.add(item.name);
+                    }
+
+                    return next;
+                  });
+                }}
+                onMouseEnter={() => {
+                  setHighlightedSeriesName(isActive ? item.name : null);
+                }}
+                onMouseLeave={() => {
+                  setHighlightedSeriesName(null);
+                }}
+                type="button"
+              >
+                <span
+                  aria-hidden="true"
+                  className="usage-stats-model-legend-swatch"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="usage-stats-model-legend-label">
+                  {item.name}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <EChartsPanel
+        ariaLabel="模型 Token 用量折线图"
+        highlightedSeriesName={highlightedSeriesName}
+        option={visibleOption}
+      />
+    </div>
+  );
+}
+
+function createModelLegendItems(
+  option: EChartsOption,
+  colors: string[]
+): ModelLegendItem[] {
+  const series = Array.isArray(option.series)
+    ? option.series
+    : option.series
+      ? [option.series]
+      : [];
+
+  return series.flatMap((item, index) => {
+    const name = "name" in item ? item.name : undefined;
+
+    if (typeof name !== "string" || name.length === 0) {
+      return [];
+    }
+
+    return [
+      {
+        color: colors[index % colors.length] ?? "var(--app-color-chart-accent)",
+        name
+      }
+    ];
+  });
+}
+
+function filterModelChartOption(
+  option: EChartsOption,
+  hiddenSeriesNames: Set<string>
+): EChartsOption {
+  const series = Array.isArray(option.series)
+    ? option.series
+    : option.series
+      ? [option.series]
+      : [];
+
+  return {
+    ...option,
+    series: series.filter((item) => {
+      const name = "name" in item ? item.name : undefined;
+
+      return typeof name !== "string" || !hiddenSeriesNames.has(name);
+    })
+  };
+}
+
 function readUsageChartTheme(): UsageChartTheme {
   if (typeof document === "undefined") {
     return FALLBACK_CHART_THEME;
@@ -246,10 +402,20 @@ function readUsageChartTheme(): UsageChartTheme {
   const borderSecondaryColor = styles
     .getPropertyValue("--app-color-border-secondary")
     .trim();
+  const seriesColors = FALLBACK_CHART_THEME.seriesColors.map((color) => {
+    if (!color.startsWith("var(")) {
+      return color;
+    }
+
+    const variableName = color.slice(4, -1);
+
+    return styles.getPropertyValue(variableName).trim() || color;
+  });
 
   return {
     borderSecondaryColor:
       borderSecondaryColor || FALLBACK_CHART_THEME.borderSecondaryColor,
+    seriesColors,
     textSecondaryColor: textSecondaryColor || FALLBACK_CHART_THEME.textSecondaryColor
   };
 }

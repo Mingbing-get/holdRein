@@ -7,11 +7,12 @@ import {
 
 const chartTheme = {
   borderSecondaryColor: "rgba(142, 165, 196, 0.22)",
+  seriesColors: ["#5470c6", "#2e9b55", "#c58b17"],
   textSecondaryColor: "rgba(239, 245, 255, 0.68)"
 };
 
 describe("usage stats chart options", () => {
-  it("uses ECharts default series colors", () => {
+  it("uses theme series colors for the model chart DOM legend", () => {
     const modelOption = createModelUsageChartOption({
       chartTheme,
       mergeModels: false,
@@ -48,7 +49,7 @@ describe("usage stats chart options", () => {
       }
     });
 
-    expect(modelOption).not.toHaveProperty("color");
+    expect(modelOption).toHaveProperty("color", chartTheme.seriesColors);
     expect(taskOption).not.toHaveProperty("color");
   });
 
@@ -186,7 +187,7 @@ describe("usage stats chart options", () => {
     });
   });
 
-  it("places the model legend above the line chart", () => {
+  it("hides the model legend because it is rendered as responsive DOM", () => {
     const modelOption = createModelUsageChartOption({
       chartTheme,
       mergeModels: false,
@@ -207,10 +208,9 @@ describe("usage stats chart options", () => {
     });
 
     expect(modelOption).toMatchObject({
-      grid: { top: 60 },
+      grid: { top: 16 },
       legend: {
-        left: "center",
-        top: 0
+        show: false
       }
     });
   });

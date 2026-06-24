@@ -1,4 +1,4 @@
-import type { BarSeriesOption, EChartsOption, LineSeriesOption } from "echarts";
+import type { EChartsOption, LineSeriesOption } from "echarts";
 
 import type {
   ModelUsagePoint,
@@ -15,6 +15,7 @@ export interface ModelChartOptionsInput {
 
 export interface UsageChartTheme {
   borderSecondaryColor: string;
+  seriesColors: string[];
   textSecondaryColor: string;
 }
 
@@ -58,14 +59,31 @@ export function createModelUsageChartOption({
     ];
   });
 
+  const coloredSeries = series.map((item, index) => {
+    const color =
+      chartTheme.seriesColors[index % chartTheme.seriesColors.length] ??
+      "var(--app-color-chart-accent)";
+
+    return {
+      ...item,
+      itemStyle: { color },
+      lineStyle: { color }
+    };
+  });
+
   return {
-    grid: { bottom: 36, left: 48, right: 16, top: 60 },
-    legend: {
-      left: "center",
-      textStyle: { color: chartTheme.textSecondaryColor },
-      top: 0
+    color: chartTheme.seriesColors,
+    grid: {
+      bottom: 36,
+      left: 48,
+      right: 16,
+      top: 16
     },
-    series,
+    legend: {
+      show: false,
+      textStyle: { color: chartTheme.textSecondaryColor },
+    },
+    series: coloredSeries,
     tooltip: { trigger: "axis" },
     xAxis: {
       axisLabel: { color: chartTheme.textSecondaryColor },
@@ -92,7 +110,12 @@ export function createTaskUsageChartOption({
   const labels = stats.rows.map((row) => row.label);
 
   return {
-    grid: { bottom: 48, left: 48, right: 16, top: 60 },
+    grid: {
+      bottom: 48,
+      left: 48,
+      right: 16,
+      top: 60
+    },
     legend: {
       left: "center",
       textStyle: { color: chartTheme.textSecondaryColor },
