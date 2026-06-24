@@ -42,7 +42,7 @@ export function createSkillsService(
   const configPath = join(rootDir, CONFIG_FILE_NAME);
   const installGitRepository =
     options.installGitRepository ?? cloneGitRepository;
-  let config: SkillsConfig = { disabledSkillIds: [] };
+  let config: SkillsConfig = {};
   let loaded = false;
 
   const ensureLoaded = async () => {
@@ -120,13 +120,13 @@ export function createSkillsService(
         return null;
       }
 
-      const disabledSkillIds = new Set(config.disabledSkillIds);
-      if (disabled) {
-        disabledSkillIds.add(skillId);
-      } else {
-        disabledSkillIds.delete(skillId);
-      }
-      config = { disabledSkillIds: [...disabledSkillIds].sort() };
+      config = normalizeConfig({
+        ...config,
+        [skillId]: {
+          ...config[skillId],
+          disabled
+        }
+      });
       await persistConfig();
 
       return { ...skill, disabled };
@@ -140,9 +140,8 @@ export function createSkillsService(
       }
 
       await rm(skill.path, { force: true, recursive: true });
-      config = {
-        disabledSkillIds: config.disabledSkillIds.filter((id) => id !== skillId)
-      };
+      const { [skillId]: _removed, ...remainingConfig } = config;
+      config = normalizeConfig(remainingConfig);
       await persistConfig();
       return true;
     }
@@ -153,22 +152,47 @@ async function readConfig(configPath: string): Promise<SkillsConfig> {
   try {
     return normalizeConfig(JSON.parse(await readFile(configPath, "utf8")));
   } catch {
-    return { disabledSkillIds: [] };
+    return {};
   }
 }
 
 function normalizeConfig(value: unknown): SkillsConfig {
   if (!value || typeof value !== "object") {
-    return { disabledSkillIds: [] };
+    return {};
   }
-  const disabledSkillIds = (value as { disabledSkillIds?: unknown })
+  const legacyDisabledSkillIds = (value as { disabledSkillIds?: unknown })
     .disabledSkillIds;
 
-  return {
-    disabledSkillIds: Array.isArray(disabledSkillIds)
-      ? [...new Set(disabledSkillIds.filter(isNonEmptyString))].sort()
-      : []
-  };
+  if (Array.isArray(legacyDisabledSkillIds)) {
+    return Object.fromEntries(
+      [...new Set(legacyDisabledSkillIds.filter(isNonEmptyString))]
+        .sort()
+        .map((skillId) => [skillId, { disabled: true }])
+    );
+  }
+
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([skillId, entry]) => isNonEmptyString(skillId) && isPlainObject(entry))
+      .sort(([leftSkillId], [rightSkillId]) =>
+        leftSkillId.localeCompare(rightSkillId)
+      )
+      .map(([skillId, entry]) => [skillId, normalizeConfigEntry(entry)])
+  );
+}
+
+function normalizeConfigEntry(entry: Record<string, unknown>) {
+  const normalizedEntry = { ...entry };
+
+  if (typeof normalizedEntry.disabled !== "boolean") {
+    delete normalizedEntry.disabled;
+  }
+
+  return normalizedEntry;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
 async function readSkillEntries(rootDir: string): Promise<Dirent<string>[]> {
@@ -192,7 +216,7 @@ async function readInstalledSkill(
     const content = await readFile(join(skillPath, "SKILL.md"), "utf8");
 
     return {
-      disabled: config.disabledSkillIds.includes(skillId),
+      disabled: config[skillId]?.disabled === true,
       id: skillId,
       name: parseSkillName(content) ?? basename(skillPath),
       path: skillPath

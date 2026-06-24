@@ -6,7 +6,12 @@ export interface InstalledSkill {
 }
 
 export interface SkillsConfig {
-  disabledSkillIds: string[];
+  [skillId: string]: SkillConfigEntry;
+}
+
+export interface SkillConfigEntry {
+  disabled?: boolean;
+  [property: string]: unknown;
 }
 
 export interface SkillsService {

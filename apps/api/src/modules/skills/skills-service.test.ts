@@ -21,7 +21,7 @@ describe("skills service", () => {
     await createSkill("planning", "planning");
     await writeFile(
       join(rootDir, "skills.json"),
-      JSON.stringify({ disabledSkillIds: ["planning"] }),
+      JSON.stringify({ planning: { disabled: true } }),
       "utf8"
     );
     const service = createSkillsService({ rootDir });
@@ -46,18 +46,34 @@ describe("skills service", () => {
     await service.load();
 
     await expect(readConfig()).resolves.toEqual({
-      disabledSkillIds: ["validator"]
+      validator: { disabled: true }
     });
     await expect(service.listEnabledSkillDirs()).resolves.toEqual([]);
 
     await service.setSkillDisabled("validator", false);
 
     await expect(readConfig()).resolves.toEqual({
-      disabledSkillIds: []
+      validator: { disabled: false }
     });
     await expect(service.listEnabledSkillDirs()).resolves.toEqual([
       join(rootDir, "validator")
     ]);
+  });
+
+  it("preserves existing skill config properties when updating disabled state", async () => {
+    await createSkill("validator", "validator");
+    await writeFile(
+      join(rootDir, "skills.json"),
+      JSON.stringify({ validator: { disabled: true, source: "custom" } }),
+      "utf8"
+    );
+    const service = createSkillsService({ rootDir });
+
+    await service.setSkillDisabled("validator", false);
+
+    await expect(readConfig()).resolves.toEqual({
+      validator: { disabled: false, source: "custom" }
+    });
   });
 
   it("installs a skill from a GitHub repository into the skills directory", async () => {
@@ -156,9 +172,7 @@ describe("skills service", () => {
     await service.setSkillDisabled("old-skill", true);
 
     expect(await service.uninstallSkill("old-skill")).toBe(true);
-    await expect(readConfig()).resolves.toEqual({
-      disabledSkillIds: []
-    });
+    await expect(readConfig()).resolves.toEqual({});
     await expect(service.listSkills()).resolves.toEqual([]);
   });
 
