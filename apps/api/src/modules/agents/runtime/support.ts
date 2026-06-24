@@ -79,9 +79,14 @@ export async function getRuntimeSkillDirs(
 
 export async function listWorkspaceSkills(
   workspacePath: string,
-  configuredSkillDirs?: string[]
+  configuredSkillDirs?: string[],
+  skillsService?: SkillsService
 ): Promise<WorkspaceSkill[]> {
-  const skillDirs = getSkillDirs(workspacePath, configuredSkillDirs);
+  const skillDirs = await getRuntimeSkillDirs(
+    workspacePath,
+    configuredSkillDirs,
+    skillsService
+  );
   const skills = await Promise.all(
     skillDirs.map((skillDir) => listSkillsInDir(skillDir))
   );
@@ -91,6 +96,11 @@ export async function listWorkspaceSkills(
 
 async function listSkillsInDir(skillDir: string): Promise<WorkspaceSkill[]> {
   let entries: Dirent<string>[];
+  const directSkill = await readSkillPath(skillDir);
+
+  if (directSkill) {
+    return [directSkill];
+  }
 
   try {
     entries = await readdir(skillDir, { withFileTypes: true });
@@ -112,7 +122,10 @@ async function readSkill(
   skillDir: string,
   skillFolderName: string
 ): Promise<WorkspaceSkill | null> {
-  const skillPath = join(skillDir, skillFolderName);
+  return readSkillPath(join(skillDir, skillFolderName));
+}
+
+async function readSkillPath(skillPath: string): Promise<WorkspaceSkill | null> {
   const skillFilePath = join(skillPath, "SKILL.md");
 
   try {

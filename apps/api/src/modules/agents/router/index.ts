@@ -2,14 +2,16 @@ import { Router, type Request, type Response } from "express";
 
 import { sendError, sendSuccess } from "../../../response";
 import { RESPONSE_CODE_DEFINITIONS } from "../../../response/response-codes";
+import { getDefaultSkillsService, type SkillsService } from "../../skills";
 import type { AgentEventEnvelope, StartAgentInput } from "../agent-types";
+import { listWorkspaceSkills } from "../runtime/support";
 import { getDefaultAgentsService } from "../service/default";
 import type { AgentsService } from "../service";
-import { listWorkspaceSkills } from "../runtime/support";
 
 export interface CreateAgentsRouterOptions {
   agentsService?: AgentsService;
   skillDirs?: string[];
+  skillsService?: SkillsService;
 }
 
 interface StartAgentBody {
@@ -44,6 +46,8 @@ export function createAgentsRouter(
   const router = Router();
   const getService = (): AgentsService =>
     options.agentsService ?? getDefaultAgentsService();
+  const getSkillsService = (): SkillsService =>
+    options.skillsService ?? getDefaultSkillsService();
 
   router.post(
     "/agents/start",
@@ -91,7 +95,11 @@ export function createAgentsRouter(
         return;
       }
 
-      void listWorkspaceSkills(workspacePath, options.skillDirs)
+      void listWorkspaceSkills(
+        workspacePath,
+        options.skillDirs,
+        getSkillsService()
+      )
         .then((skills) => {
           sendSuccess(response, { skills });
         })

@@ -6,6 +6,7 @@ import request from "supertest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createApp } from "../../../app";
+import type { SkillsService } from "../../skills";
 import type { AgentsService } from "../service";
 
 function createService(overrides: Partial<AgentsService> = {}): AgentsService {
@@ -97,6 +98,20 @@ function createService(overrides: Partial<AgentsService> = {}): AgentsService {
   };
 }
 
+function createSkillsService(
+  overrides: Partial<SkillsService> = {}
+): SkillsService {
+  return {
+    installSkill: vi.fn(),
+    listEnabledSkillDirs: vi.fn().mockResolvedValue([]),
+    listSkills: vi.fn().mockResolvedValue([]),
+    load: vi.fn().mockResolvedValue(undefined),
+    setSkillDisabled: vi.fn(),
+    uninstallSkill: vi.fn(),
+    ...overrides
+  };
+}
+
 describe("agent routes", () => {
   let rootPath = "";
 
@@ -148,17 +163,30 @@ describe("agent routes", () => {
     });
   });
 
-  it("lists skills for a workspace path", async () => {
+  it("lists workspace skills and enabled global skills", async () => {
     rootPath = await mkdtemp(join(tmpdir(), "hold-rein-agent-skills-"));
-    const skillPath = join(rootPath, ".agents", "skills", "reviewer");
+    const workspaceSkillPath = join(rootPath, ".agents", "skills", "reviewer");
+    const enabledGlobalSkillPath = join(rootPath, "global", "enabled");
+    const disabledGlobalSkillPath = join(rootPath, "global", "disabled");
 
-    await mkdir(skillPath, { recursive: true });
+    await mkdir(workspaceSkillPath, { recursive: true });
+    await mkdir(enabledGlobalSkillPath, { recursive: true });
+    await mkdir(disabledGlobalSkillPath, { recursive: true });
     await writeFile(
-      join(skillPath, "SKILL.md"),
-      "---\nname: code-reviewer\n---\n# Code Reviewer\n"
+      join(workspaceSkillPath, "SKILL.md"),
+      "---\nname: code-reviewer\n---\n"
     );
+    await writeFile(join(enabledGlobalSkillPath, "SKILL.md"), "# Enabled\n");
+    await writeFile(join(disabledGlobalSkillPath, "SKILL.md"), "# Disabled\n");
 
-    const response = await request(await createApp({ agentsService: createService() }))
+    const skillsService = createSkillsService({
+      listEnabledSkillDirs: vi.fn().mockResolvedValue([enabledGlobalSkillPath])
+    });
+
+    const response = await request(await createApp({
+      agentsService: createService(),
+      skillsService
+    }))
       .get("/api/v1/agents/skills")
       .query({ workspacePath: rootPath });
 
@@ -166,9 +194,17 @@ describe("agent routes", () => {
     expect(response.body.data.skills).toEqual(expect.arrayContaining([
       {
         name: "code-reviewer",
-        path: skillPath
+        path: workspaceSkillPath
+      },
+      {
+        name: "enabled",
+        path: enabledGlobalSkillPath
       }
     ]));
+    expect(response.body.data.skills).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ path: disabledGlobalSkillPath })
+    ]));
+    expect(skillsService.listEnabledSkillDirs).toHaveBeenCalledOnce();
   });
 
   it("rejects invalid skill list requests", async () => {
