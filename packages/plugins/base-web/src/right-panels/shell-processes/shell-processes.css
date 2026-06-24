@@ -1,0 +1,83 @@
+.shell-processes-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.shell-processes-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.shell-processes-title {
+  color: var(--app-color-text);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.shell-processes-empty {
+  align-items: center;
+  color: var(--app-color-text-secondary);
+  display: flex;
+  justify-content: center;
+  min-height: 160px;
+}
+
+.shell-processes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shell-processes-item {
+  border: 1px solid var(--app-color-border-secondary);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+}
+
+.shell-processes-item-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.shell-processes-command {
+  color: var(--app-color-text);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.shell-processes-meta {
+  color: var(--app-color-text-tertiary);
+  font-size: 11px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.shell-processes-output {
+  background: var(--app-color-fill-tertiary);
+  border-radius: 4px;
+  color: var(--app-color-text-secondary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.45;
+  margin: 0;
+  max-height: 180px;
+  overflow: auto;
+  padding: 8px;
+  white-space: pre-wrap;
+}
+
+.shell-processes-status {
+  margin-inline-end: 0;
+}

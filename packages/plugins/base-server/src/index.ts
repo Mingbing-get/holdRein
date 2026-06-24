@@ -8,8 +8,11 @@ import {
   createGrepFilesTool,
   createReadFileTool,
   createShellExecTool,
+  createShellKillTool,
+  createShellReadTool,
   createWriteFileTool
 } from './tools'
+import { shellProcessManager } from './tools/shell-exec-tool/shell-process-manager'
 
 const baseServerPlugin: ServerPlugin.Plugin = {
   id: '__base',
@@ -23,15 +26,10 @@ const baseServerPlugin: ServerPlugin.Plugin = {
         createGrepFilesTool(context.env),
         createFindFilesTool(context.env),
         createEditFileTool(context.env),
-        createShellExecTool(context.env)
-      ],
-      // onAgentEnd: () => {
-      //   if (context.isContinue || context.agentName !== 'main') {
-      //     return
-      //   }
-
-      //   return { prompt: '测试自动运行', useSubagent: true }
-      // }
+        createShellExecTool(context.env, { taskId: context.taskId }),
+        createShellReadTool(),
+        createShellKillTool()
+      ]
     }
   }
 }

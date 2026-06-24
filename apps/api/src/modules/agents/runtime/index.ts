@@ -87,6 +87,7 @@ export function createAgentRuntime(
           isContinue: harnessOptions.isContinue,
           session: harnessOptions.session,
           prompt: harnessOptions.pluginPrompt,
+          taskId: input.taskId,
           thinkingLevel: input.thinkingLevel,
           model: activeModel
         }
@@ -486,7 +487,6 @@ export function createAgentRuntime(
       };
     }
   };
-
   function createTokenCollectionOptions() {
     if (!options.tokenUsageStorageTarget) return {};
 

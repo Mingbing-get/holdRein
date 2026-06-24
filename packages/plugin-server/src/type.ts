@@ -41,6 +41,7 @@ export namespace ServerPlugin {
     readonly model: Model<Api>;
     readonly thinkingLevel: ThinkingLevel;
     readonly prompt: string;
+    readonly taskId: string;
   }
 
   export interface AgentSessionMetadata {
