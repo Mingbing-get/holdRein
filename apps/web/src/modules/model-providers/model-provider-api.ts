@@ -5,6 +5,8 @@ import type {
   ModelSummary
 } from "./model-provider-types";
 
+const providerModelsCache = new Map<string, Promise<ModelSummary[]>>();
+
 export async function fetchModelProviders(
   apiBaseUrl: string
 ): Promise<ModelProviderSummary[]> {
@@ -34,6 +36,47 @@ export async function fetchProviderModels(
   return payload.data;
 }
 
+export function fetchCachedProviderModels(
+  apiBaseUrl: string,
+  providerId: string
+): Promise<ModelSummary[]> {
+  const cacheKey = createProviderModelsCacheKey(apiBaseUrl, providerId);
+  const cachedModels = providerModelsCache.get(cacheKey);
+
+  if (cachedModels) {
+    return cachedModels;
+  }
+
+  const modelsPromise = fetchProviderModels(apiBaseUrl, providerId).catch((error) => {
+    providerModelsCache.delete(cacheKey);
+    throw error;
+  });
+  providerModelsCache.set(cacheKey, modelsPromise);
+  return modelsPromise;
+}
+
+export function invalidateProviderModelsCache(
+  apiBaseUrl?: string,
+  providerId?: string
+): void {
+  if (!apiBaseUrl) {
+    providerModelsCache.clear();
+    return;
+  }
+
+  if (providerId) {
+    providerModelsCache.delete(createProviderModelsCacheKey(apiBaseUrl, providerId));
+    return;
+  }
+
+  const prefix = `${normalizeApiBaseUrl(apiBaseUrl)}::`;
+  for (const cacheKey of providerModelsCache.keys()) {
+    if (cacheKey.startsWith(prefix)) {
+      providerModelsCache.delete(cacheKey);
+    }
+  }
+}
+
 export async function fetchModelProxies(
   apiBaseUrl: string
 ): Promise<ModelProxySummary[]> {
@@ -49,7 +92,7 @@ export async function fetchModelProxies(
 }
 
 export function createModelProvidersUrl(apiBaseUrl: string): string {
-  return `${apiBaseUrl.replace(/\/$/, "")}/api/v1/model-providers`;
+  return `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/model-providers`;
 }
 
 export function createModelProxiesUrl(apiBaseUrl: string): string {
@@ -103,4 +146,12 @@ function sortProviders(providers: ModelProviderSummary[]): ModelProviderSummary[
 
     return left.id.localeCompare(right.id);
   });
+}
+
+function createProviderModelsCacheKey(apiBaseUrl: string, providerId: string): string {
+  return `${normalizeApiBaseUrl(apiBaseUrl)}::${providerId}`;
+}
+
+function normalizeApiBaseUrl(apiBaseUrl: string): string {
+  return apiBaseUrl.replace(/\/$/, "");
 }

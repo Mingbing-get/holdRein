@@ -4,8 +4,8 @@ import type { CascaderProps } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
+  fetchCachedProviderModels,
   fetchModelProviders,
-  fetchProviderModels
 } from "../../model-providers/model-provider-api";
 import type {
   ModelProviderSummary,
@@ -86,6 +86,22 @@ function toCascaderValue(value?: SelectedModel): string[] | undefined {
   return value ? [value.providerId, value.modelId] : undefined;
 }
 
+function setProviderModels(
+  options: ProviderOption[],
+  providerId: string,
+  models: ModelSummary[]
+): ProviderOption[] {
+  return options.map((option) =>
+    option.value === providerId
+      ? {
+          ...option,
+          children: buildModelOptions(models),
+          loading: false
+        }
+      : option
+  );
+}
+
 export function ModelSelector({
   apiBaseUrl,
   onChange,
@@ -105,7 +121,18 @@ export function ModelSelector({
 
     void fetchModelProviders(apiBaseUrl).then((providers) => {
       if (isCurrent) {
-        setOptions(buildConfiguredProviderOptions(providers));
+        const nextOptions = buildConfiguredProviderOptions(providers);
+        setOptions(nextOptions);
+
+        if (nextOptions.some((option) => option.value === "local")) {
+          void fetchCachedProviderModels(apiBaseUrl, "local").then((models) => {
+            if (isCurrent) {
+              setOptions((currentOptions) =>
+                setProviderModels(currentOptions, "local", models)
+              );
+            }
+          });
+        }
       }
     });
 
@@ -127,7 +154,7 @@ export function ModelSelector({
       providerOption.loading = true;
       setOptions([...options]);
 
-      void fetchProviderModels(apiBaseUrl, providerOption.value).then(
+      void fetchCachedProviderModels(apiBaseUrl, providerOption.value).then(
         (models) => {
           providerOption.loading = false;
           providerOption.children = buildModelOptions(models);

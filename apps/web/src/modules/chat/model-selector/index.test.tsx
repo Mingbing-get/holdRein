@@ -151,6 +151,52 @@ describe("ModelSelector", () => {
     });
   });
 
+  it("preloads local proxy models so the selected proxy shows its display name", async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: [
+            { hasApiKey: true, id: "local", modelCount: 1, source: "proxy" }
+          ],
+          msg: "ok"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: [
+            {
+              api: "chat",
+              contextWindow: 128000,
+              id: "coding-agent",
+              input: ["text"],
+              maxTokens: 4096,
+              name: "Coding Agent",
+              provider: "local",
+              reasoning: false
+            }
+          ],
+          msg: "ok"
+        }),
+        ok: true
+      } as Response);
+
+    render(
+      <ModelSelector
+        apiBaseUrl="http://localhost:4001"
+        value={{ modelId: "coding-agent", providerId: "local" }}
+      />
+    );
+
+    expect(await screen.findByText("Coding Agent")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost:4001/api/v1/model-providers/local/models"
+    );
+  });
+
   it("uses content-sized popup width and disables clearing", () => {
     const modelSelectorSource = readFileSync(
       getWebSourcePath("modules/chat/model-selector/index.tsx"),

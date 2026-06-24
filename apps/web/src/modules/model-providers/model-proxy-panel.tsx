@@ -19,7 +19,8 @@ import {
   createModelProxyUrl,
   fetchModelProxies,
   fetchModelProviders,
-  fetchProviderModels
+  fetchProviderModels,
+  invalidateProviderModelsCache
 } from "./model-provider-api";
 import {
   DEFAULT_MODEL_PROXY_LIMIT,
@@ -179,6 +180,7 @@ export function ModelProxyPanel({
         }
       );
       if (!response.ok) throw new Error("Failed to save model proxy");
+      invalidateProviderModelsCache(apiBaseUrl, "local");
       await refreshProxies();
       await onChanged();
       closeModal();
@@ -192,6 +194,7 @@ export function ModelProxyPanel({
       method: "DELETE"
     });
     if (!response.ok) throw new Error("Failed to delete model proxy");
+    invalidateProviderModelsCache(apiBaseUrl, "local");
     await refreshProxies();
     await onChanged();
   };
