@@ -455,6 +455,14 @@ describe("Sender action button", () => {
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
+  it("shows the thinking level selector when the active agent does not support reasoning", () => {
+    const activeAgent = { modelId: "basic-model", providerId: "local", reasoning: false } as const;
+
+    render(<Sender activeAgent={activeAgent} apiBaseUrl="" />);
+
+    expect(screen.getByLabelText("思考级别")).toBeInTheDocument();
+  });
+
   it("renders plugin sender actions after the model selector with a divider", () => {
     const Render: WebPlugin.SenderAction["Render"] = ({
       draftMessage,
@@ -483,10 +491,10 @@ describe("Sender action button", () => {
 
     const footerTools = screen.getByTestId("sender-footer-tools");
     expect(footerTools).toHaveTextContent(
-      "工作空间选择模型选择需审批插件动作:hello:/tmp/workspace"
+      "工作空间选择模型选择中需审批插件动作:hello:/tmp/workspace"
     );
 
     const dividers = footerTools.querySelectorAll(".ant-divider-vertical");
-    expect(dividers).toHaveLength(3);
+    expect(dividers).toHaveLength(4);
   });
 });

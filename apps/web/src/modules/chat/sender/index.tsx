@@ -247,30 +247,26 @@ export default function Sender({
                             ? { onChange: onActiveAgentChange }
                             : {})}
                         />
-                        {activeAgent?.reasoning === true ? (
-                          <>
-                            <Divider
-                              orientation="vertical"
-                              style={{
-                                borderColor:
-                                  "var(--app-color-border-secondary)"
-                              }}
-                            />
-                            <ConfigProvider theme={senderSelectTheme}>
-                              <Select<ThinkingLevel>
-                                aria-label="思考级别"
-                                options={THINKING_LEVEL_OPTIONS}
-                                popupMatchSelectWidth={false}
-                                size="small"
-                                value={thinkingLevel}
-                                variant="borderless"
-                                {...(onThinkingLevelChange
-                                  ? { onChange: onThinkingLevelChange }
-                                  : {})}
-                              />
-                            </ConfigProvider>
-                          </>
-                        ) : null}
+                        <Divider
+                          orientation="vertical"
+                          style={{
+                            borderColor:
+                              "var(--app-color-border-secondary)"
+                          }}
+                        />
+                        <ConfigProvider theme={senderSelectTheme}>
+                          <Select<ThinkingLevel>
+                            aria-label="思考级别"
+                            options={THINKING_LEVEL_OPTIONS}
+                            popupMatchSelectWidth={false}
+                            size="small"
+                            value={thinkingLevel}
+                            variant="borderless"
+                            {...(onThinkingLevelChange
+                              ? { onChange: onThinkingLevelChange }
+                              : {})}
+                          />
+                        </ConfigProvider>
                         <Divider
                           orientation="vertical"
                           style={{
