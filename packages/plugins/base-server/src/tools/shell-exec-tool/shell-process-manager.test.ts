@@ -1,8 +1,51 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { ShellProcessManager } from "./shell-process-manager";
 
 describe("ShellProcessManager", () => {
+  it("notifies subscribers as shell processes stream output and end", () => {
+    const manager = new ShellProcessManager();
+    const listener = vi.fn();
+    const unsubscribe = manager.subscribe(listener);
+
+    const record = manager.register({
+      command: "npm run dev",
+      controller: new AbortController(),
+      cwd: "/workspace",
+      taskId: "task-1",
+      toolCallId: "tool-call-1"
+    });
+    manager.appendStdout(record.id, "ready\n");
+    manager.appendStderr(record.id, "warn\n");
+    manager.complete(record.id, 0);
+    unsubscribe();
+    manager.appendStdout(record.id, "ignored\n");
+
+    expect(listener).toHaveBeenCalledTimes(4);
+    expect(listener).toHaveBeenNthCalledWith(1, {
+      record,
+      type: "shell_start"
+    });
+    expect(listener).toHaveBeenNthCalledWith(2, {
+      chunk: "ready\n",
+      record: expect.objectContaining({ id: record.id, stdout: "ready\n" }),
+      type: "shell_stdout"
+    });
+    expect(listener).toHaveBeenNthCalledWith(3, {
+      chunk: "warn\n",
+      record: expect.objectContaining({ id: record.id, stderr: "warn\n" }),
+      type: "shell_stderr"
+    });
+    expect(listener).toHaveBeenNthCalledWith(4, {
+      record: expect.objectContaining({
+        exitCode: 0,
+        id: record.id,
+        status: "completed"
+      }),
+      type: "shell_end"
+    });
+  });
+
   it("kills running shell processes for a task and keeps other tasks running", () => {
     const manager = new ShellProcessManager();
     const firstController = new AbortController();

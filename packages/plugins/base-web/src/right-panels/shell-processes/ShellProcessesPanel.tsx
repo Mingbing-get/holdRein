@@ -27,55 +27,67 @@ interface ShellProcessRecord {
   readonly truncated: boolean;
 }
 
+type ShellProcessEvent =
+  | {
+    readonly record: ShellProcessRecord;
+    readonly type: "shell_end" | "shell_start";
+  }
+  | {
+    readonly chunk: string;
+    readonly record: ShellProcessRecord;
+    readonly type: "shell_stderr" | "shell_stdout";
+  };
+
 export interface ShellProcessesPanelProps extends WebPlugin.RightPanelProps {
   readonly request: WebPlugin.RuntimeContext["request"];
 }
 
 export function ShellProcessesPanel({
   request,
-  status,
   taskId
 }: ShellProcessesPanelProps) {
   const [items, setItems] = useState<ShellProcessRecord[]>([]);
   const [expandedIds, setExpandedIds] = useState<ReadonlySet<string>>(new Set());
   const [loading, setLoading] = useState(false);
+  const [reconnectIndex, setReconnectIndex] = useState(0);
   const [stoppingId, setStoppingId] = useState<string>("");
 
-  const loadShells = useCallback(async () => {
+  const reconnect = useCallback(() => {
+    setReconnectIndex((current) => current + 1);
+  }, []);
+
+  useEffect(() => {
     if (!taskId) {
       setItems([]);
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const result = await request<ShellProcessRecord[]>({
-        path: "/plugin/__base/shells",
-        query: { taskId }
-      });
-      setItems(result.data);
-    } finally {
-      setLoading(false);
-    }
-  }, [request, taskId]);
-
-  useEffect(() => {
-    void loadShells();
-  }, [loadShells]);
-
-  useEffect(() => {
-    if (!taskId || status !== "running") {
       return undefined;
     }
 
-    const intervalId = window.setInterval(() => {
-      void loadShells();
-    }, 2_000);
+    const controller = new AbortController();
+    let active = true;
+
+    setLoading(true);
+    setItems([]);
+    void listenForShells(taskId, controller.signal, () => {
+      if (active) {
+        setLoading(false);
+      }
+    }, (event) => {
+      if (!active) {
+        return;
+      }
+
+      setItems((current) => applyShellEvent(current, event));
+    }).finally(() => {
+      if (active) {
+        setLoading(false);
+      }
+    });
 
     return () => {
-      window.clearInterval(intervalId);
+      active = false;
+      controller.abort();
     };
-  }, [loadShells, status, taskId]);
+  }, [reconnectIndex, taskId]);
 
   const stopShell = useCallback(
     async (shellId: string) => {
@@ -85,12 +97,11 @@ export function ShellProcessesPanel({
           method: "POST",
           path: `/plugin/__base/shells/${shellId}/kill`
         });
-        await loadShells();
       } finally {
         setStoppingId("");
       }
     },
-    [loadShells, request]
+    [request]
   );
 
   const toggleShell = useCallback((shellId: string) => {
@@ -124,7 +135,7 @@ export function ShellProcessesPanel({
             aria-label="Refresh shells"
             icon={<SyncOutlined spin={loading} />}
             onClick={() => {
-              void loadShells();
+              reconnect();
             }}
             size="small"
             type="text"
@@ -191,7 +202,85 @@ export function ShellProcessesPanel({
 }
 
 function formatOutput(item: ShellProcessRecord): string {
-  const output = item.stdout || item.stderr;
+  const output = createOutputText(item);
 
   return output.trim() || "(no output)";
+}
+
+async function listenForShells(
+  taskId: string,
+  signal: AbortSignal,
+  onOpen: () => void,
+  onEvent: (event: ShellProcessEvent) => void
+): Promise<void> {
+  try {
+    const response = await fetch(createShellStreamUrl(taskId), { signal });
+    const reader = response.body?.getReader();
+    onOpen();
+
+    if (!response.ok || !reader) {
+      return;
+    }
+
+    await readJsonLines(reader, signal, onEvent);
+  } catch (error) {
+    if (!isAbortError(error)) {
+      throw error;
+    }
+  }
+}
+
+async function readJsonLines(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  signal: AbortSignal,
+  onEvent: (event: ShellProcessEvent) => void
+): Promise<void> {
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (!signal.aborted) {
+    const result = await reader.read();
+
+    if (result.done) {
+      break;
+    }
+
+    buffer += decoder.decode(result.value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (!line.trim()) {
+        continue;
+      }
+
+      onEvent(JSON.parse(line) as ShellProcessEvent);
+    }
+  }
+}
+
+function applyShellEvent(
+  current: readonly ShellProcessRecord[],
+  event: ShellProcessEvent
+): ShellProcessRecord[] {
+  const next = event.record;
+  const index = current.findIndex((item) => item.id === next.id);
+
+  if (index === -1) {
+    return [...current, next];
+  }
+
+  return current.map((item, itemIndex) => itemIndex === index ? next : item);
+}
+
+function createOutputText(record: ShellProcessRecord): string {
+  return [record.stdout, record.stderr].filter(Boolean).join("");
+}
+
+function createShellStreamUrl(taskId: string): string {
+  return `/plugin/__base/shells?taskId=${encodeURIComponent(taskId)}`;
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === "AbortError";
 }

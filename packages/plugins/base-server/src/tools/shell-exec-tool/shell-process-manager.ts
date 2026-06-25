@@ -19,6 +19,19 @@ export interface ShellProcessRecord {
   readonly truncated: boolean;
 }
 
+export type ShellProcessEvent =
+  | {
+    readonly record: ShellProcessRecord;
+    readonly type: "shell_end" | "shell_start";
+  }
+  | {
+    readonly chunk: string;
+    readonly record: ShellProcessRecord;
+    readonly type: "shell_stderr" | "shell_stdout";
+  };
+
+export type ShellProcessEventListener = (event: ShellProcessEvent) => void;
+
 interface MutableShellProcessRecord {
   command: string;
   controller: AbortController;
@@ -44,6 +57,8 @@ export interface RegisterShellProcessInput {
 }
 
 export class ShellProcessManager {
+  private readonly listeners = new Set<ShellProcessEventListener>();
+
   private readonly records = new Map<string, MutableShellProcessRecord>();
 
   appendStderr(id: string, chunk: string): void {
@@ -56,6 +71,11 @@ export class ShellProcessManager {
     const next = appendBounded(record.stderr, chunk);
     record.stderr = next.value;
     record.truncated ||= next.truncated;
+    this.notify({
+      chunk,
+      record: toShellProcessRecord(record),
+      type: "shell_stderr"
+    });
   }
 
   appendStdout(id: string, chunk: string): void {
@@ -68,6 +88,11 @@ export class ShellProcessManager {
     const next = appendBounded(record.stdout, chunk);
     record.stdout = next.value;
     record.truncated ||= next.truncated;
+    this.notify({
+      chunk,
+      record: toShellProcessRecord(record),
+      type: "shell_stdout"
+    });
   }
 
   clear(): void {
@@ -84,6 +109,10 @@ export class ShellProcessManager {
     record.endedAt = new Date().toISOString();
     record.exitCode = exitCode;
     record.status = exitCode === 0 ? "completed" : "failed";
+    this.notify({
+      record: toShellProcessRecord(record),
+      type: "shell_end"
+    });
   }
 
   fail(id: string): void {
@@ -95,6 +124,10 @@ export class ShellProcessManager {
 
     record.endedAt = new Date().toISOString();
     record.status = "failed";
+    this.notify({
+      record: toShellProcessRecord(record),
+      type: "shell_end"
+    });
   }
 
   get(id: string): ShellProcessRecord | undefined {
@@ -114,6 +147,10 @@ export class ShellProcessManager {
       record.controller.abort();
       record.endedAt = new Date().toISOString();
       record.status = "killed";
+      this.notify({
+        record: toShellProcessRecord(record),
+        type: "shell_end"
+      });
     }
 
     return toShellProcessRecord(record);
@@ -161,7 +198,27 @@ export class ShellProcessManager {
 
     this.records.set(id, record);
 
-    return toShellProcessRecord(record);
+    const shellRecord = toShellProcessRecord(record);
+    this.notify({
+      record: shellRecord,
+      type: "shell_start"
+    });
+
+    return shellRecord;
+  }
+
+  subscribe(listener: ShellProcessEventListener): () => void {
+    this.listeners.add(listener);
+
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  private notify(event: ShellProcessEvent): void {
+    for (const listener of this.listeners) {
+      listener(event);
+    }
   }
 }
 
