@@ -15,6 +15,7 @@ import {
   type ContinueTaskBody,
   type StartAgentBody
 } from "./request-parsing";
+import { parseBrowserToolResultBody } from "./browser-tool-result";
 
 interface ApprovalDecisionBody {
   approved?: boolean;
@@ -359,6 +360,56 @@ export function createAgentsRouter(
             response,
             RESPONSE_CODE_DEFINITIONS.notFound,
             error instanceof Error ? error.message : "Unknown approval request"
+          );
+        });
+    }
+  );
+
+  router.post(
+    "/agents/:agentId/browser-tools/:toolCallId/result",
+    (
+      request: Request<
+        { agentId: string; toolCallId: string },
+        unknown,
+        { content?: unknown; isError?: unknown }
+      >,
+      response: Response
+    ): void => {
+      const input = parseBrowserToolResultBody(
+        request.body,
+        request.params.agentId,
+        request.params.toolCallId
+      );
+
+      if (!input) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "content must be a string or text content array"
+        );
+        return;
+      }
+
+      void getService()
+        .submitBrowserToolResult(input)
+        .then((result) => {
+          if (!result) {
+            sendError(
+              response,
+              RESPONSE_CODE_DEFINITIONS.notFound,
+              "Unknown browser tool call"
+            );
+            return;
+          }
+          sendSuccess(response, result);
+        })
+        .catch((error) => {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.badRequest,
+            error instanceof Error
+              ? error.message
+              : "Failed to submit browser tool result"
           );
         });
     }

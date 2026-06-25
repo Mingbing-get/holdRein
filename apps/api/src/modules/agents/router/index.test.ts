@@ -82,6 +82,7 @@ function createService(overrides: Partial<AgentsService> = {}): AgentsService {
         updatedAt: "2026-06-08T00:00:00.000Z"
       }
     }),
+    submitBrowserToolResult: vi.fn().mockResolvedValue(null),
     subscribeToAgentEvents: vi.fn().mockImplementation((_input, listener) => {
       listener({
         agentId: "agent-1",

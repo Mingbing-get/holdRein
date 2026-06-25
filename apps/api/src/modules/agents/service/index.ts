@@ -23,6 +23,8 @@ import type {
   ApprovalPolicy,
   ApprovalDecisionInput,
   ApprovalDecisionResult,
+  BrowserRuntimeContributions,
+  BrowserToolResultInput,
   StoredAgentMessage,
   InterruptTaskResult,
   StartAgentInput,
@@ -48,6 +50,9 @@ export interface AgentsService {
   listTaskMessages: (input: GetTaskTitleInput) => Promise<TaskMessageHistory>;
   renameTask: (input: RenameTaskInput) => Promise<TaskTitleResult | null>;
   startAgent: (input: StartAgentInput) => Promise<StartAgentResult>;
+  submitBrowserToolResult: (
+    input: BrowserToolResultInput
+  ) => Promise<BrowserToolResultInput | null>;
   subscribeToAgentEvents: (
     input: SubscribeAgentEventsInput,
     listener: AgentEventListener
@@ -65,6 +70,7 @@ export interface RenameTaskInput extends GetTaskTitleInput {
 interface ContinueTaskBaseInput {
   approvalPolicy?: ApprovalPolicy;
   prompt: string;
+  runtimeContributions?: BrowserRuntimeContributions;
   thinkingLevel?: ThinkingLevel;
   taskId: string;
 }
@@ -189,6 +195,9 @@ export function createAgentsService(options: CreateAgentsServiceOptions): Agents
           prompt,
           provider: selectedModel?.lastModelProvider ?? task.lastModelProvider,
           ...optionUpdate,
+          ...(input.runtimeContributions === undefined
+            ? {}
+            : { runtimeContributions: input.runtimeContributions }),
           ...(session ? { session } : {}),
           taskId,
           workspacePath: workspace.path
@@ -300,6 +309,11 @@ export function createAgentsService(options: CreateAgentsServiceOptions): Agents
       const updatedTask = options.repository.updateTaskSession(task.id, run.session) ?? task;
 
       return toStartAgentResult(run, updatedTask, workspace);
+    },
+    submitBrowserToolResult: async (input) => {
+      const accepted =
+        (await options.runtime.submitBrowserToolResult?.(input)) ?? false;
+      return accepted ? input : null;
     },
     subscribeToAgentEvents: (input, listener) =>
       options.eventBus.subscribe(input, listener)

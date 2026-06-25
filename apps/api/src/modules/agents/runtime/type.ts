@@ -1,6 +1,12 @@
 import type { AgentHarness, JsonlSessionRepoApi } from "@earendil-works/pi-agent-core/node";
 import type { AppDatabase } from "../../../db";
-import type { AgentRunResult, AgentSessionMetadata, StoredAgentMessage, RunAgentInput } from "../agent-types";
+import type {
+  AgentRunResult,
+  AgentSessionMetadata,
+  BrowserToolResultInput,
+  StoredAgentMessage,
+  RunAgentInput
+} from "../agent-types";
 import type { AgentApprovalStore } from "../approval/store";
 import type { AgentEventBus } from "../event/event-bus";
 import type { AgentModelLookup } from '../model/resolver'
@@ -13,6 +19,7 @@ export interface AgentRuntime {
   interrupt: (agentId: string) => Promise<boolean>;
   listMessages: (input: { session: AgentSessionMetadata; workspacePath: string }) => Promise<StoredAgentMessage[]>;
   start: (input: RunAgentInput) => Promise<AgentRunResult>;
+  submitBrowserToolResult?: (input: BrowserToolResultInput) => Promise<boolean>;
 }
 
 export interface CreateAgentRuntimeOptions {

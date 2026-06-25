@@ -4,7 +4,9 @@ import { describe, expect, it, vi } from "vitest";
 import { createApp } from "../../../app";
 import type { AgentsService } from "../service";
 
-function createService(): AgentsService {
+function createService(): AgentsService & {
+  submitBrowserToolResult: ReturnType<typeof vi.fn>;
+} {
   return {
     approveAgentAction: vi.fn(),
     continueTask: vi.fn().mockResolvedValue({
@@ -25,6 +27,12 @@ function createService(): AgentsService {
       status: "running",
       task: { id: "task-1" },
       workspace: { id: "workspace-1" }
+    }),
+    submitBrowserToolResult: vi.fn().mockResolvedValue({
+      agentId: "agent-1",
+      content: "Browser result",
+      isError: false,
+      toolCallId: "tool-call-1"
     }),
     subscribeToAgentEvents: vi.fn()
   };
@@ -83,6 +91,22 @@ describe("agent runtime contribution routes", () => {
       runtimeContributions,
       taskId: "task-1",
       thinkingLevel: "medium"
+    });
+  });
+
+  it("submits browser tool results", async () => {
+    const service = createService();
+
+    const response = await request(await createApp({ agentsService: service }))
+      .post("/api/v1/agents/agent-1/browser-tools/tool-call-1/result")
+      .send({ content: "Browser result", isError: false });
+
+    expect(response.status).toBe(200);
+    expect(service.submitBrowserToolResult).toHaveBeenCalledWith({
+      agentId: "agent-1",
+      content: "Browser result",
+      isError: false,
+      toolCallId: "tool-call-1"
     });
   });
 });
