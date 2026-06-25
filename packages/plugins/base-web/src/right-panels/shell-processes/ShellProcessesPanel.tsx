@@ -149,7 +149,7 @@ export function ShellProcessesPanel({
       ) : (
         <div className="shell-processes-list">
           {items.map((item) => {
-            const isExpanded = expandedIds.has(item.id);
+            const isExpanded = item.status === "running" || expandedIds.has(item.id);
 
             return (
               <article className="shell-processes-item" key={item.id}>
@@ -267,14 +267,24 @@ function applyShellEvent(
   const index = current.findIndex((item) => item.id === next.id);
 
   if (index === -1) {
-    return [...current, next];
+    return sortShellProcesses([...current, next]);
   }
 
-  return current.map((item, itemIndex) => itemIndex === index ? next : item);
+  return sortShellProcesses(
+    current.map((item, itemIndex) => itemIndex === index ? next : item)
+  );
 }
 
 function createOutputText(record: ShellProcessRecord): string {
   return [record.stdout, record.stderr].filter(Boolean).join("");
+}
+
+function sortShellProcesses(
+  items: readonly ShellProcessRecord[]
+): ShellProcessRecord[] {
+  return [...items].sort((left, right) => (
+    Date.parse(right.startedAt) - Date.parse(left.startedAt)
+  ));
 }
 
 function createShellStreamUrl(taskId: string): string {

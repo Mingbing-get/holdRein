@@ -69,7 +69,7 @@ describe("ShellProcessesPanel", () => {
 
     await screen.findByText("npm run dev");
     expect(screen.getByText("running")).toBeInTheDocument();
-    expect(screen.queryByText("ready")).not.toBeInTheDocument();
+    expect(screen.getByText("ready")).toBeInTheDocument();
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "/plugin/__base/shells?taskId=task-1",
       expect.objectContaining({ signal: expect.any(AbortSignal) })
@@ -111,6 +111,68 @@ describe("ShellProcessesPanel", () => {
     expect(title).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByText("/workspace")).not.toBeInTheDocument();
     expect(screen.queryByText("ready")).not.toBeInTheDocument();
+  });
+
+  it("orders shell processes from newest to oldest by start time", async () => {
+    const request = vi.fn();
+    const stream = createShellStream();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(stream.response);
+
+    render(
+      React.createElement(ShellProcessesPanel, {
+        request,
+        status: "running",
+        taskId: "task-1"
+      })
+    );
+    stream.write({
+      record: createShellRecord({
+        command: "npm test",
+        id: "shell-old",
+        startedAt: "2026-06-24T00:00:00.000Z",
+        toolCallId: "tool-call-old"
+      }),
+      type: "shell_start"
+    });
+    stream.write({
+      record: createShellRecord({
+        command: "npm run dev",
+        id: "shell-new",
+        startedAt: "2026-06-24T00:01:00.000Z",
+        toolCallId: "tool-call-new"
+      }),
+      type: "shell_start"
+    });
+
+    await screen.findByText("npm run dev");
+
+    expect(screen.getAllByRole("button", { name: /npm/ }).map((button) => (
+      button.textContent
+    ))).toEqual(["npm run dev", "npm test"]);
+  });
+
+  it("expands running shell process details by default", async () => {
+    const request = vi.fn();
+    const stream = createShellStream();
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(stream.response);
+
+    render(
+      React.createElement(ShellProcessesPanel, {
+        request,
+        status: "running",
+        taskId: "task-1"
+      })
+    );
+    stream.write({
+      record: createShellRecord({ stdout: "ready\n" }),
+      type: "shell_start"
+    });
+
+    const title = await screen.findByRole("button", { name: /npm run dev/ });
+
+    expect(title).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("/workspace")).toBeInTheDocument();
+    expect(screen.getByText("ready")).toBeInTheDocument();
   });
 
   it("streams stdout chunks into an existing shell process", async () => {
