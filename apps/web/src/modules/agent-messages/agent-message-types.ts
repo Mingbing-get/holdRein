@@ -104,6 +104,7 @@ export interface StartTaskInput {
   modelId: string;
   prompt: string;
   provider: string;
+  runtimeContributions?: BrowserRuntimeContributions;
   thinkingLevel?: ThinkingLevel;
   workspacePath: string;
 }
@@ -113,7 +114,33 @@ export interface ContinueTaskInput {
   modelId: string;
   prompt: string;
   provider: string;
+  runtimeContributions?: BrowserRuntimeContributions;
   thinkingLevel?: ThinkingLevel;
+}
+
+export interface BrowserRuntimeToolSchema {
+  description?: string;
+  inputSchema: unknown;
+  name: string;
+}
+
+export interface BrowserRuntimeSkill {
+  content: string;
+  description?: string;
+  name: string;
+}
+
+export interface BrowserRuntimeContributions {
+  skills?: BrowserRuntimeSkill[];
+  systemPrompts?: string[];
+  tools?: BrowserRuntimeToolSchema[];
+}
+
+export interface BrowserToolResultInput {
+  agentId: string;
+  content: string | WebPlugin.TextContent[];
+  isError?: boolean;
+  toolCallId: string;
 }
 
 export interface StartedWorkspace {

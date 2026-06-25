@@ -1,6 +1,7 @@
 import type {
   AgentEventEnvelope,
   ApprovalDecisionInput,
+  BrowserToolResultInput,
   ContinueTaskInput,
   InterruptTaskResult,
   StartTaskInput,
@@ -101,6 +102,25 @@ export async function decideAgentApproval(
       body: JSON.stringify({
         approved: input.approved,
         ...(input.reason === undefined ? {} : { reason: input.reason })
+      }),
+      headers: { "Content-Type": "application/json" },
+      method: "POST"
+    }
+  );
+}
+
+export async function submitBrowserToolResult(
+  apiBaseUrl: string,
+  input: BrowserToolResultInput,
+  fetcher: AgentMessageFetcher = fetch
+): Promise<BrowserToolResultInput> {
+  return requestData<BrowserToolResultInput>(
+    fetcher,
+    `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/agents/${encodeURIComponent(input.agentId)}/browser-tools/${encodeURIComponent(input.toolCallId)}/result`,
+    {
+      body: JSON.stringify({
+        content: input.content,
+        ...(input.isError === undefined ? {} : { isError: input.isError })
       }),
       headers: { "Content-Type": "application/json" },
       method: "POST"

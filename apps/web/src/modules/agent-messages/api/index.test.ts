@@ -7,8 +7,14 @@ import {
   fetchTaskMessages,
   fetchTaskTitle,
   startAgentTask,
+  submitBrowserToolResult,
   subscribeToAgentEvents
 } from ".";
+
+const runtimeContributions = {
+  systemPrompts: ["Browser prompt"],
+  tools: [{ inputSchema: { type: "object" }, name: "read_browser_selection" }]
+};
 
 describe("agent message API", () => {
   it("starts an agent task with the selected workspace and model", async () => {
@@ -52,6 +58,48 @@ describe("agent message API", () => {
           workspacePath: "/workspace"
         }),
         method: "POST"
+      })
+    );
+  });
+
+  it("starts an agent task with runtime contributions", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      json: async () => ({
+        code: 0,
+        data: {
+          agentId: "agent-1",
+          sessionId: "session-1",
+          status: "running",
+          task: { id: "task-1" },
+          workspace: { id: "workspace-1" }
+        },
+        msg: "ok"
+      }),
+      ok: true
+    });
+
+    await startAgentTask(
+      "",
+      {
+        modelId: "gpt-4.1",
+        prompt: "Inspect",
+        provider: "openai",
+        runtimeContributions,
+        workspacePath: "/workspace"
+      },
+      fetcher
+    );
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/agents/start",
+      expect.objectContaining({
+        body: JSON.stringify({
+          modelId: "gpt-4.1",
+          prompt: "Inspect",
+          provider: "openai",
+          runtimeContributions,
+          workspacePath: "/workspace"
+        })
       })
     );
   });
@@ -138,6 +186,76 @@ describe("agent message API", () => {
           provider: "anthropic",
           thinkingLevel: "medium"
         }),
+        method: "POST"
+      })
+    );
+  });
+
+  it("continues an agent task with runtime contributions", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      json: async () => ({
+        code: 0,
+        data: { agentId: "agent-2", sessionId: "session-2", status: "running" },
+        msg: "ok"
+      }),
+      ok: true
+    });
+
+    await continueAgentTask(
+      "",
+      "task-1",
+      {
+        modelId: "gpt-4.1",
+        prompt: "Continue",
+        provider: "openai",
+        runtimeContributions
+      },
+      fetcher
+    );
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/agents/tasks/task-1/continue",
+      expect.objectContaining({
+        body: JSON.stringify({
+          modelId: "gpt-4.1",
+          prompt: "Continue",
+          provider: "openai",
+          runtimeContributions
+        })
+      })
+    );
+  });
+
+  it("submits browser tool results", async () => {
+    const fetcher = vi.fn().mockResolvedValue({
+      json: async () => ({
+        code: 0,
+        data: {
+          agentId: "agent-1",
+          content: "ok",
+          isError: false,
+          toolCallId: "tool-call-1"
+        },
+        msg: "ok"
+      }),
+      ok: true
+    });
+
+    await submitBrowserToolResult(
+      "",
+      {
+        agentId: "agent-1",
+        content: "ok",
+        isError: false,
+        toolCallId: "tool-call-1"
+      },
+      fetcher
+    );
+
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/agents/agent-1/browser-tools/tool-call-1/result",
+      expect.objectContaining({
+        body: JSON.stringify({ content: "ok", isError: false }),
         method: "POST"
       })
     );
