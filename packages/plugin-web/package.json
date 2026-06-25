@@ -36,7 +36,8 @@
   "dependencies": {
     "@ant-design/icons": "6.2.5",
     "antd": "6.4.3",
-    "react": "19.2.6"
+    "react": "19.2.6",
+    "typebox": "1.1.38"
   },
   "devDependencies": {
     "@types/react": "19.2.15",

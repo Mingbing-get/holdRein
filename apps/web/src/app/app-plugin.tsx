@@ -1,4 +1,9 @@
-import { createWebPluginRegistry, type WebPluginRegistry, type WebPlugin } from '@hold-rein/plugin-web'
+import {
+  createWebPluginRegistry,
+  registerBrowserToolExecutor,
+  type WebPluginRegistry,
+  type WebPlugin
+} from '@hold-rein/plugin-web'
 
 import {
   createContext,
@@ -18,6 +23,7 @@ import baseWebPlugin from '@hold-rein/plugins-base-web';
 export interface AppPluginContextValue {
   pluginRegistry: WebPluginRegistry;
   rightPanels: WebPlugin.RightPanel[];
+  runtimeContributions: WebPlugin.ResolvedBrowserRuntimeContributions;
   settings: WebPlugin.SettingsItem[];
   senderActions: WebPlugin.SenderAction[];
   senderSuggestions: WebPlugin.SuggestionGroup[];
@@ -27,10 +33,21 @@ export interface AppPluginContextValue {
 
 const AppPluginContext = createContext<AppPluginContextValue | null>(null);
 
+const EMPTY_RUNTIME_CONTRIBUTIONS: WebPlugin.ResolvedBrowserRuntimeContributions = {
+  skills: [],
+  systemPrompts: [],
+  tools: []
+};
+
 export function AppPluginProvider({ children }: PropsWithChildren) {
   const pluginRegistry = useRef<WebPluginRegistry>(createWebPluginRegistry())
   const loadGeneration = useRef(0)
+  const browserToolDisposers = useRef<(() => void)[]>([])
   const [rightPanels, setRightPanels] = useState<WebPlugin.RightPanel[]>([])
+  const [runtimeContributions, setRuntimeContributions] =
+    useState<WebPlugin.ResolvedBrowserRuntimeContributions>(
+      EMPTY_RUNTIME_CONTRIBUTIONS
+    )
   const [settings, setSettings] = useState<WebPlugin.SettingsItem[]>([])
   const [senderActions, setSenderActions] = useState<WebPlugin.SenderAction[]>([])
   const [senderSuggestions, setSenderSuggestions] = useState<WebPlugin.SuggestionGroup[]>([])
@@ -86,19 +103,63 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
     if (contribution.toolRenders?.length) {
       setToolRenders(old => [...old, ...(contribution.toolRenders || [])])
     }
+    const tools = contribution.tools
+    if (tools?.length) {
+      browserToolDisposers.current.push(
+        ...tools.map((tool) =>
+          registerBrowserToolExecutor(tool.name, tool.executor)
+        )
+      )
+      setRuntimeContributions((old) => ({
+        ...old,
+        tools: [
+          ...old.tools,
+          ...tools.map((tool) => ({
+            ...(tool.description === undefined
+              ? {}
+              : { description: tool.description }),
+            inputSchema: tool.params,
+            name: tool.name
+          }))
+        ]
+      }))
+    }
+    const skills = contribution.skills
+    if (skills?.length) {
+      setRuntimeContributions((old) => ({
+        ...old,
+        skills: [...old.skills, ...skills]
+      }))
+    }
+    const systemPrompts = contribution.systemPrompts
+    if (systemPrompts?.length) {
+      setRuntimeContributions((old) => ({
+        ...old,
+        systemPrompts: [...old.systemPrompts, ...systemPrompts]
+      }))
+    }
     if (contribution.senderSuggestions?.length) {
       setSenderSuggestions(old => [...old, ...(contribution.senderSuggestions || [])])
     }
   }, [])
 
+  const clearBrowserToolRegistrations = useCallback(() => {
+    for (const dispose of browserToolDisposers.current) {
+      dispose()
+    }
+    browserToolDisposers.current = []
+  }, [])
+
   const clear = useCallback(() => {
+    clearBrowserToolRegistrations()
     setRightPanels([])
+    setRuntimeContributions(EMPTY_RUNTIME_CONTRIBUTIONS)
     setSettings([])
     setSenderActions([])
     setToolRenders([])
     setTurnFooterRenders([])
     setSenderSuggestions([])
-  }, [])
+  }, [clearBrowserToolRegistrations])
 
   const loadFromPlugins = useCallback(async (
     plugins: readonly WebPlugin.Plugin[],
@@ -140,14 +201,19 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
     clear()
     loadFromPlugins(plugins, generation)
     
-    return pluginRegistry.current.on((plugin) => {
+    const offPluginRegistered = pluginRegistry.current.on((plugin) => {
       loadFromPlugins([plugin], loadGeneration.current)
     })
+    return () => {
+      offPluginRegistered()
+      clearBrowserToolRegistrations()
+    }
   }, [clear, loadFromPlugins])
 
   const contextValue = useMemo(() => ({
     pluginRegistry: pluginRegistry.current,
     rightPanels,
+    runtimeContributions,
     settings,
     senderActions,
     toolRenders,
@@ -155,6 +221,7 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
     turnFooterRenders
   }), [
     rightPanels,
+    runtimeContributions,
     senderActions,
     settings,
     toolRenders,
@@ -177,4 +244,8 @@ export function useAppPlugins() {
   }
 
   return contextValue;
+}
+
+export function useOptionalAppPlugins() {
+  return useContext(AppPluginContext);
 }

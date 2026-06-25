@@ -14,6 +14,46 @@ export interface WebPluginRegistry {
   has: (id: string) => boolean;
 }
 
+const executors = new Map<string, WebPlugin.BrowserToolExecutor>();
+
+export function registerBrowserToolExecutor(
+  toolName: string,
+  executor: WebPlugin.BrowserToolExecutor
+): () => void {
+  executors.set(toolName, executor);
+  return () => {
+    if (executors.get(toolName) === executor) {
+      executors.delete(toolName);
+    }
+  };
+}
+
+export async function executeBrowserTool(
+  context: WebPlugin.BrowserToolExecutionContext
+): Promise<{ content: string | WebPlugin.TextContent[]; isError: boolean }> {
+  const executor = executors.get(context.toolName);
+  if (!executor) {
+    return {
+      content: `No browser executor registered for ${context.toolName}.`,
+      isError: true
+    };
+  }
+
+  try {
+    return { content: await executor(context), isError: false };
+  } catch (error) {
+    return {
+      content:
+        error instanceof Error ? error.message : "Browser tool execution failed.",
+      isError: true
+    };
+  }
+}
+
+export function clearBrowserToolExecutorsForTests(): void {
+  executors.clear();
+}
+
 export function createWebPluginRegistry(): WebPluginRegistry {
   const plugins = new Map<string, WebPlugin.Plugin>();
   const listeners = new Array<WebPluginListener>;

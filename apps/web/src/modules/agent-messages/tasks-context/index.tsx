@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { PropsWithChildren } from "react";
 
+import { useOptionalAppPlugins } from "../../../app/app-plugin";
 import { useAppWorkspace } from "../../../app/app-workspace-context";
 import { getActiveAgentId } from "../agent-task-workspace-utils";
 import {
@@ -41,6 +42,8 @@ import type {
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
 const EMPTY_MESSAGES: WebPlugin.AgentMessage[] = [];
+const EMPTY_RUNTIME_CONTRIBUTIONS: WebPlugin.ResolvedBrowserRuntimeContributions =
+  { skills: [], systemPrompts: [], tools: [] };
 
 export interface AgentTasksContextValue {
   cancelTask: (taskId: string) => Promise<void>;
@@ -80,6 +83,9 @@ export function AgentTasksProvider({
     updateTaskTitle,
     upsertStartedTask
   } = useAppWorkspace();
+  const appPlugins = useOptionalAppPlugins();
+  const pluginRuntimeContributions =
+    appPlugins?.runtimeContributions ?? EMPTY_RUNTIME_CONTRIBUTIONS;
   const [taskStates, setTaskStates] = useState<Record<string, AgentTaskState>>(
     {}
   );
@@ -260,7 +266,11 @@ export function AgentTasksProvider({
 
   const startTask = useCallback(
     async (input: StartTaskInput) => {
-      const result = await startAgentTask(apiBaseUrl, input, fetcher);
+      const requestInput = mergeStartTaskRuntimeContributions(
+        input,
+        pluginRuntimeContributions
+      );
+      const result = await startAgentTask(apiBaseUrl, requestInput, fetcher);
       const taskId = result.task.id;
 
       upsertStartedTask(
@@ -296,6 +306,7 @@ export function AgentTasksProvider({
       fetcher,
       handleTaskEvent,
       handleTaskSubscriptionError,
+      pluginRuntimeContributions,
       updateTaskTitle,
       upsertStartedTask
     ]
@@ -303,7 +314,16 @@ export function AgentTasksProvider({
 
   const continueTask = useCallback(
     async (taskId: string, input: ContinueTaskInput) => {
-      const result = await continueAgentTask(apiBaseUrl, taskId, input, fetcher);
+      const requestInput = mergeContinueTaskRuntimeContributions(
+        input,
+        pluginRuntimeContributions
+      );
+      const result = await continueAgentTask(
+        apiBaseUrl,
+        taskId,
+        requestInput,
+        fetcher
+      );
       updateTaskStatus(taskId, "running", result.agentId);
       setTaskStates((current) => ({
         ...current,
@@ -326,6 +346,7 @@ export function AgentTasksProvider({
       fetcher,
       handleTaskEvent,
       handleTaskSubscriptionError,
+      pluginRuntimeContributions,
       updateTaskStatus
     ]
   );
@@ -428,4 +449,50 @@ export function useAgentTasks(): AgentTasksContextValue {
   }
 
   return value;
+}
+
+function mergeStartTaskRuntimeContributions(
+  input: StartTaskInput,
+  pluginContributions: WebPlugin.ResolvedBrowserRuntimeContributions
+): StartTaskInput {
+  const runtimeContributions = mergeRuntimeContributions(
+    input.runtimeContributions,
+    pluginContributions
+  );
+  return runtimeContributions ? { ...input, runtimeContributions } : input;
+}
+
+function mergeContinueTaskRuntimeContributions(
+  input: ContinueTaskInput,
+  pluginContributions: WebPlugin.ResolvedBrowserRuntimeContributions
+): ContinueTaskInput {
+  const runtimeContributions = mergeRuntimeContributions(
+    input.runtimeContributions,
+    pluginContributions
+  );
+  return runtimeContributions ? { ...input, runtimeContributions } : input;
+}
+
+function mergeRuntimeContributions(
+  input: WebPlugin.BrowserRuntimeContributions | undefined,
+  pluginContributions: WebPlugin.ResolvedBrowserRuntimeContributions
+): WebPlugin.BrowserRuntimeContributions | undefined {
+  const tools = [
+    ...(input?.tools ?? []),
+    ...pluginContributions.tools
+  ];
+  const skills = [
+    ...(input?.skills ?? []),
+    ...pluginContributions.skills
+  ];
+  const systemPrompts = [
+    ...(input?.systemPrompts ?? []),
+    ...pluginContributions.systemPrompts
+  ];
+
+  if (!tools.length && !skills.length && !systemPrompts.length) {
+    return undefined;
+  }
+
+  return { skills, systemPrompts, tools };
 }

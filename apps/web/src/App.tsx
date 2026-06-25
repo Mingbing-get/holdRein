@@ -11,11 +11,11 @@ export default function App() {
   return (
     <AppUiProvider>
       <AppWorkspaceProvider>
-        <AgentTasksProvider apiBaseUrl={apiBaseUrl}>
-          <AppPluginProvider>
+        <AppPluginProvider>
+          <AgentTasksProvider apiBaseUrl={apiBaseUrl}>
             <HoldReinShell apiBaseUrl={apiBaseUrl} />
-          </AppPluginProvider>
-        </AgentTasksProvider>
+          </AgentTasksProvider>
+        </AppPluginProvider>
       </AppWorkspaceProvider>
     </AppUiProvider>
   );

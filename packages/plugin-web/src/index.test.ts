@@ -1,8 +1,17 @@
-import { describe, expect, it } from "vitest";
-import { createWebPluginRegistry } from "./index";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  clearBrowserToolExecutorsForTests,
+  createWebPluginRegistry,
+  executeBrowserTool,
+  registerBrowserToolExecutor
+} from "./index";
 import type { WebPlugin } from "./index";
 
 describe("createWebPluginRegistry", () => {
+  afterEach(() => {
+    clearBrowserToolExecutorsForTests();
+  });
+
   it("registers web plugins and returns them in order", () => {
     const registry = createWebPluginRegistry();
     const plugin: WebPlugin.Plugin = {
@@ -57,6 +66,14 @@ describe("createWebPluginRegistry", () => {
             toolName: "shell_exec"
           }
         ],
+        tools: [
+          {
+            description: "Read selected browser text.",
+            executor: () => "Selected text",
+            name: "read_browser_selection",
+            params: { type: "object" } as WebPlugin.BrowserRuntimeTool["params"]
+          }
+        ],
         turnFooterRenders: [
           {
             id: "task-summary",
@@ -71,5 +88,19 @@ describe("createWebPluginRegistry", () => {
 
     const registered = registry.get("ui");
     expect(registered).toBe(plugin);
+  });
+
+  it("executes registered browser tool executors", async () => {
+    registerBrowserToolExecutor("read_browser_selection", () => "Selected text");
+
+    await expect(
+      executeBrowserTool({
+        agentId: "agent-1",
+        arguments: { scope: "selection" },
+        taskId: "task-1",
+        toolCallId: "tool-call-1",
+        toolName: "read_browser_selection"
+      })
+    ).resolves.toEqual({ content: "Selected text", isError: false });
   });
 });

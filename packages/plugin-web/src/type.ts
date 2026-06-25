@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
+import type { TSchema } from "typebox";
 
 export namespace WebPlugin {
   export type HttpMethod =
@@ -177,6 +178,52 @@ export namespace WebPlugin {
     readonly toolName: string;
   }
 
+  export interface BrowserToolExecutionContext {
+    readonly agentId: string;
+    readonly arguments: Record<string, unknown>;
+    readonly taskId: string;
+    readonly toolCallId: string;
+    readonly toolName: string;
+  }
+
+  export type BrowserToolExecutor = (
+    context: BrowserToolExecutionContext
+  ) =>
+    | Promise<string | TextContent[]>
+    | string
+    | TextContent[];
+
+  export interface BrowserRuntimeTool<TParams extends TSchema = TSchema> {
+    readonly description?: string;
+    readonly executor: BrowserToolExecutor;
+    readonly name: string;
+    readonly params: TParams;
+  }
+
+  export interface BrowserRuntimeToolSchema {
+    readonly description?: string;
+    readonly inputSchema: TSchema;
+    readonly name: string;
+  }
+
+  export interface BrowserRuntimeSkill {
+    readonly content: string;
+    readonly description?: string;
+    readonly name: string;
+  }
+
+  export interface BrowserRuntimeContributions {
+    readonly skills?: readonly BrowserRuntimeSkill[];
+    readonly systemPrompts?: readonly string[];
+    readonly tools?: readonly BrowserRuntimeToolSchema[];
+  }
+
+  export interface ResolvedBrowserRuntimeContributions {
+    readonly skills: readonly BrowserRuntimeSkill[];
+    readonly systemPrompts: readonly string[];
+    readonly tools: readonly BrowserRuntimeToolSchema[];
+  }
+
   export type SettingsPanelProps = Readonly<Record<string, never>>;
 
   export interface SettingsItem {
@@ -246,7 +293,10 @@ export namespace WebPlugin {
     readonly senderActions?: readonly SenderAction[];
     readonly senderSuggestions?: readonly SuggestionGroup[];
     readonly settings?: readonly SettingsItem[];
+    readonly skills?: readonly BrowserRuntimeSkill[];
+    readonly systemPrompts?: readonly string[];
     readonly toolRenders?: readonly ToolRender[];
+    readonly tools?: readonly BrowserRuntimeTool[];
     readonly turnFooterRenders?: readonly TurnFooterRender[];
   }
 

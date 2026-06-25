@@ -3,14 +3,16 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { WebPlugin } from "@hold-rein/plugin-web";
+import { clearBrowserToolExecutorsForTests, executeBrowserTool } from "@hold-rein/plugin-web";
 import { AppPluginProvider, useAppPlugins } from "./app-plugin";
 import { AppUiProvider, useAppUi } from "./app-ui-context";
 
 describe("AppPluginProvider", () => {
   afterEach(() => {
+    clearBrowserToolExecutorsForTests();
     cleanup();
   });
 
@@ -112,6 +114,36 @@ describe("AppPluginProvider", () => {
       expect(observedThemeModes).toEqual([initialThemeMode, nextThemeMode]);
     });
   });
+
+  it("collects runtime contributions and registers browser tool executors", async () => {
+    const executor = vi.fn().mockResolvedValue("Selected text");
+
+    render(
+      <AppUiProvider>
+        <AppPluginProvider>
+          <RegisterRuntimePlugin executor={executor} />
+          <RuntimeContributionProbe />
+        </AppPluginProvider>
+      </AppUiProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("runtime-contributions")).toHaveTextContent(
+        "read_browser_selection,browser-context,Prefer browser tools."
+      );
+    });
+
+    await expect(
+      executeBrowserTool({
+        agentId: "agent-1",
+        arguments: { scope: "selection" },
+        taskId: "task-1",
+        toolCallId: "tool-call-1",
+        toolName: "read_browser_selection"
+      })
+    ).resolves.toEqual({ content: "Selected text", isError: false });
+    expect(executor).toHaveBeenCalled();
+  });
 });
 
 function RegisterPlugin() {
@@ -189,6 +221,43 @@ function RegisterSubscriptionPlugin({
   return null;
 }
 
+function RegisterRuntimePlugin({
+  executor
+}: {
+  executor: WebPlugin.BrowserToolExecutor;
+}) {
+  const { pluginRegistry } = useAppPlugins();
+
+  useEffect(() => {
+    const plugin: WebPlugin.Plugin = {
+      contributionResolver: {
+        skills: [
+          {
+            content: "# Browser Context",
+            name: "browser-context"
+          }
+        ],
+        systemPrompts: ["Prefer browser tools."],
+        tools: [
+          {
+            description: "Read selected browser text.",
+            executor,
+            name: "read_browser_selection",
+            params: { type: "object" } as WebPlugin.BrowserRuntimeTool["params"]
+          }
+        ]
+      },
+      id: "runtime-demo"
+    };
+
+    if (!pluginRegistry.has(plugin.id)) {
+      pluginRegistry.register(plugin);
+    }
+  }, [executor, pluginRegistry]);
+
+  return null;
+}
+
 function CaptureToggleThemeMode({
   onCapture
 }: {
@@ -209,6 +278,20 @@ function PluginStateProbe() {
   return (
     <div data-testid="turn-footer-render-ids">
       {turnFooterRenders.map((item) => item.id).join(",")}
+    </div>
+  );
+}
+
+function RuntimeContributionProbe() {
+  const { runtimeContributions } = useAppPlugins();
+
+  return (
+    <div data-testid="runtime-contributions">
+      {[
+        runtimeContributions.tools.map((tool) => tool.name).join("|"),
+        runtimeContributions.skills.map((skill) => skill.name).join("|"),
+        runtimeContributions.systemPrompts.join("|")
+      ].join(",")}
     </div>
   );
 }
