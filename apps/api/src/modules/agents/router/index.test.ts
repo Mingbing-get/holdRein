@@ -223,7 +223,7 @@ describe("agent routes", () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       code: 40000,
-      msg: "workspacePath, provider, modelId and prompt must be strings",
+      msg: "workspacePath, provider, modelId and prompt must be strings; runtimeContributions must be valid when provided",
       data: null
     });
   });
@@ -318,7 +318,7 @@ describe("agent routes", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.msg).toBe(
-      "prompt must be a string and provider and modelId must both be strings when provided"
+      "prompt must be a string, provider and modelId must both be strings when provided, and runtimeContributions must be valid when provided"
     );
     expect(service.continueTask).not.toHaveBeenCalled();
   });

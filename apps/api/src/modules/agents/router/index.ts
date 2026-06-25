@@ -3,41 +3,32 @@ import { Router, type Request, type Response } from "express";
 import { sendError, sendSuccess } from "../../../response";
 import { RESPONSE_CODE_DEFINITIONS } from "../../../response/response-codes";
 import { getDefaultSkillsService, type SkillsService } from "../../skills";
-import type { AgentEventEnvelope, StartAgentInput } from "../agent-types";
+import type { AgentEventEnvelope } from "../agent-types";
 import { listWorkspaceSkills } from "../runtime/support";
 import { getDefaultAgentsService } from "../service/default";
 import type { AgentsService } from "../service";
-
-export interface CreateAgentsRouterOptions {
-  agentsService?: AgentsService;
-  skillDirs?: string[];
-  skillsService?: SkillsService;
-}
-
-interface StartAgentBody {
-  approvalPolicy?: unknown;
-  modelId?: string;
-  prompt?: string;
-  provider?: string;
-  thinkingLevel?: unknown;
-  workspacePath?: string;
-}
+import {
+  getRequiredQueryString,
+  parseAfterSequence,
+  parseContinueTaskBody,
+  parseStartAgentBody,
+  type ContinueTaskBody,
+  type StartAgentBody
+} from "./request-parsing";
 
 interface ApprovalDecisionBody {
   approved?: boolean;
   reason?: unknown;
 }
 
-interface ContinueTaskBody {
-  approvalPolicy?: unknown;
-  modelId?: string;
-  prompt?: string;
-  provider?: string;
-  thinkingLevel?: unknown;
-}
-
 interface RenameTaskBody {
   title?: string;
+}
+
+export interface CreateAgentsRouterOptions {
+  agentsService?: AgentsService;
+  skillDirs?: string[];
+  skillsService?: SkillsService;
 }
 
 export function createAgentsRouter(
@@ -61,7 +52,7 @@ export function createAgentsRouter(
         sendError(
           response,
           RESPONSE_CODE_DEFINITIONS.badRequest,
-          "workspacePath, provider, modelId and prompt must be strings"
+          "workspacePath, provider, modelId and prompt must be strings; runtimeContributions must be valid when provided"
         );
         return;
       }
@@ -204,7 +195,7 @@ export function createAgentsRouter(
         sendError(
           response,
           RESPONSE_CODE_DEFINITIONS.badRequest,
-          "prompt must be a string and provider and modelId must both be strings when provided"
+          "prompt must be a string, provider and modelId must both be strings when provided, and runtimeContributions must be valid when provided"
         );
         return;
       }
@@ -374,109 +365,6 @@ export function createAgentsRouter(
   );
 
   return router;
-}
-
-function parseContinueTaskBody(
-  body: ContinueTaskBody,
-  taskId: string
-): Parameters<AgentsService["continueTask"]>[0] | null {
-  if (typeof body.prompt !== "string") {
-    return null;
-  }
-
-  const options = parseTaskRunOptions(body);
-
-  if (!options) {
-    return null;
-  }
-
-  if (body.provider === undefined && body.modelId === undefined) {
-    return { ...options, prompt: body.prompt, taskId };
-  }
-
-  if (typeof body.provider !== "string" || typeof body.modelId !== "string") {
-    return null;
-  }
-
-  return {
-    ...options,
-    modelId: body.modelId,
-    prompt: body.prompt,
-    provider: body.provider,
-    taskId
-  };
-}
-
-function parseStartAgentBody(body: StartAgentBody): StartAgentInput | null {
-  if (
-    typeof body.workspacePath !== "string" ||
-    typeof body.provider !== "string" ||
-    typeof body.modelId !== "string" ||
-    typeof body.prompt !== "string"
-  ) {
-    return null;
-  }
-
-  const options = parseTaskRunOptions(body);
-
-  if (!options) {
-    return null;
-  }
-
-  return {
-    ...options,
-    modelId: body.modelId,
-    prompt: body.prompt,
-    provider: body.provider,
-    workspacePath: body.workspacePath
-  };
-}
-
-function parseTaskRunOptions(body: {
-  approvalPolicy?: unknown;
-  thinkingLevel?: unknown;
-}): Pick<StartAgentInput, "approvalPolicy" | "thinkingLevel"> | null {
-  const approvalPolicy = body.approvalPolicy ?? "approval";
-  const thinkingLevel = body.thinkingLevel ?? "medium";
-
-  if (approvalPolicy !== "approval" && approvalPolicy !== "run_all") {
-    return null;
-  }
-
-  if (!isThinkingLevel(thinkingLevel)) {
-    return null;
-  }
-
-  return { approvalPolicy, thinkingLevel };
-}
-
-function isThinkingLevel(value: unknown): value is StartAgentInput["thinkingLevel"] {
-  return (
-    value === "off" ||
-    value === "minimal" ||
-    value === "low" ||
-    value === "medium" ||
-    value === "high" ||
-    value === "xhigh"
-  );
-}
-
-function parseAfterSequence(
-  value: Request["query"][string]
-): number | undefined | null {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (typeof value !== "string" || !/^\d+$/.test(value)) {
-    return null;
-  }
-
-  return Number(value);
-}
-
-function getRequiredQueryString(value: Request["query"][string]): string | null {
-  return typeof value === "string" ? value : null;
 }
 
 function writeNdjsonEvent(response: Response, event: AgentEventEnvelope): void {
