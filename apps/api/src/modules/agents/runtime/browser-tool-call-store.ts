@@ -1,4 +1,4 @@
-import type { ToolCallResult } from "@earendil-works/pi-agent-core";
+import type { AgentToolResult } from "@earendil-works/pi-agent-core";
 
 import type { BrowserToolResultInput } from "../agent-types";
 
@@ -11,9 +11,13 @@ export interface BrowserToolCallRequest {
 
 export interface BrowserToolCallStore {
   clearAgent: (agentId: string) => void;
-  createCall: (request: BrowserToolCallRequest) => Promise<ToolCallResult>;
+  createCall: (request: BrowserToolCallRequest) => Promise<BrowserToolResult>;
   submitResult: (input: BrowserToolResultInput) => boolean;
 }
+
+type BrowserToolResult = AgentToolResult<{ toolName?: string }> & {
+  isError?: boolean;
+};
 
 export function createBrowserToolCallStore(
   timeoutMs = 60_000
@@ -30,6 +34,7 @@ export function createBrowserToolCallStore(
           content: [
             { text: "Browser tool call was interrupted.", type: "text" }
           ],
+          details: { toolName: call.toolName },
           isError: true
         });
       }
@@ -41,21 +46,28 @@ export function createBrowserToolCallStore(
           content: [
             { text: "Duplicate browser tool call id.", type: "text" }
           ],
+          details: { toolName: request.toolName },
           isError: true
         });
       }
 
-      return new Promise<ToolCallResult>((resolve) => {
+      return new Promise<BrowserToolResult>((resolve) => {
         const timeout = setTimeout(() => {
           pending.delete(key);
           resolve({
             content: [
               { text: "Browser tool call timed out.", type: "text" }
             ],
+            details: { toolName: request.toolName },
             isError: true
           });
         }, timeoutMs);
-        pending.set(key, { agentId: request.agentId, resolve, timeout });
+        pending.set(key, {
+          agentId: request.agentId,
+          resolve,
+          timeout,
+          toolName: request.toolName
+        });
       });
     },
     submitResult(input) {
@@ -69,6 +81,7 @@ export function createBrowserToolCallStore(
           typeof input.content === "string"
             ? [{ text: input.content, type: "text" }]
             : input.content,
+        details: { toolName: call.toolName },
         isError: input.isError ?? false
       });
       return true;
@@ -78,8 +91,9 @@ export function createBrowserToolCallStore(
 
 interface PendingCall {
   agentId: string;
-  resolve: (result: ToolCallResult) => void;
+  resolve: (result: BrowserToolResult) => void;
   timeout: ReturnType<typeof setTimeout>;
+  toolName: string;
 }
 
 function createKey(agentId: string, toolCallId: string): string {

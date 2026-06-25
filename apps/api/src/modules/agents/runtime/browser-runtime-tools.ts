@@ -15,9 +15,7 @@ export function createBrowserRuntimeTools(
   input: CreateBrowserRuntimeToolsInput
 ): ServerPlugin.PluginTool[] {
   return (input.tools ?? []).map((tool) => ({
-    ...(tool.description === undefined
-      ? {}
-      : { description: tool.description }),
+    description: tool.description ?? tool.name,
     execute: (toolCallId: string, toolInput: unknown) => {
       const args = toArgumentsRecord(toolInput);
       input.eventBus.emit({
@@ -36,6 +34,7 @@ export function createBrowserRuntimeTools(
         toolName: tool.name
       });
     },
+    label: tool.name,
     name: tool.name,
     parameters: tool.inputSchema as never
   }));

@@ -106,10 +106,10 @@ describe("agent runtime browser contributions", () => {
       toolCallId: "tool-call-1"
     });
 
-    await expect(execution).resolves.toEqual({
+    await expect(execution).resolves.toEqual(expect.objectContaining({
       content: [{ text: "Selected text", type: "text" }],
       isError: false
-    });
+    }));
   });
 
   it("resolves pending browser tools with an error on interrupt", async () => {
@@ -137,12 +137,12 @@ describe("agent runtime browser contributions", () => {
     const execution = tool.execute("tool-call-1", {});
     await runtime.interrupt(result.agentId);
 
-    await expect(execution).resolves.toEqual({
+    await expect(execution).resolves.toEqual(expect.objectContaining({
       content: [
         { text: "Browser tool call was interrupted.", type: "text" }
       ],
       isError: true
-    });
+    }));
     await expect(
       runtime.submitBrowserToolResult?.({
         agentId: result.agentId,

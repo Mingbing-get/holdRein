@@ -39,6 +39,7 @@ export function toRuntimeSkills(
   return (skills ?? []).map((skill) => ({
     content: skill.content,
     description: skill.description ?? "",
+    filePath: `browser-runtime://${skill.name}/SKILL.md`,
     name: skill.name
   }));
 }
