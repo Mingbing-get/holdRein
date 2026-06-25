@@ -32,6 +32,20 @@ export interface CreateTokenCollectionOptions {
 
 const DEFAULT_TOKEN_FLUSH_INTERVAL_MS = 5000;
 
+export function createRuntimeTokenCollectionOptions(input: {
+  tokenFlushIntervalMs?: number;
+  tokenUsageStorageTarget?: TokenUsageStorageTarget;
+}): CreateTokenCollectionOptions {
+  if (!input.tokenUsageStorageTarget) return {};
+
+  return {
+    ...(input.tokenFlushIntervalMs === undefined
+      ? {}
+      : { flushIntervalMs: input.tokenFlushIntervalMs }),
+    storageTarget: input.tokenUsageStorageTarget
+  };
+}
+
 export function createTokenCollection(
   taskId: string,
   options: CreateTokenCollectionOptions = {}

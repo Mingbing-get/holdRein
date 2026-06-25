@@ -99,4 +99,32 @@ describe("agent runtime workspace instructions", () => {
 
     expect(promptText).not.toContain("Workspace AGENTS.md mandatory constraints:");
   });
+
+  it("merges request-scoped skills and system prompts", async () => {
+    const { repo } = createSessionRepo();
+    const runtime = createRuntime(repo);
+
+    await runtime.start({
+      ...createRunInput(),
+      runtimeContributions: {
+        skills: [{ content: "# Browser Skill", name: "browser-skill" }],
+        systemPrompts: ["Browser system prompt."]
+      },
+      workspacePath
+    });
+
+    const options = harnessConstructor.mock.calls[0]?.[0] as
+      | {
+          resources?: { skills?: { name: string }[] };
+          systemPrompt?: (input: { resources: { skills: unknown[] } }) => string;
+        }
+      | undefined;
+
+    expect(options?.resources?.skills).toEqual(
+      expect.arrayContaining([expect.objectContaining({ name: "browser-skill" })])
+    );
+    expect(options?.systemPrompt?.({ resources: { skills: [] } })).toContain(
+      "Browser system prompt."
+    );
+  });
 });

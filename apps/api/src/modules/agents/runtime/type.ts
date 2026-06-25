@@ -24,6 +24,7 @@ export interface AgentRuntime {
 
 export interface CreateAgentRuntimeOptions {
   approvalStore: AgentApprovalStore;
+  browserToolTimeoutMs?: number;
   eventBus: AgentEventBus;
   getApiKey?: (provider: string, modelId: string) => Promise<string | undefined>;
   getCustomModel?: AgentModelLookup;

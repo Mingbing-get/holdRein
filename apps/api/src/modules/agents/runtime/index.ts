@@ -8,19 +8,19 @@ import { addPendingSubagentResult, appendSubagentResult, flushPendingSubagentRes
 import { createRuntimeRevokeSubagentTool, createRuntimeSubagentTools } from "./subagent-tools";
 import { startContinuationSubagent } from "./continuation-subagent";
 import { createSessionRepo, getEnvApiKey, getRuntimeSkillDirs, interruptHarness, toAgentSessionMetadata } from "./support";
-import { createTokenCollection } from "./token-collection";
+import { createRuntimeTokenCollectionOptions, createTokenCollection } from "./token-collection";
 import { runToolBeforeExecute } from "../approval/tool-approval";
 import { extractAssistantText, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "../subagent";
 import { pluginRegistry } from '../../../plugin'
 import { formatWorkspaceAgentInstructionsForSystemPrompt, readWorkspaceAgentInstructions } from "./workspace-agent-instructions";
 import { createModelProxyRuntimeController, type ModelProxyRuntimeController } from "../../model-proxies/model-proxy-runtime";
-
+import { createBrowserToolCallStore } from "./browser-tool-call-store";
+import { createBrowserRuntimeTools } from "./browser-runtime-tools";
+import { toRuntimeSkills } from "./browser-runtime-contributions";
 import type { AgentRuntime, CreateAgentRuntimeOptions, RunningAgent, HarnessSession, CreateHarnessOptions, PendingVisibleCustomMessage, StartHarnessOptions, StartHarnessResult } from './type'
 import type { Api, Model } from "@earendil-works/pi-ai";
-
 const AGENT_CONTINUATION_CUSTOM_TYPE = "agent_continuation";
 const AGENT_CONTINUE_PROMPT = "";
-
 export function createAgentRuntime(
   options: CreateAgentRuntimeOptions
 ): AgentRuntime {
@@ -32,16 +32,15 @@ export function createAgentRuntime(
   const harnessTools = new Map<string, ServerPlugin.PluginTool[]>();
   const interruptedHarnesses = new WeakSet<AgentHarness>();
   const tokenCollections = new Map<string, ReturnType<typeof createTokenCollection>>();
-
+  const browserToolCalls = createBrowserToolCallStore(options.browserToolTimeoutMs);
   return {
     interrupt: async (agentId) => {
       const runningAgent = runningAgents.get(agentId);
-
       if (!runningAgent) {
         return false;
       }
-
       interruptedHarnesses.add(runningAgent.harness);
+      browserToolCalls.clearAgent(agentId);
       runningAgents.delete(agentId);
       await interruptHarness(runningAgent.harness);
       return true;
@@ -49,11 +48,12 @@ export function createAgentRuntime(
     listMessages: async ({ session: metadata, workspacePath }) => {
       const session = await sessionRepo.open({ ...metadata, cwd: workspacePath });
       const context = await session.buildContext();
-
       return context.messages.map((message) =>
         toStoredAgentMessage(`message_${randomUUID()}`, message)
       );
     },
+    submitBrowserToolResult: async (input) =>
+      browserToolCalls.submitResult(input),
     start: async (input) => {
       const env = new NodeExecutionEnv({ cwd: input.workspacePath });
       const proxyCandidate = input.provider === "local"
@@ -67,14 +67,11 @@ export function createAgentRuntime(
       const initialProvider = proxyCandidate?.provider ?? input.provider;
       const initialModelId = proxyCandidate?.modelId ?? input.modelId;
       let model = await resolveAgentModel(initialProvider, initialModelId, options.getCustomModel);
-
       if (!model) {
         throw new Error("Unknown model");
       }
-
       const workspaceAgentInstructions = await readWorkspaceAgentInstructions(input.workspacePath);
       const pendingSubagentResults = new Map<string, Set<string>>();
-
       const createHarness = async (harnessOptions: CreateHarnessOptions) => {
         let activeMessageId: string | undefined;
         let activeModel: Model<Api> = model!;
@@ -97,10 +94,17 @@ export function createAgentRuntime(
           options.skillsService
         );
         const { skills: loadedSkills } = await loadSkills(env, skillDirs);
-        const skills = [...loadedSkills, ...(contribution.skills || [])];
-
+        const skills = [
+          ...loadedSkills,
+          ...(contribution.skills || []),
+          ...toRuntimeSkills(input.runtimeContributions?.skills)
+        ];
+        const browserTools = createBrowserRuntimeTools({
+          agentId: harnessOptions.agentId, eventBus: options.eventBus,
+          store: browserToolCalls, tools: input.runtimeContributions?.tools
+        });
         const tools = await createRuntimeSubagentTools({
-          contributionTools: contribution.tools || [],
+          contributionTools: [...(contribution.tools || []), ...browserTools],
           eventBus: options.eventBus,
           parentAgentId: harnessOptions.agentId,
           ...(harnessOptions.agentName === undefined
@@ -118,7 +122,6 @@ export function createAgentRuntime(
         });
         harnessSessions.set(harnessOptions.agentId, harnessOptions.session);
         harnessTools.set(harnessOptions.agentId, tools);
-
         const harness = new AgentHarness({
           activeToolNames: tools.map(tool => tool.name),
           env,
@@ -127,7 +130,6 @@ export function createAgentRuntime(
             const apiKey =
               (await options.getApiKey?.(apiModel.provider, apiModel.id)) ??
               getEnvApiKey(apiModel.provider);
-
             return apiKey ? { apiKey } : undefined;
           },
           model: contribution.model || activeModel,
@@ -136,6 +138,7 @@ export function createAgentRuntime(
           systemPrompt: ({ resources }) =>
             [
               ...(contribution.systemPrompts || []),
+              ...(input.runtimeContributions?.systemPrompts || []),
               `Workspace: ${input.workspacePath}`,
               formatWorkspaceAgentInstructionsForSystemPrompt(workspaceAgentInstructions),
               `Current time: ${new Date().toISOString()}`,
@@ -164,17 +167,18 @@ export function createAgentRuntime(
         }
         const tokenCollection =
           tokenCollections.get(input.taskId) ??
-          createTokenCollection(input.taskId, createTokenCollectionOptions());
+          createTokenCollection(input.taskId, createRuntimeTokenCollectionOptions({
+            tokenFlushIntervalMs: options.tokenFlushIntervalMs,
+            tokenUsageStorageTarget: options.tokenUsageStorageTarget
+          }));
         tokenCollections.set(input.taskId, tokenCollection);
         tokenCollection.appendHarness(harness);
-
         harness.subscribe(async (event) => {
           try {
             contribution.subscribe?.(event)
           } catch {
             // Keep plugin subscriber failures from breaking agent event delivery.
           }
-
           if (event.type === "message_start") {
             activeMessageId = `message_${randomUUID()}`;
             options.eventBus.emit({
@@ -487,14 +491,4 @@ export function createAgentRuntime(
       };
     }
   };
-  function createTokenCollectionOptions() {
-    if (!options.tokenUsageStorageTarget) return {};
-
-    return {
-      ...(options.tokenFlushIntervalMs === undefined
-        ? {}
-        : { flushIntervalMs: options.tokenFlushIntervalMs }),
-      storageTarget: options.tokenUsageStorageTarget
-    };
-  }
 }
