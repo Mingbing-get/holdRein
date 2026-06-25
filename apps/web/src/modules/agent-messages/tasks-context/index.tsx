@@ -24,6 +24,7 @@ import {
   getAgentEventMessage,
   startAgentEventSubscription
 } from "../agent-event-subscription";
+import { handleBrowserToolEvent } from "../browser-tool-events";
 import {
   createInitialAgentTaskState,
   reduceAgentTaskState
@@ -176,10 +177,11 @@ export function AgentTasksProvider({
       if (event.type === "subagent_resumed") {
         setSubagentMessagesById((current) => reduceSubagentResumeEvent(current, event, taskId));
       }
+      handleBrowserToolEvent({ apiBaseUrl, event, fetcher, taskId });
       if (event.type === "task_end") handleTaskStatus(taskId, "completed");
       if (event.type === "agent_error") handleTaskStatus(taskId, "error");
     },
-    [handleTaskStatus]
+    [apiBaseUrl, fetcher, handleTaskStatus]
   );
 
   const handleTaskSubscriptionError = useCallback(
