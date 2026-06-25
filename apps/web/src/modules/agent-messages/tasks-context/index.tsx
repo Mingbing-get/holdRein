@@ -30,6 +30,15 @@ import {
   createInitialAgentTaskState,
   reduceAgentTaskState
 } from "../reducer";
+import {
+  mergeContinueTaskRuntimeContributions,
+  mergeStartTaskRuntimeContributions
+} from "./runtime-contributions";
+import {
+  decideLocalBrowserApproval,
+  requestLocalBrowserApproval
+} from "./local-browser-approval";
+import type { LocalApprovalResolver } from "./local-browser-approval";
 import { discoverSubagents, initializeSubagentsFromHistory, reduceSubagentEvent, reduceSubagentResumeEvent } from "../subagent-message/store";
 import type {
   AgentEventEnvelope,
@@ -92,6 +101,7 @@ export function AgentTasksProvider({
   const [subagentMessagesById, setSubagentMessagesById] =
     useState<SubagentStatesById>({});
   const subscriptions = useRef(new Map<string, AbortController>());
+  const localApprovalResolvers = useRef(new Map<string, LocalApprovalResolver>());
   const loadedTaskIds = useRef(new Set<string>());
   const activeTaskIdRef = useRef(activeTaskId);
   const [unreadCompletionTaskIds, setUnreadCompletionTaskIds] = useState<
@@ -165,6 +175,21 @@ export function AgentTasksProvider({
     [updateTaskStatus]
   );
 
+  const requestBrowserApproval = useCallback(
+    (
+      taskId: string,
+      approval: PendingApproval
+    ): Promise<WebPlugin.BrowserToolBeforeExecuteResult> => {
+      return requestLocalBrowserApproval({
+        approval,
+        resolvers: localApprovalResolvers.current,
+        setTaskStates,
+        taskId
+      });
+    },
+    []
+  );
+
   const handleTaskEvent = useCallback(
     (taskId: string, event: AgentEventEnvelope) => {
       setTaskStates((current) => ({
@@ -183,11 +208,18 @@ export function AgentTasksProvider({
       if (event.type === "subagent_resumed") {
         setSubagentMessagesById((current) => reduceSubagentResumeEvent(current, event, taskId));
       }
-      handleBrowserToolEvent({ apiBaseUrl, event, fetcher, taskId });
+      handleBrowserToolEvent({
+        apiBaseUrl,
+        event,
+        fetcher,
+        requestApproval: (approval) =>
+          requestBrowserApproval(taskId, approval),
+        taskId
+      });
       if (event.type === "task_end") handleTaskStatus(taskId, "completed");
       if (event.type === "agent_error") handleTaskStatus(taskId, "error");
     },
-    [apiBaseUrl, fetcher, handleTaskStatus]
+    [apiBaseUrl, fetcher, handleTaskStatus, requestBrowserApproval]
   );
 
   const handleTaskSubscriptionError = useCallback(
@@ -387,6 +419,19 @@ export function AgentTasksProvider({
       if (!approval) {
         throw new Error("Unknown approval request");
       }
+      if (
+        decideLocalBrowserApproval({
+          approval,
+          approvalId,
+          approved,
+          ...(reason === undefined ? {} : { reason }),
+          resolvers: localApprovalResolvers.current,
+          setTaskStates,
+          taskId
+        })
+      ) {
+        return;
+      }
       await decideAgentApproval(
         apiBaseUrl,
         {
@@ -449,50 +494,4 @@ export function useAgentTasks(): AgentTasksContextValue {
   }
 
   return value;
-}
-
-function mergeStartTaskRuntimeContributions(
-  input: StartTaskInput,
-  pluginContributions: WebPlugin.ResolvedBrowserRuntimeContributions
-): StartTaskInput {
-  const runtimeContributions = mergeRuntimeContributions(
-    input.runtimeContributions,
-    pluginContributions
-  );
-  return runtimeContributions ? { ...input, runtimeContributions } : input;
-}
-
-function mergeContinueTaskRuntimeContributions(
-  input: ContinueTaskInput,
-  pluginContributions: WebPlugin.ResolvedBrowserRuntimeContributions
-): ContinueTaskInput {
-  const runtimeContributions = mergeRuntimeContributions(
-    input.runtimeContributions,
-    pluginContributions
-  );
-  return runtimeContributions ? { ...input, runtimeContributions } : input;
-}
-
-function mergeRuntimeContributions(
-  input: WebPlugin.BrowserRuntimeContributions | undefined,
-  pluginContributions: WebPlugin.ResolvedBrowserRuntimeContributions
-): WebPlugin.BrowserRuntimeContributions | undefined {
-  const tools = [
-    ...(input?.tools ?? []),
-    ...pluginContributions.tools
-  ];
-  const skills = [
-    ...(input?.skills ?? []),
-    ...pluginContributions.skills
-  ];
-  const systemPrompts = [
-    ...(input?.systemPrompts ?? []),
-    ...pluginContributions.systemPrompts
-  ];
-
-  if (!tools.length && !skills.length && !systemPrompts.length) {
-    return undefined;
-  }
-
-  return { skills, systemPrompts, tools };
 }

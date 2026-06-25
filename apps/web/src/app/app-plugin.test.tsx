@@ -144,6 +144,47 @@ describe("AppPluginProvider", () => {
     ).resolves.toEqual({ content: "Selected text", isError: false });
     expect(executor).toHaveBeenCalled();
   });
+
+  it("registers browser tool beforeExecute hooks from runtime contributions", async () => {
+    const executor = vi.fn().mockResolvedValue("Selected text");
+    const beforeExecute = vi.fn().mockResolvedValue({
+      block: true,
+      reason: "Selection access denied."
+    });
+
+    render(
+      <AppUiProvider>
+        <AppPluginProvider>
+          <RegisterRuntimePlugin
+            beforeExecute={beforeExecute}
+            executor={executor}
+          />
+          <RuntimeContributionProbe />
+        </AppPluginProvider>
+      </AppUiProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("runtime-contributions")).toHaveTextContent(
+        "read_browser_selection,browser-context,Prefer browser tools."
+      );
+    });
+
+    await expect(
+      executeBrowserTool({
+        agentId: "agent-1",
+        arguments: { scope: "selection" },
+        taskId: "task-1",
+        toolCallId: "tool-call-1",
+        toolName: "read_browser_selection"
+      })
+    ).resolves.toEqual({
+      content: "Selection access denied.",
+      isError: true
+    });
+    expect(beforeExecute).toHaveBeenCalled();
+    expect(executor).not.toHaveBeenCalled();
+  });
 });
 
 function RegisterPlugin() {
@@ -222,8 +263,10 @@ function RegisterSubscriptionPlugin({
 }
 
 function RegisterRuntimePlugin({
+  beforeExecute,
   executor
 }: {
+  beforeExecute?: WebPlugin.BrowserToolBeforeExecute;
   executor: WebPlugin.BrowserToolExecutor;
 }) {
   const { pluginRegistry } = useAppPlugins();
@@ -240,6 +283,7 @@ function RegisterRuntimePlugin({
         systemPrompts: ["Prefer browser tools."],
         tools: [
           {
+            ...(beforeExecute === undefined ? {} : { beforeExecute }),
             description: "Read selected browser text.",
             executor,
             name: "read_browser_selection",

@@ -11,6 +11,7 @@ export type AgentTaskAction =
   | { approvalId: string; type: "approval_decided" }
   | { event: AgentEventEnvelope; type: "event_received" }
   | { messages: WebPlugin.AgentMessage[]; type: "history_loaded" }
+  | { approval: PendingApproval; type: "local_approval_requested" }
   | { message: string; type: "subscription_failed" };
 
 export function createInitialAgentTaskState(taskId: string): AgentTaskState {
@@ -55,6 +56,19 @@ export function reduceAgentTaskState(
       pendingApprovals: state.pendingApprovals.filter(
         (approval) => approval.approvalId !== action.approvalId
       )
+    };
+  }
+  if (action.type === "local_approval_requested") {
+    if (
+      state.pendingApprovals.some(
+        (approval) => approval.approvalId === action.approval.approvalId
+      )
+    ) {
+      return state;
+    }
+    return {
+      ...state,
+      pendingApprovals: [...state.pendingApprovals, action.approval]
     };
   }
 

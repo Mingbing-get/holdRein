@@ -193,7 +193,35 @@ export namespace WebPlugin {
     | string
     | TextContent[];
 
+  export type BrowserToolBeforeExecuteResult =
+    | {
+        readonly block: true;
+        readonly reason?: string;
+      }
+    | undefined;
+
+  export type BrowserToolApprovalRequester = (
+    title?: string
+  ) => Promise<BrowserToolBeforeExecuteResult>;
+
+  export interface BrowserToolBeforeExecuteOptions
+    extends BrowserToolExecutionContext {
+    readonly requestApproval: BrowserToolApprovalRequester;
+  }
+
+  export interface BrowserToolExecutionOptions
+    extends BrowserToolExecutionContext {
+    readonly requestApproval?: BrowserToolApprovalRequester;
+  }
+
+  export type BrowserToolBeforeExecute = (
+    options: BrowserToolBeforeExecuteOptions
+  ) =>
+    | BrowserToolBeforeExecuteResult
+    | Promise<BrowserToolBeforeExecuteResult>;
+
   export interface BrowserRuntimeTool<TParams extends TSchema = TSchema> {
+    readonly beforeExecute?: BrowserToolBeforeExecute;
     readonly description?: string;
     readonly executor: BrowserToolExecutor;
     readonly name: string;

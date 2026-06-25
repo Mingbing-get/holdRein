@@ -103,4 +103,79 @@ describe("createWebPluginRegistry", () => {
       })
     ).resolves.toEqual({ content: "Selected text", isError: false });
   });
+
+  it("executes browser tools after optional beforeExecute allows execution", async () => {
+    const beforeExecute: WebPlugin.BrowserToolBeforeExecute = async ({
+      requestApproval
+    }) => requestApproval("Allow selection access?");
+
+    registerBrowserToolExecutor(
+      "read_browser_selection",
+      () => "Selected text",
+      beforeExecute
+    );
+
+    await expect(
+      executeBrowserTool({
+        agentId: "agent-1",
+        arguments: { scope: "selection" },
+        requestApproval: async () => undefined,
+        taskId: "task-1",
+        toolCallId: "tool-call-1",
+        toolName: "read_browser_selection"
+      })
+    ).resolves.toEqual({ content: "Selected text", isError: false });
+  });
+
+  it("returns a tool error without executing when optional beforeExecute blocks", async () => {
+    let executed = false;
+
+    registerBrowserToolExecutor(
+      "read_browser_selection",
+      () => {
+        executed = true;
+        return "Selected text";
+      },
+      async ({ requestApproval }) => requestApproval("Allow selection access?")
+    );
+
+    await expect(
+      executeBrowserTool({
+        agentId: "agent-1",
+        arguments: { scope: "selection" },
+        requestApproval: async () => ({
+          block: true,
+          reason: "User rejected browser selection access."
+        }),
+        taskId: "task-1",
+        toolCallId: "tool-call-1",
+        toolName: "read_browser_selection"
+      })
+    ).resolves.toEqual({
+      content: "User rejected browser selection access.",
+      isError: true
+    });
+    expect(executed).toBe(false);
+  });
+
+  it("provides a default approval requester for browser tools without one", async () => {
+    const beforeExecute = async ({ requestApproval }: WebPlugin.BrowserToolBeforeExecuteOptions) =>
+      requestApproval("Allow selection access?");
+
+    registerBrowserToolExecutor(
+      "read_browser_selection",
+      () => "Selected text",
+      beforeExecute
+    );
+
+    await expect(
+      executeBrowserTool({
+        agentId: "agent-1",
+        arguments: { scope: "selection" },
+        taskId: "task-1",
+        toolCallId: "tool-call-1",
+        toolName: "read_browser_selection"
+      })
+    ).resolves.toEqual({ content: "Selected text", isError: false });
+  });
 });

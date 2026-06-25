@@ -14,25 +14,35 @@ export interface WebPluginRegistry {
   has: (id: string) => boolean;
 }
 
-const executors = new Map<string, WebPlugin.BrowserToolExecutor>();
+interface BrowserToolRegistration {
+  readonly beforeExecute?: WebPlugin.BrowserToolBeforeExecute;
+  readonly executor: WebPlugin.BrowserToolExecutor;
+}
+
+const registrations = new Map<string, BrowserToolRegistration>();
 
 export function registerBrowserToolExecutor(
   toolName: string,
-  executor: WebPlugin.BrowserToolExecutor
+  executor: WebPlugin.BrowserToolExecutor,
+  beforeExecute?: WebPlugin.BrowserToolBeforeExecute
 ): () => void {
-  executors.set(toolName, executor);
+  const registration: BrowserToolRegistration = {
+    ...(beforeExecute === undefined ? {} : { beforeExecute }),
+    executor
+  };
+  registrations.set(toolName, registration);
   return () => {
-    if (executors.get(toolName) === executor) {
-      executors.delete(toolName);
+    if (registrations.get(toolName) === registration) {
+      registrations.delete(toolName);
     }
   };
 }
 
 export async function executeBrowserTool(
-  context: WebPlugin.BrowserToolExecutionContext
+  context: WebPlugin.BrowserToolExecutionOptions
 ): Promise<{ content: string | WebPlugin.TextContent[]; isError: boolean }> {
-  const executor = executors.get(context.toolName);
-  if (!executor) {
+  const registration = registrations.get(context.toolName);
+  if (!registration) {
     return {
       content: `No browser executor registered for ${context.toolName}.`,
       isError: true
@@ -40,7 +50,15 @@ export async function executeBrowserTool(
   }
 
   try {
-    return { content: await executor(context), isError: false };
+    const beforeExecuteResult = await registration.beforeExecute?.({
+      ...context,
+      requestApproval: context.requestApproval ?? requestNoApproval
+    });
+    if (beforeExecuteResult?.block === true) {
+      return { content: beforeExecuteResult.reason, isError: true };
+    }
+
+    return { content: await registration.executor(context), isError: false };
   } catch (error) {
     return {
       content:
@@ -50,8 +68,12 @@ export async function executeBrowserTool(
   }
 }
 
+async function requestNoApproval(): Promise<undefined> {
+  return undefined;
+}
+
 export function clearBrowserToolExecutorsForTests(): void {
-  executors.clear();
+  registrations.clear();
 }
 
 export function createWebPluginRegistry(): WebPluginRegistry {

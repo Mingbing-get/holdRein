@@ -107,7 +107,11 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
     if (tools?.length) {
       browserToolDisposers.current.push(
         ...tools.map((tool) =>
-          registerBrowserToolExecutor(tool.name, tool.executor)
+          registerBrowserToolExecutor(
+            tool.name,
+            tool.executor,
+            tool.beforeExecute
+          )
         )
       )
       setRuntimeContributions((old) => ({
