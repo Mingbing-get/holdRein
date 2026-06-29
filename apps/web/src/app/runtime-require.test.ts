@@ -1,19 +1,32 @@
 // @vitest-environment jsdom
 
-import { expect, it, vi } from "vitest";
+import { beforeEach, expect, it, vi } from "vitest";
 
-vi.mock("@ant-design/icons", () => ({ IconProbe: "icons" }));
+const IconDefault = vi.fn();
+const MonacoDefault = vi.fn();
+
+vi.mock("@ant-design/icons", () => ({
+  default: IconDefault,
+  IconProbe: "icons"
+}));
 vi.mock("@hold-rein/plugin-web", () => ({
   require: {
     register: vi.fn()
   }
 }));
-vi.mock("@monaco-editor/react", () => ({ Editor: "editor" }));
+vi.mock("@monaco-editor/react", () => ({
+  default: MonacoDefault,
+  DiffEditor: "diff-editor"
+}));
 vi.mock("antd", () => ({ Button: "button" }));
 vi.mock("monaco-editor", () => ({ editor: "monaco-editor" }));
 vi.mock("react", () => ({ createElement: "create-element" }));
 vi.mock("react-dom", () => ({ createPortal: "create-portal" }));
 vi.mock("react/jsx-runtime", () => ({ jsx: "jsx" }));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 it("registers host packages for runtime plugins", async () => {
   const { require } = await import("@hold-rein/plugin-web");
@@ -43,5 +56,29 @@ it("registers host packages for runtime plugins", async () => {
   expect(require.register).toHaveBeenCalledWith(
     "monaco-editor",
     expect.anything()
+  );
+});
+
+it("registers default exports as AMD module values with named exports attached", async () => {
+  const { require } = await import("@hold-rein/plugin-web");
+  const { registerRuntimePluginPackages } = await import("./runtime-require");
+
+  registerRuntimePluginPackages();
+
+  const iconRegistration = vi
+    .mocked(require.register)
+    .mock.calls.find(([packageName]) => packageName === "@ant-design/icons");
+  const monacoRegistration = vi
+    .mocked(require.register)
+    .mock.calls.find(([packageName]) => packageName === "@monaco-editor/react");
+
+  expect(typeof iconRegistration?.[1]).toBe("function");
+  expect((iconRegistration?.[1] as { IconProbe?: unknown }).IconProbe).toBe(
+    "icons"
+  );
+
+  expect(typeof monacoRegistration?.[1]).toBe("function");
+  expect((monacoRegistration?.[1] as { DiffEditor?: unknown }).DiffEditor).toBe(
+    "diff-editor"
   );
 });
