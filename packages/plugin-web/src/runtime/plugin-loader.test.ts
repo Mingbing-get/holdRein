@@ -6,7 +6,7 @@ it("imports and registers web plugins", async () => {
   const register = vi.fn();
 
   await loadRuntimeWebPlugins({
-    importer: vi.fn(async () => ({ default: { id: "demo" } })),
+    importer: vi.fn(async () => ({ id: "demo" })),
     manifests: [
       {
         id: "demo",

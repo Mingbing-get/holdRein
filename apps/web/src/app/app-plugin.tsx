@@ -28,7 +28,7 @@ interface RuntimePluginsResponse {
 export interface AppPluginProviderProps extends PropsWithChildren {
   readonly runtimePluginImporter?: (
     entryUrl: string
-  ) => Promise<{ default?: WebPlugin.Plugin }>;
+  ) => Promise<WebPlugin.Plugin>;
 }
 
 export interface AppPluginContextValue {

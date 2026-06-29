@@ -3,7 +3,7 @@ import type { WebPluginRegistry } from "../index";
 import { require } from "./require";
 
 export interface LoadRuntimeWebPluginsOptions {
-  readonly importer?: (entryUrl: string) => Promise<{ default?: WebPlugin.Plugin }>;
+  readonly importer?: (entryUrl: string) => Promise<WebPlugin.Plugin>;
   readonly manifests: readonly RuntimePluginManifest[];
   readonly registry: Pick<WebPluginRegistry, "has" | "register">;
 }
@@ -19,20 +19,21 @@ export async function loadRuntimeWebPlugins(
     }
 
     const module = await importer(manifest.webEntry);
-    if (!module.default) {
+
+    if (!module) {
       throw new Error(
         `Web plugin "${manifest.id}" does not export a default plugin.`
       );
     }
 
-    options.registry.register(module.default);
+    options.registry.register(module);
   }
 }
 
 async function importRuntimePlugin(
   entryUrl: string
-): Promise<{ default?: WebPlugin.Plugin }> {
+): Promise<WebPlugin.Plugin> {
   const [module] = await require.require([entryUrl]);
 
-  return module as { default?: WebPlugin.Plugin };
+  return module as WebPlugin.Plugin;
 }

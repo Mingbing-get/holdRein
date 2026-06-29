@@ -413,7 +413,7 @@ it("filters shared imports", () => {
 it("imports and registers web plugins", async () => {
   const register = vi.fn();
   await loadRuntimeWebPlugins({
-    importer: vi.fn(async () => ({ default: { id: "demo" } })),
+    importer: vi.fn(async () => ({ id: "demo" })),
     manifests: [{ id: "demo", name: "Demo", packageName: "@scope/demo", version: "1.0.0", webEntry: "/demo.js" }],
     registry: { has: () => false, register }
   });
