@@ -4,6 +4,7 @@ export default defineConfig({
   build: {
     emptyOutDir: false,
     lib: {
+      cssFileName: "style",
       entry: "src/web.ts",
       fileName: () => "web.umd.cjs",
       formats: ["umd"],

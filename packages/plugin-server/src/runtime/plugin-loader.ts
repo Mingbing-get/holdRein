@@ -57,14 +57,21 @@ export async function loadInstalledServerPlugins(
         name: manifest.name,
         packageName: manifest.packageName,
         version: manifest.version,
-        webEntry: `/plugin-assets/${encodeURIComponent(pluginDir)}/${toPluginAssetPath(
-          manifest.webEntry
-        )}`
+        webEntry: toPluginAssetUrl(pluginDir, manifest.webEntry),
+        ...(manifest.webStyle === undefined
+          ? {}
+          : { webStyle: toPluginAssetUrl(pluginDir, manifest.webStyle) })
       });
     }
   }
 
   return { plugins, webPlugins };
+}
+
+function toPluginAssetUrl(pluginDir: string, entry: string): string {
+  return `/plugin-assets/${encodeURIComponent(pluginDir)}/${toPluginAssetPath(
+    entry
+  )}`;
 }
 
 function toPluginAssetPath(entry: string): string {

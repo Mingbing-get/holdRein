@@ -22,7 +22,10 @@ it("imports plugin default exports and returns web manifests", async () => {
       version: "1.0.0",
       exports: {
         ".": "./dist/server/index.js",
-        "./web": "./dist/web/index.js"
+        "./web": {
+          import: "./dist/web/index.js",
+          style: "./dist/style.css"
+        }
       }
     })
   );
@@ -39,6 +42,7 @@ it("imports plugin default exports and returns web manifests", async () => {
     name: "@scope/demo",
     packageName: "@scope/demo",
     version: "1.0.0",
-    webEntry: "/plugin-assets/%40scope__demo/web/index.js"
+    webEntry: "/plugin-assets/%40scope__demo/web/index.js",
+    webStyle: "/plugin-assets/%40scope__demo/style.css"
   });
 });

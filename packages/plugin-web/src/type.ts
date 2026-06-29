@@ -344,4 +344,5 @@ export interface RuntimePluginManifest {
   readonly packageName: string;
   readonly version: string;
   readonly webEntry: string;
+  readonly webStyle?: string;
 }

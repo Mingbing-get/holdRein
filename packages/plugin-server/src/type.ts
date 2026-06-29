@@ -122,6 +122,7 @@ export interface PackageEntryManifest {
   readonly serverEntry: string;
   readonly version: string;
   readonly webEntry?: string;
+  readonly webStyle?: string;
 }
 
 export interface RuntimePluginManifest {
@@ -130,4 +131,5 @@ export interface RuntimePluginManifest {
   readonly packageName: string;
   readonly version: string;
   readonly webEntry: string;
+  readonly webStyle?: string;
 }

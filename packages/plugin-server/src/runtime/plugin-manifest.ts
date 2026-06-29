@@ -30,6 +30,7 @@ export function parseServerPluginManifest(
     "./server"
   ) ?? resolvePackageExport(packageManifest.exports, ".");
   const webEntry = resolvePackageExport(packageManifest.exports, "./web");
+  const webStyle = resolvePackageStyleExport(packageManifest.exports, "./web");
 
   if (!serverEntry) {
     throw new Error('Plugin package "exports" must define a server entry.');
@@ -41,7 +42,8 @@ export function parseServerPluginManifest(
     packageName,
     serverEntry,
     version,
-    ...(webEntry === undefined ? {} : { webEntry })
+    ...(webEntry === undefined ? {} : { webEntry }),
+    ...(webStyle === undefined ? {} : { webStyle })
   };
 }
 
@@ -101,6 +103,35 @@ function resolvePackageExport(
       : exportMap[subpath];
 
   return resolveExportValue(exportValue);
+}
+
+function resolvePackageStyleExport(
+  exportsField: unknown,
+  subpath: "./web"
+): string | undefined {
+  if (
+    !exportsField ||
+    typeof exportsField !== "object" ||
+    Array.isArray(exportsField)
+  ) {
+    return undefined;
+  }
+
+  const exportMap = exportsField as Record<string, unknown>;
+  const exportValue = exportMap[subpath];
+
+  if (
+    !exportValue ||
+    typeof exportValue !== "object" ||
+    Array.isArray(exportValue)
+  ) {
+    return undefined;
+  }
+
+  const conditions = exportValue as Record<string, unknown>;
+  const style = conditions.style;
+
+  return typeof style === "string" ? style : undefined;
 }
 
 function resolveExportValue(value: unknown): string | undefined {

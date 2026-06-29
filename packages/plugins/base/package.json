@@ -14,6 +14,7 @@
     },
     "./web": {
       "types": "./src/web.ts",
+      "style": "./dist/style.css",
       "import": "./src/web.ts",
       "require": "./src/web.ts"
     }
@@ -34,6 +35,7 @@
       },
       "./web": {
         "types": "./dist/web.d.ts",
+        "style": "./dist/style.css",
         "default": "./dist/web.umd.cjs",
         "require": "./dist/web.umd.cjs"
       }

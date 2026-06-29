@@ -18,7 +18,10 @@ describe("plugin manifests", () => {
           ".": {
             import: "./dist/server/index.js"
           },
-          "./web": "./dist/web/index.js"
+          "./web": {
+            import: "./dist/web/index.js",
+            style: "./dist/style.css"
+          }
         }
       })
     ).toEqual({
@@ -27,7 +30,8 @@ describe("plugin manifests", () => {
       packageName: "@scope/demo",
       serverEntry: "./dist/server/index.js",
       version: "1.0.0",
-      webEntry: "./dist/web/index.js"
+      webEntry: "./dist/web/index.js",
+      webStyle: "./dist/style.css"
     });
   });
 
