@@ -7,6 +7,7 @@ import {
 import { Button, Empty, Space, Tag, Tooltip } from "antd";
 import { useCallback, useEffect, useState } from "react";
 import type { WebPlugin } from "@hold-rein/plugin-web";
+import { BASE_EXAMPLE_PLUGIN_ID } from '../../../plugin-id'
 
 import "./shell-processes.css";
 
@@ -95,7 +96,7 @@ export function ShellProcessesPanel({
       try {
         await request({
           method: "POST",
-          path: `/plugin/__base/shells/${shellId}/kill`
+          path: `/plugin/${BASE_EXAMPLE_PLUGIN_ID}/shells/${shellId}/kill`
         });
       } finally {
         setStoppingId("");
@@ -288,7 +289,7 @@ function sortShellProcesses(
 }
 
 function createShellStreamUrl(taskId: string): string {
-  return `/plugin/__base/shells?taskId=${encodeURIComponent(taskId)}`;
+  return `/plugin/${BASE_EXAMPLE_PLUGIN_ID}/shells?taskId=${encodeURIComponent(taskId)}`;
 }
 
 function isAbortError(error: unknown): boolean {

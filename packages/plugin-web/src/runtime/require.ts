@@ -52,7 +52,13 @@ class Require {
             reject(new Error(`Failed to execute runtime module "${path}".`))
             this.deleteRequireCustom(fnKey)
           }
-          script.innerText = `(function() {const define = window.requireCustom.${fnKey};define.amd=true;${scriptText}})()`
+          script.textContent = [
+            "(function() {",
+            `const define = window.requireCustom.${fnKey};`,
+            "define.amd = true;",
+            scriptText,
+            "})()"
+          ].join("\n");
 
           document.body.appendChild(script)
         } catch (error) {
