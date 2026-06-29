@@ -1,0 +1,55 @@
+{
+  "name": "@hold-rein/plugins-base",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/server.ts",
+  "module": "./src/server.ts",
+  "types": "./src/server.ts",
+  "exports": {
+    "./server": {
+      "types": "./src/server.ts",
+      "import": "./src/server.ts",
+      "require": "./src/server.ts"
+    },
+    "./web": {
+      "types": "./src/web.ts",
+      "import": "./src/web.ts",
+      "require": "./src/web.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "restricted",
+    "main": "./dist/server.cjs",
+    "module": "./dist/server.js",
+    "types": "./dist/server.d.ts",
+    "exports": {
+      "./server": {
+        "types": "./dist/server.d.ts",
+        "import": "./dist/server.js",
+        "require": "./dist/server.cjs"
+      },
+      "./web": {
+        "types": "./dist/web.d.ts",
+        "default": "./dist/web.umd.cjs",
+        "require": "./dist/web.umd.cjs"
+      }
+    }
+  },
+  "scripts": {
+    "build": "vite build --config vite.config.ts && vite build --config vite.web.config.ts && tsc -p tsconfig.json --emitDeclarationOnly",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "@hold-rein/plugin-server": "workspace:^",
+    "@hold-rein/plugin-web": "workspace:^"
+  },
+  "devDependencies": {
+    "@hold-rein/plugin-server": "workspace:^",
+    "@hold-rein/plugin-web": "workspace:^",
+    "vite": "6.3.5"
+  }
+}
