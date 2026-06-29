@@ -8,6 +8,7 @@ export default defineConfig({
       entry: "src/web.ts",
       fileName: () => "web.umd.cjs",
       formats: ["umd"],
+      name: "HoldReinCodePlugin"
     },
     sourcemap: true,
     rollupOptions: {
