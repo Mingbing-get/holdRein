@@ -11,4 +11,6 @@ export const MEMORY_DIR = resolve(AGENT_ROOT_DIR, './memories')
 
 export const SKILL_DIR = resolve(AGENT_ROOT_DIR, './skills')
 
+export const PLUGIN_DIR = resolve(AGENT_ROOT_DIR, './plugins')
+
 export const DB_FILE = resolve(AGENT_ROOT_DIR, './hold-rein.sqlite')

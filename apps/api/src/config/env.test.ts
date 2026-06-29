@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 
 import { describe, expect, it } from "vitest";
 
-import { loadApiEnv } from "./env";
+import { PLUGIN_DIR } from "./const";
+import { getApiEnv, loadApiEnv } from "./env";
 
 describe("loadApiEnv", () => {
   it("loads .env values and lets .env.local override them", () => {
@@ -36,6 +37,18 @@ describe("loadApiEnv", () => {
     loadApiEnv({ envDir, targetEnv });
 
     expect(targetEnv.PORT).toBe("9999");
+  });
+});
+
+describe("getApiEnv", () => {
+  it("defaults plugin storage to the central home directory", () => {
+    expect(getApiEnv({}).pluginRoot).toBe(PLUGIN_DIR);
+  });
+
+  it("allows HOLD_REIN_PLUGIN_ROOT to override plugin storage", () => {
+    expect(
+      getApiEnv({ HOLD_REIN_PLUGIN_ROOT: "/tmp/custom-plugins" }).pluginRoot
+    ).toBe("/tmp/custom-plugins");
   });
 });
 

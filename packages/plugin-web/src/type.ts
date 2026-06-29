@@ -337,3 +337,11 @@ export namespace WebPlugin {
     readonly id: string;
   }
 }
+
+export interface RuntimePluginManifest {
+  readonly id: string;
+  readonly name: string;
+  readonly packageName: string;
+  readonly version: string;
+  readonly webEntry: string;
+}

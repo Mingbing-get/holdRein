@@ -113,3 +113,21 @@ export namespace ServerPlugin {
     readonly registerRoutes?: (context: RouteContext) => Router | Promise<Router>;
   }
 }
+
+export interface PackageEntryManifest {
+  readonly compatibleHost?: string;
+  readonly id: string;
+  readonly name: string;
+  readonly packageName: string;
+  readonly serverEntry: string;
+  readonly version: string;
+  readonly webEntry?: string;
+}
+
+export interface RuntimePluginManifest {
+  readonly id: string;
+  readonly name: string;
+  readonly packageName: string;
+  readonly version: string;
+  readonly webEntry: string;
+}

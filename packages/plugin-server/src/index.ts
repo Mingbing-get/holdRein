@@ -2,6 +2,27 @@ import type { Router } from 'express'
 import type { ServerPlugin } from './type'
 
 export * from "./type";
+export { loadInstalledServerPlugins } from "./runtime/plugin-loader";
+export type {
+  LoadedServerPlugins,
+  LoadInstalledServerPluginsOptions
+} from "./runtime/plugin-loader";
+export {
+  copyInstalledPluginPackage,
+  encodePluginDirectoryName,
+  installNpmPluginPackage
+} from "./runtime/plugin-installer";
+export type {
+  CopyInstalledPluginPackageOptions,
+  InstallNpmPluginPackageOptions
+} from "./runtime/plugin-installer";
+export {
+  discoverServerPluginManifests,
+  parseServerPluginManifest
+} from "./runtime/plugin-manifest";
+export { SERVER_PLUGIN_SHARED_PACKAGES } from "./runtime/shared-packages";
+export { linkServerPluginSharedPackages } from "./runtime/shared-symlinks";
+export type { LinkServerPluginSharedPackagesOptions } from "./runtime/shared-symlinks";
 
 export interface ServerPluginRegistry {
   register: (plugin: ServerPlugin.Plugin) => void;

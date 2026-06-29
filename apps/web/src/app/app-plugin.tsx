@@ -1,6 +1,8 @@
 import {
   createWebPluginRegistry,
+  loadRuntimeWebPlugins,
   registerBrowserToolExecutor,
+  type RuntimePluginManifest,
   type WebPluginRegistry,
   type WebPlugin
 } from '@hold-rein/plugin-web'
@@ -19,6 +21,16 @@ import {
 import { useAppUi } from './app-ui-context';
 import { request } from '../api/request';
 import baseWebPlugin from '@hold-rein/plugins-base-web';
+
+interface RuntimePluginsResponse {
+  readonly plugins: readonly RuntimePluginManifest[];
+}
+
+export interface AppPluginProviderProps extends PropsWithChildren {
+  readonly runtimePluginImporter?: (
+    entryUrl: string
+  ) => Promise<{ default?: WebPlugin.Plugin }>;
+}
 
 export interface AppPluginContextValue {
   pluginRegistry: WebPluginRegistry;
@@ -39,7 +51,10 @@ const EMPTY_RUNTIME_CONTRIBUTIONS: WebPlugin.ResolvedBrowserRuntimeContributions
   tools: []
 };
 
-export function AppPluginProvider({ children }: PropsWithChildren) {
+export function AppPluginProvider({
+  children,
+  runtimePluginImporter
+}: AppPluginProviderProps) {
   const pluginRegistry = useRef<WebPluginRegistry>(createWebPluginRegistry())
   const loadGeneration = useRef(0)
   const browserToolDisposers = useRef<(() => void)[]>([])
@@ -198,21 +213,38 @@ export function AppPluginProvider({ children }: PropsWithChildren) {
       pluginRegistry.current.register(baseWebPlugin)
     }
 
-    const plugins = pluginRegistry.current.list()
     const generation = loadGeneration.current + 1
     loadGeneration.current = generation
 
     clear()
-    loadFromPlugins(plugins, generation)
-    
     const offPluginRegistered = pluginRegistry.current.on((plugin) => {
       loadFromPlugins([plugin], loadGeneration.current)
     })
+
+    loadFromPlugins(pluginRegistry.current.list(), generation)
+
+    request<RuntimePluginsResponse>({
+      method: "GET",
+      path: "/api/v1/plugins"
+    })
+      .then(async ({ data }) => {
+        if (generation !== loadGeneration.current) return
+
+        await loadRuntimeWebPlugins({
+          ...(runtimePluginImporter === undefined
+            ? {}
+            : { importer: runtimePluginImporter }),
+          manifests: data.plugins,
+          registry: pluginRegistry.current
+        })
+      })
+      .catch(() => undefined)
+
     return () => {
       offPluginRegistered()
       clearBrowserToolRegistrations()
     }
-  }, [clear, loadFromPlugins])
+  }, [clear, clearBrowserToolRegistrations, loadFromPlugins, runtimePluginImporter])
 
   const contextValue = useMemo(() => ({
     pluginRegistry: pluginRegistry.current,

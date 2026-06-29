@@ -3,6 +3,10 @@ import type { WebPlugin } from "./type";
 export type {
   WebPlugin
 };
+export type { RuntimePluginManifest } from "./type";
+export { loadRuntimeWebPlugins } from "./runtime/plugin-loader";
+export { require } from "./runtime/require";
+export type { LoadRuntimeWebPluginsOptions } from "./runtime/plugin-loader";
 
 export type WebPluginListener = (plugin: WebPlugin.Plugin) => void;
 
@@ -55,7 +59,7 @@ export async function executeBrowserTool(
       requestApproval: context.requestApproval ?? requestNoApproval
     });
     if (beforeExecuteResult?.block === true) {
-      return { content: beforeExecuteResult.reason, isError: true };
+      return { content: beforeExecuteResult.reason || '', isError: true };
     }
 
     return { content: await registration.executor(context), isError: false };

@@ -33,17 +33,24 @@
     "build": "tsc -p tsconfig.json --emitDeclarationOnly && vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": {
+  "peerDependencies": {
     "@ant-design/icons": "6.2.5",
+    "@hold-rein/plugin-web": "workspace:^",
     "@monaco-editor/react": "4.7.0",
     "antd": "6.4.3",
     "monaco-editor": "0.55.1",
     "react": "19.2.6",
-    "react-dom": "19.2.6",
-    "@hold-rein/plugin-web": "workspace:^"
+    "react-dom": "19.2.6"
   },
   "devDependencies": {
+    "@ant-design/icons": "6.2.5",
+    "@hold-rein/plugin-web": "workspace:^",
+    "@monaco-editor/react": "4.7.0",
     "@types/react": "19.2.15",
+    "antd": "6.4.3",
+    "monaco-editor": "0.55.1",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
     "vite": "6.3.5"
   }
 }

@@ -10,6 +10,7 @@ export default defineConfig({
     rollupOptions: {
       external: [
         "@ant-design/icons",
+        "@hold-rein/plugin-web",
         "@monaco-editor/react",
         "antd",
         "monaco-editor",
