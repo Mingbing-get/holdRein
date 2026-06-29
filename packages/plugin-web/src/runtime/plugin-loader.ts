@@ -1,5 +1,6 @@
 import type { RuntimePluginManifest, WebPlugin } from "../type";
 import type { WebPluginRegistry } from "../index";
+import { require } from "./require";
 
 export interface LoadRuntimeWebPluginsOptions {
   readonly importer?: (entryUrl: string) => Promise<{ default?: WebPlugin.Plugin }>;
@@ -31,5 +32,7 @@ export async function loadRuntimeWebPlugins(
 async function importRuntimePlugin(
   entryUrl: string
 ): Promise<{ default?: WebPlugin.Plugin }> {
-  return import(/* @vite-ignore */ entryUrl);
+  const [module] = await require.require([entryUrl]);
+
+  return module as { default?: WebPlugin.Plugin };
 }

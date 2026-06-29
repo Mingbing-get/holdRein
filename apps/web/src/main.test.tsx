@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const renderMock = vi.fn();
+const registerRuntimePluginPackagesMock = vi.fn();
 const createRootMock = vi.fn(() => ({
   render: renderMock
 }));
@@ -17,6 +18,10 @@ vi.mock("./App", () => ({
   default: () => null
 }));
 
+vi.mock("./app/runtime-require", () => ({
+  registerRuntimePluginPackages: registerRuntimePluginPackagesMock
+}));
+
 vi.mock("antd/dist/reset.css", () => {
   resetStylesLoaded = true;
 
@@ -27,6 +32,7 @@ describe("main", () => {
   beforeEach(() => {
     globalThis.document.body.innerHTML = '<div id="root"></div>';
     renderMock.mockClear();
+    registerRuntimePluginPackagesMock.mockClear();
     createRootMock.mockClear();
     resetStylesLoaded = false;
     vi.resetModules();
@@ -39,6 +45,7 @@ describe("main", () => {
     expect(createRootMock).toHaveBeenCalledWith(
       globalThis.document.getElementById("root")
     );
+    expect(registerRuntimePluginPackagesMock).toHaveBeenCalledOnce();
     expect(renderMock).toHaveBeenCalledOnce();
   });
 });
