@@ -71,12 +71,6 @@ importers:
       '@hold-rein/plugin-server':
         specifier: workspace:^
         version: link:../../packages/plugin-server
-      '@hold-rein/plugins-base-server':
-        specifier: workspace:^
-        version: link:../../packages/plugins/base-server
-      '@hold-rein/plugins-ts-standards-server':
-        specifier: workspace:^
-        version: link:../../packages/plugins/ts-standards-server
       better-sqlite3:
         specifier: 12.10.0
         version: 12.10.0
@@ -105,9 +99,6 @@ importers:
       '@hold-rein/plugin-web':
         specifier: workspace:^
         version: link:../../packages/plugin-web
-      '@hold-rein/plugins-base-web':
-        specifier: workspace:^
-        version: link:../../packages/plugins/base-web
       '@monaco-editor/react':
         specifier: 4.7.0
         version: 4.7.0(monaco-editor@0.55.1)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)

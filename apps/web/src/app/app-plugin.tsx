@@ -20,7 +20,6 @@ import {
 
 import { useAppUi } from './app-ui-context';
 import { request } from '../api/request';
-import baseWebPlugin from '@hold-rein/plugins-base-web';
 
 interface RuntimePluginsResponse {
   readonly plugins: readonly RuntimePluginManifest[];
@@ -209,10 +208,6 @@ export function AppPluginProvider({
   }, [appUi])
 
   useEffect(() => {
-    if (!pluginRegistry.current.has(baseWebPlugin.id)) {
-      pluginRegistry.current.register(baseWebPlugin)
-    }
-
     const generation = loadGeneration.current + 1
     loadGeneration.current = generation
 

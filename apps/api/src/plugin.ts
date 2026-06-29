@@ -5,17 +5,12 @@ import {
   loadInstalledServerPlugins,
   type RuntimePluginManifest
 } from "@hold-rein/plugin-server";
-import baseServerPlugin from "@hold-rein/plugins-base-server";
-import tsStandardsServerPlugin from "@hold-rein/plugins-ts-standards-server";
 
 export const pluginRegistry = createServerPluginRegistry();
 
 let runtimeWebPlugins: RuntimePluginManifest[] = [];
 
 export async function bootstrapServerPlugins(pluginRoot: string): Promise<void> {
-  registerPluginIfMissing(baseServerPlugin);
-  registerPluginIfMissing(tsStandardsServerPlugin);
-
   const loaded = await loadInstalledServerPlugins({
     hostNodeModules: join(process.cwd(), "node_modules"),
     pluginRoot
