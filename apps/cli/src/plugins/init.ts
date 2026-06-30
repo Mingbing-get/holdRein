@@ -7,6 +7,7 @@ export interface InitPluginPackageResult {
 
 export interface InitPluginPackageOptions {
   readonly name?: string;
+  readonly path?: string;
 }
 
 const basePackageJson = {
@@ -177,10 +178,11 @@ export const initPluginPackage = (
   currentWorkingDirectory: string,
   options: InitPluginPackageOptions = {}
 ): InitPluginPackageResult => {
+  const targetRootDirectory = options.path ?? currentWorkingDirectory;
   const targetDirectory =
     options.name === undefined
-      ? currentWorkingDirectory
-      : join(currentWorkingDirectory, options.name);
+      ? targetRootDirectory
+      : join(targetRootDirectory, options.name);
   const folderName = basename(targetDirectory);
   const packageName = `hold-rein-plugin-${folderName}`;
   const packageJson = {

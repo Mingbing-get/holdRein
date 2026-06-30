@@ -17,11 +17,13 @@ Usage: hold-rein <command>
 Aliases: hold-rein, hr
 
 Commands:
-  plugin init    Initialize a plugin package in the current directory
+  plugin init    Initialize a plugin package
   version    Print the current CLI version
   help       Print this help message
 
 Options:
+  plugin init --path <path>    Initialize in a specific path
+  plugin init --name <name>    Initialize in a child directory
   -v, --version    Print the current CLI version
   -h, --help       Print this help message
 `;
@@ -70,18 +72,37 @@ function formatError(error: unknown): string {
 
 function parsePluginInitOptions(
   args: readonly string[]
-): { readonly name?: string } {
-  const nameIndex = args.indexOf("--name");
+): { readonly name?: string; readonly path?: string } {
+  const options: { name?: string; path?: string } = {};
+  const name = readOptionValue(args, "--name");
+  const path = readOptionValue(args, "--path");
 
-  if (nameIndex === -1) {
-    return {};
+  if (name !== undefined) {
+    options.name = name;
   }
 
-  const name = args[nameIndex + 1];
-
-  if (name === undefined || name.startsWith("-")) {
-    throw new Error("Missing value for --name");
+  if (path !== undefined) {
+    options.path = path;
   }
 
-  return { name };
+  return options;
+}
+
+function readOptionValue(
+  args: readonly string[],
+  optionName: string
+): string | undefined {
+  const optionIndex = args.indexOf(optionName);
+
+  if (optionIndex === -1) {
+    return undefined;
+  }
+
+  const value = args[optionIndex + 1];
+
+  if (value === undefined || value.startsWith("-")) {
+    throw new Error(`Missing value for ${optionName}`);
+  }
+
+  return value;
 }
