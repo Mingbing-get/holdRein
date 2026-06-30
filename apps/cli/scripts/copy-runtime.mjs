@@ -1,19 +1,27 @@
 import { access, cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import { argv } from "node:process";
+import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const cliRuntimeDirectory = resolve(root, "apps/cli/dist/runtime");
 
-await rm(cliRuntimeDirectory, { force: true, recursive: true });
-await mkdir(cliRuntimeDirectory, { recursive: true });
-const apiRuntimeDirectory = resolve(cliRuntimeDirectory, "api");
+if (import.meta.url === pathToFileURL(argv[1] ?? "").href) {
+  await copyRuntime();
+}
 
-await copyRuntimeApi(resolve(root, "apps/api/dist"), apiRuntimeDirectory);
-await fixRuntimeApiImports(apiRuntimeDirectory);
-await cp(resolve(root, "apps/web/dist"), resolve(cliRuntimeDirectory, "web"), {
-  recursive: true
-});
+async function copyRuntime() {
+  await rm(cliRuntimeDirectory, { force: true, recursive: true });
+  await mkdir(cliRuntimeDirectory, { recursive: true });
+  const apiRuntimeDirectory = resolve(cliRuntimeDirectory, "api");
+
+  await copyRuntimeApi(resolve(root, "apps/api/dist"), apiRuntimeDirectory);
+  await fixRuntimeApiImports(apiRuntimeDirectory);
+  await cp(resolve(root, "apps/web/dist"), resolve(cliRuntimeDirectory, "web"), {
+    recursive: true
+  });
+}
 
 async function copyRuntimeApi(sourceDirectory, destinationDirectory) {
   await mkdir(destinationDirectory, { recursive: true });
@@ -37,7 +45,7 @@ async function copyRuntimeApi(sourceDirectory, destinationDirectory) {
   }
 }
 
-async function fixRuntimeApiImports(directory) {
+export async function fixRuntimeApiImports(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
 
   for (const entry of entries) {
@@ -62,8 +70,15 @@ async function fixRuntimeApiImports(directory) {
 }
 
 async function replaceRelativeSpecifiers(source, filePath) {
-  const fromPattern = /(from\s+["'])(\.{1,2}\/[^"']+)(["'])/g;
-  const importPattern = /(import\s*\(\s*["'])(\.{1,2}\/[^"']+)(["']\s*\))/g;
+  const relativeSpecifier = String.raw`\.{1,2}(?:\/[^"']+)?`;
+  const fromPattern = new RegExp(
+    `(from\\s+["'])(${relativeSpecifier})(["'])`,
+    "g"
+  );
+  const importPattern = new RegExp(
+    `(import\\s*\\(\\s*["'])(${relativeSpecifier})(["']\\s*\\))`,
+    "g"
+  );
 
   let fixed = source;
   fixed = await replaceAsync(fixed, fromPattern, filePath);
