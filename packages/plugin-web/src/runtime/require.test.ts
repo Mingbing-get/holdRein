@@ -17,7 +17,7 @@ it("loads AMD modules with fetch text responses", async () => {
   }));
   vi.stubGlobal("fetch", fetch);
   vi.spyOn(document.body, "appendChild").mockImplementation((node) => {
-    Function((node as HTMLScriptElement).innerText)();
+    Function((node as HTMLScriptElement).textContent ?? "")();
     return node;
   });
 
@@ -43,7 +43,7 @@ it("resolves registered dependencies for UMD-style AMD modules", async () => {
     vi.fn(async () => ({ text }))
   );
   vi.spyOn(document.body, "appendChild").mockImplementation((node) => {
-    Function((node as HTMLScriptElement).innerText)();
+    Function((node as HTMLScriptElement).textContent ?? "")();
     return node;
   });
 
@@ -59,7 +59,7 @@ it("loads modules through configured aliases", async () => {
   const fetch = vi.fn(async () => ({ text }));
   vi.stubGlobal("fetch", fetch);
   vi.spyOn(document.body, "appendChild").mockImplementation((node) => {
-    Function((node as HTMLScriptElement).innerText)();
+    Function((node as HTMLScriptElement).textContent ?? "")();
     return node;
   });
 

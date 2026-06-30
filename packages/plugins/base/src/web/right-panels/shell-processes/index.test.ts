@@ -71,7 +71,7 @@ describe("ShellProcessesPanel", () => {
     expect(screen.getByText("running")).toBeInTheDocument();
     expect(screen.getByText("ready")).toBeInTheDocument();
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      "/plugin/__base/shells?taskId=task-1",
+      "/plugin/__base__plugin/shells?taskId=task-1",
       expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
     expect(request).not.toHaveBeenCalled();
@@ -229,7 +229,7 @@ describe("ShellProcessesPanel", () => {
     await waitFor(() => {
       expect(request).toHaveBeenCalledWith({
         method: "POST",
-        path: "/plugin/__base/shells/shell-1/kill"
+        path: "/plugin/__base__plugin/shells/shell-1/kill"
       });
     });
     expect(request).toHaveBeenCalledTimes(1);
