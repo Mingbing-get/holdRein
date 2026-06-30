@@ -1,11 +1,10 @@
 import {
+  initPluginPackage,
   installPluginPackage as installPluginPackageDefault,
   type InstallPluginPackageOptions
 } from "@hold-rein/plugin-server";
 import { homedir } from "node:os";
 import { join } from "node:path";
-
-import { initPluginPackage } from "./plugins/init";
 
 export interface CliOptions {
   readonly installPluginPackage?: (

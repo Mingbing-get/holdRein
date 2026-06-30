@@ -18,6 +18,11 @@ export type {
   InstallPluginPackageOptions,
   InstallNpmPluginPackageOptions
 } from "./runtime/installer";
+export { initPluginPackage } from "./runtime/init";
+export type {
+  InitPluginPackageOptions,
+  InitPluginPackageResult
+} from "./runtime/init";
 export type {
   PluginInstallCommandResult,
   PluginInstallCommandRunner,
