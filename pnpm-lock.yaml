@@ -88,6 +88,15 @@ importers:
         specifier: 0.31.10
         version: 0.31.10
 
+  apps/cli:
+    devDependencies:
+      '@types/node':
+        specifier: 22.15.29
+        version: 22.15.29
+      vite:
+        specifier: 6.3.5
+        version: 6.3.5(@types/node@22.15.29)(tsx@4.22.3)(yaml@2.9.0)
+
   apps/web:
     dependencies:
       '@ant-design/icons':
@@ -291,24 +300,6 @@ importers:
       react-dom:
         specifier: 19.2.6
         version: 19.2.6(react@19.2.6)
-      vite:
-        specifier: 6.3.5
-        version: 6.3.5(@types/node@22.15.29)(tsx@4.22.3)(yaml@2.9.0)
-
-  packages/plugins/ts-standards-server:
-    devDependencies:
-      '@earendil-works/pi-agent-core':
-        specifier: 0.75.4
-        version: 0.75.4(ws@8.21.0)(zod@4.3.6)
-      '@earendil-works/pi-ai':
-        specifier: 0.76.0
-        version: 0.76.0(ws@8.21.0)(zod@4.3.6)
-      '@hold-rein/plugin-server':
-        specifier: workspace:^
-        version: link:../../plugin-server
-      express:
-        specifier: 5.2.1
-        version: 5.2.1
       vite:
         specifier: 6.3.5
         version: 6.3.5(@types/node@22.15.29)(tsx@4.22.3)(yaml@2.9.0)

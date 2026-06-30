@@ -9,6 +9,7 @@
     "api:dev": "pnpm --filter @hold-rein/api dev",
     "web:build": "pnpm --filter @hold-rein/web build",
     "web:dev": "pnpm --filter @hold-rein/web dev",
+    "cli:dev": "pnpm --filter @hold-rein/cli dev",
     "build": "pnpm -r build",
     "dev": "pnpm --parallel --filter @hold-rein/api --filter @hold-rein/web dev",
     "changeset": "changeset",
