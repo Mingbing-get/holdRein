@@ -5,17 +5,17 @@ import { isAbsolute, join, resolve } from "node:path";
 import {
   type GithubPluginSource,
   parseGithubPluginSource
-} from "./plugin-github-source";
+} from "./github-source";
 import {
   type PluginInstallCommandRunner,
   type PluginInstallWriter,
   runInstallCommand
-} from "./plugin-install-command";
+} from "./command";
 import {
   createPublishedManifest,
   isBuiltPackageManifest,
   readValidPluginPackageManifest
-} from "./plugin-package-manifest";
+} from "../manifest/package";
 
 export interface CopyInstalledPluginPackageOptions {
   readonly packageName: string;

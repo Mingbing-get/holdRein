@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { expect, it } from "vitest";
 
-import { loadInstalledServerPlugins } from "./plugin-loader";
+import { loadInstalledServerPlugins } from ".";
 
 it("imports plugin default exports and returns web manifests", async () => {
   const root = await mkdtemp(join(tmpdir(), "hold-rein-load-"));

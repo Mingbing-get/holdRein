@@ -2,34 +2,34 @@ import type { Router } from 'express'
 import type { ServerPlugin } from './type'
 
 export * from "./type";
-export { loadInstalledServerPlugins } from "./runtime/plugin-loader";
+export { loadInstalledServerPlugins } from "./runtime/loader";
 export type {
   LoadedServerPlugins,
   LoadInstalledServerPluginsOptions
-} from "./runtime/plugin-loader";
+} from "./runtime/loader";
 export {
   copyInstalledPluginPackage,
   encodePluginDirectoryName,
   installPluginPackage,
   installNpmPluginPackage
-} from "./runtime/plugin-installer";
+} from "./runtime/installer";
 export type {
   CopyInstalledPluginPackageOptions,
   InstallPluginPackageOptions,
   InstallNpmPluginPackageOptions
-} from "./runtime/plugin-installer";
+} from "./runtime/installer";
 export type {
   PluginInstallCommandResult,
   PluginInstallCommandRunner,
   PluginInstallWriter
-} from "./runtime/plugin-install-command";
+} from "./runtime/installer/command";
 export {
   discoverServerPluginManifests,
   parseServerPluginManifest
-} from "./runtime/plugin-manifest";
-export { SERVER_PLUGIN_SHARED_PACKAGES } from "./runtime/shared-packages";
-export { linkServerPluginSharedPackages } from "./runtime/shared-symlinks";
-export type { LinkServerPluginSharedPackagesOptions } from "./runtime/shared-symlinks";
+} from "./runtime/manifest";
+export { SERVER_PLUGIN_SHARED_PACKAGES } from "./runtime/shared/packages";
+export { linkServerPluginSharedPackages } from "./runtime/shared/symlinks";
+export type { LinkServerPluginSharedPackagesOptions } from "./runtime/shared/symlinks";
 
 export interface ServerPluginRegistry {
   register: (plugin: ServerPlugin.Plugin) => void;

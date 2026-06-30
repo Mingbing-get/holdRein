@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import {
   discoverServerPluginManifests,
   parseServerPluginManifest
-} from "./plugin-manifest";
+} from ".";
 
 describe("plugin manifests", () => {
   it("accepts package manifests with server and web exports", () => {

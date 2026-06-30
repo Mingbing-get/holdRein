@@ -2,12 +2,12 @@ import { readFile } from "node:fs/promises";
 import { basename, dirname, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { RuntimePluginManifest, ServerPlugin } from "../type";
+import type { RuntimePluginManifest, ServerPlugin } from "../../type";
 import {
   discoverServerPluginManifests,
   parseServerPluginManifest
-} from "./plugin-manifest";
-import { linkServerPluginSharedPackages } from "./shared-symlinks";
+} from "../manifest";
+import { linkServerPluginSharedPackages } from "../shared/symlinks";
 
 export interface LoadInstalledServerPluginsOptions {
   readonly hostNodeModules: string;

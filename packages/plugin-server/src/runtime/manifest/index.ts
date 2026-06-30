@@ -1,7 +1,7 @@
 import { access, readdir } from "node:fs/promises";
 import { join } from "node:path";
 
-import type { PackageEntryManifest } from "../type";
+import type { PackageEntryManifest } from "../../type";
 
 function requirePackageString(
   input: Record<string, unknown>,

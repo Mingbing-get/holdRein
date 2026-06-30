@@ -1,7 +1,7 @@
 import { mkdir, rm, symlink } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
-import { SERVER_PLUGIN_SHARED_PACKAGES } from "./shared-packages";
+import { SERVER_PLUGIN_SHARED_PACKAGES } from "./packages";
 
 export interface LinkServerPluginSharedPackagesOptions {
   readonly hostNodeModules: string;

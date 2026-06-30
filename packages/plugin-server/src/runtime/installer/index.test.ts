@@ -7,7 +7,7 @@ import {
   copyInstalledPluginPackage,
   encodePluginDirectoryName,
   installPluginPackage
-} from "./plugin-installer";
+} from ".";
 
 describe("plugin installer", () => {
   const temporaryDirectories: string[] = [];

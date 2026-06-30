@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 
-import { linkServerPluginSharedPackages } from "./shared-symlinks";
+import { linkServerPluginSharedPackages } from "./symlinks";
 
 it("creates shared package symlinks in plugin node_modules", async () => {
   const root = await mkdtemp(join(tmpdir(), "hold-rein-link-"));
