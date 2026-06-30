@@ -1,6 +1,16 @@
+import {
+  installPluginPackage as installPluginPackageDefault,
+  type InstallPluginPackageOptions
+} from "@hold-rein/plugin-server";
+import { homedir } from "node:os";
+import { join } from "node:path";
+
 import { initPluginPackage } from "./plugins/init";
 
 export interface CliOptions {
+  readonly installPluginPackage?: (
+    options: InstallPluginPackageOptions
+  ) => Promise<string>;
   readonly packageVersion: string;
   readonly write: (value: string) => void;
   readonly currentWorkingDirectory?: string;
@@ -18,12 +28,14 @@ Aliases: hold-rein, hr
 
 Commands:
   plugin init    Initialize a plugin package
+  plugin install Install a plugin package
   version    Print the current CLI version
   help       Print this help message
 
 Options:
   plugin init --path <path>    Initialize in a specific path
   plugin init --name <name>    Initialize in a child directory
+  plugin install --target <path>    Install into a specific plugin directory
   -v, --version    Print the current CLI version
   -h, --help       Print this help message
 `;
@@ -33,7 +45,10 @@ const HELP_ARGS = new Set(["help", "--help", "-h"]);
 
 export const getHelpText = (): string => HELP_TEXT;
 
-export const runCli = (args: readonly string[], options: CliOptions): CliResult => {
+export const runCli = async (
+  args: readonly string[],
+  options: CliOptions
+): Promise<CliResult> => {
   const [command, subcommand, ...commandArgs] = args;
 
   if (command === undefined || HELP_ARGS.has(command)) {
@@ -62,12 +77,51 @@ export const runCli = (args: readonly string[], options: CliOptions): CliResult 
     }
   }
 
+  if (command === "plugin" && subcommand === "install") {
+    try {
+      const installOptions = parsePluginInstallOptions(commandArgs);
+      const installPluginPackage =
+        options.installPluginPackage ?? installPluginPackageDefault;
+      const destination = await installPluginPackage({
+        currentWorkingDirectory: options.currentWorkingDirectory ?? process.cwd(),
+        pluginRoot:
+          installOptions.target ?? join(homedir(), ".hold-rein", "plugins"),
+        source: installOptions.source,
+        write: options.write
+      });
+      options.write(`Installed plugin to ${destination}\n`);
+      return { exitCode: 0 };
+    } catch (error) {
+      options.write(`Failed to install plugin: ${formatError(error)}\n`);
+      return { exitCode: 1 };
+    }
+  }
+
   options.write(`Unknown command: ${command}\n\n${HELP_TEXT}`);
   return { exitCode: 1 };
 };
 
 function formatError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function parsePluginInstallOptions(
+  args: readonly string[]
+): { readonly source: string; readonly target?: string } {
+  const source = args[0];
+
+  if (source === undefined || source.startsWith("-")) {
+    throw new Error("Missing plugin source");
+  }
+
+  const options: { source: string; target?: string } = { source };
+  const target = readOptionValue(args, "--target");
+
+  if (target !== undefined) {
+    options.target = target;
+  }
+
+  return options;
 }
 
 function parsePluginInitOptions(

@@ -1,5 +1,5 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { basename, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -32,10 +32,10 @@ describe("runCli", () => {
     temporaryDirectories.length = 0;
   });
 
-  it("prints the package version for the version command", () => {
+  it("prints the package version for the version command", async () => {
     const output = collectOutput();
 
-    const result = runCli(["version"], {
+    const result = await runCli(["version"], {
       packageVersion: "1.2.3",
       write: output.write
     });
@@ -44,10 +44,10 @@ describe("runCli", () => {
     expect(output.lines).toEqual(["1.2.3\n"]);
   });
 
-  it("prints the package version for the version flag", () => {
+  it("prints the package version for the version flag", async () => {
     const output = collectOutput();
 
-    const result = runCli(["--version"], {
+    const result = await runCli(["--version"], {
       packageVersion: "1.2.3",
       write: output.write
     });
@@ -56,10 +56,10 @@ describe("runCli", () => {
     expect(output.lines).toEqual(["1.2.3\n"]);
   });
 
-  it("prints help for the help command", () => {
+  it("prints help for the help command", async () => {
     const output = collectOutput();
 
-    const result = runCli(["help"], {
+    const result = await runCli(["help"], {
       packageVersion: "1.2.3",
       write: output.write
     });
@@ -71,10 +71,10 @@ describe("runCli", () => {
     expect(output.lines.join("")).toContain("help");
   });
 
-  it("prints help for the help flag", () => {
+  it("prints help for the help flag", async () => {
     const output = collectOutput();
 
-    const result = runCli(["--help"], {
+    const result = await runCli(["--help"], {
       packageVersion: "1.2.3",
       write: output.write
     });
@@ -206,10 +206,10 @@ describe("runCli", () => {
     ).resolves.toBe('export const PLUGIN_ID = "__nested-plugin__plugin";\n');
   });
 
-  it("fails when the path option is missing a value", () => {
+  it("fails when the path option is missing a value", async () => {
     const output = collectOutput();
 
-    const result = runCli(["plugin", "init", "--path"], {
+    const result = await runCli(["plugin", "init", "--path"], {
       packageVersion: "1.2.3",
       write: output.write
     });
@@ -217,6 +217,90 @@ describe("runCli", () => {
     expect(result.exitCode).toBe(1);
     expect(output.lines).toEqual([
       "Failed to initialize plugin package: Missing value for --path\n"
+    ]);
+  });
+
+  it("installs a plugin into a custom target directory", async () => {
+    const output = collectOutput();
+    const installCalls: unknown[] = [];
+
+    const result = await runCli(
+      ["plugin", "install", "@scope/demo", "--target", "/tmp/plugins"],
+      {
+        installPluginPackage: async (options) => {
+          installCalls.push(options);
+          options.write("Running: npm install @scope/demo --ignore-scripts\n");
+          return "/tmp/plugins/@scope__demo";
+        },
+        packageVersion: "1.2.3",
+        write: output.write
+      }
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(installCalls).toEqual([
+      {
+        currentWorkingDirectory: process.cwd(),
+        pluginRoot: "/tmp/plugins",
+        source: "@scope/demo",
+        write: output.write
+      }
+    ]);
+    expect(output.lines).toEqual([
+      "Running: npm install @scope/demo --ignore-scripts\n",
+      "Installed plugin to /tmp/plugins/@scope__demo\n"
+    ]);
+  });
+
+  it("installs a plugin into the default home plugin directory", async () => {
+    const output = collectOutput();
+    const installCalls: unknown[] = [];
+
+    const result = await runCli(["plugin", "install", "plain-demo"], {
+      installPluginPackage: async (options) => {
+        installCalls.push(options);
+        return join(homedir(), ".hold-rein", "plugins", "plain-demo");
+      },
+      packageVersion: "1.2.3",
+      write: output.write
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(installCalls).toEqual([
+      {
+        currentWorkingDirectory: process.cwd(),
+        pluginRoot: join(homedir(), ".hold-rein", "plugins"),
+        source: "plain-demo",
+        write: output.write
+      }
+    ]);
+  });
+
+  it("fails when the plugin install source is missing", async () => {
+    const output = collectOutput();
+
+    const result = await runCli(["plugin", "install"], {
+      packageVersion: "1.2.3",
+      write: output.write
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(output.lines).toEqual([
+      "Failed to install plugin: Missing plugin source\n"
+    ]);
+  });
+
+  it("fails when the target option is missing a value", async () => {
+    const output = collectOutput();
+
+    const result = await runCli(["plugin", "install", "plain-demo", "--target"], {
+      packageVersion: "1.2.3",
+      write: output.write
+    });
+
+    expect(result.exitCode).toBe(1);
+    expect(output.lines).toEqual([
+      "Failed to install plugin: Missing value for --target\n"
     ]);
   });
 });

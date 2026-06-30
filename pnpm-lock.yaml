@@ -90,6 +90,9 @@ importers:
 
   apps/cli:
     dependencies:
+      '@hold-rein/plugin-server':
+        specifier: workspace:^
+        version: link:../../packages/plugin-server
       chalk:
         specifier: ^5.6.2
         version: 5.6.2

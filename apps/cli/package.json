@@ -41,6 +41,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@hold-rein/plugin-server": "workspace:^",
     "chalk": "^5.6.2"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 {
-  "name": "@hold-rein/ts-standards",
+  "name": "@hold-rein/plugins-ts-standards",
   "version": "0.0.0",
   "private": true,
   "type": "module",

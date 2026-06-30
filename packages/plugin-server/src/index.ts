@@ -10,12 +10,19 @@ export type {
 export {
   copyInstalledPluginPackage,
   encodePluginDirectoryName,
+  installPluginPackage,
   installNpmPluginPackage
 } from "./runtime/plugin-installer";
 export type {
   CopyInstalledPluginPackageOptions,
+  InstallPluginPackageOptions,
   InstallNpmPluginPackageOptions
 } from "./runtime/plugin-installer";
+export type {
+  PluginInstallCommandResult,
+  PluginInstallCommandRunner,
+  PluginInstallWriter
+} from "./runtime/plugin-install-command";
 export {
   discoverServerPluginManifests,
   parseServerPluginManifest
