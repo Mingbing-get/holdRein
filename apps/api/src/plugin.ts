@@ -1,6 +1,6 @@
-import { readFileSync } from "node:fs";
-import { createRequire } from "node:module";
+import { readFileSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   createServerPluginRegistry,
@@ -11,7 +11,7 @@ import {
 export const pluginRegistry = createServerPluginRegistry();
 
 let runtimeWebPlugins: RuntimePluginManifest[] = [];
-const runtimeRequire = createRequire(import.meta.url);
+const apiPackageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 export async function bootstrapServerPlugins(pluginRoot: string): Promise<void> {
   const loaded = await loadInstalledServerPlugins({
@@ -40,7 +40,9 @@ function registerPluginIfMissing(
 }
 
 function resolveRuntimePackageTarget(packageName: string): string {
-  let directory = dirname(runtimeRequire.resolve(packageName));
+  let directory = realpathSync(
+    join(apiPackageRoot, "node_modules", ...packageName.split("/"))
+  );
 
   while (true) {
     if (hasPackageName(directory, packageName)) {

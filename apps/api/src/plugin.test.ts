@@ -38,4 +38,10 @@ it("resolves shared plugin packages from the API runtime module", async () => {
   expect(options.resolvePackageTarget("express")).toContain(
     `${join("node_modules", "express")}`
   );
+  expect(options.resolvePackageTarget("@earendil-works/pi-agent-core")).toContain(
+    `${join("node_modules", "@earendil-works", "pi-agent-core")}`
+  );
+  expect(options.resolvePackageTarget("@earendil-works/pi-ai")).toContain(
+    `${join("node_modules", "@earendil-works", "pi-ai")}`
+  );
 });
