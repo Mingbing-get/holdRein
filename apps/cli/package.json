@@ -36,7 +36,7 @@
     }
   },
   "scripts": {
-    "build": "corepack pnpm --filter @hold-rein/api build && corepack pnpm --filter @hold-rein/web build && tsc -p tsconfig.json --emitDeclarationOnly && vite build && node scripts/copy-runtime.mjs",
+    "build": "pnpm --filter @hold-rein/api build && pnpm --filter @hold-rein/web build && tsc -p tsconfig.json --emitDeclarationOnly && vite build && node scripts/copy-runtime.mjs",
     "dev": "tsx src/cli.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
