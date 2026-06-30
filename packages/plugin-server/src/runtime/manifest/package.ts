@@ -4,6 +4,7 @@ import { join } from "node:path";
 export interface PluginPackageManifest {
   readonly name: string;
   readonly exports?: unknown;
+  readonly packageJson: Record<string, unknown>;
   readonly publishConfig?: unknown;
 }
 
@@ -32,6 +33,7 @@ export async function readValidPluginPackageManifest(
   return {
     exports: packageManifest.exports,
     name,
+    packageJson: packageManifest,
     publishConfig: packageManifest.publishConfig
   };
 }
@@ -45,15 +47,13 @@ export function createPublishedManifest(
     !Array.isArray(manifest.publishConfig)
   ) {
     return {
+      ...withoutPublishConfig(manifest.packageJson),
       ...(manifest.publishConfig as Record<string, unknown>),
       name: manifest.name
     };
   }
 
-  return {
-    exports: manifest.exports,
-    name: manifest.name
-  };
+  return withoutPublishConfig(manifest.packageJson);
 }
 
 export function isBuiltPackageManifest(
@@ -72,6 +72,15 @@ function hasServerExport(exportsField: unknown): boolean {
   }
 
   return Object.hasOwn(exportsField, "./server");
+}
+
+function withoutPublishConfig(
+  packageJson: Record<string, unknown>
+): Record<string, unknown> {
+  const publishedManifest = { ...packageJson };
+  delete publishedManifest.publishConfig;
+
+  return publishedManifest;
 }
 
 function isSourceEntry(entry: string): boolean {

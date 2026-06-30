@@ -145,6 +145,65 @@ describe("plugin installer", () => {
     );
   });
 
+  it("uses publishConfig to override source package fields for built plugins", async () => {
+    const root = await createTemporaryDirectory();
+    const source = join(root, "source-plugin");
+    const commandRunner = vi.fn(async (command: string, args: readonly string[]) => {
+      if (command === "pnpm" && args[0] === "build") {
+        await mkdir(join(source, "dist"), { recursive: true });
+      }
+    });
+
+    await mkdir(source, { recursive: true });
+    await writeFile(
+      join(source, "package.json"),
+      JSON.stringify({
+        name: "source-plugin",
+        version: "1.0.0",
+        exports: {
+          "./server": {
+            import: "./src/server.ts"
+          }
+        },
+        peerDependencies: {
+          react: "^19.0.0"
+        },
+        publishConfig: {
+          exports: {
+            "./server": {
+              import: "./dist/server.js"
+            }
+          }
+        }
+      })
+    );
+
+    const destination = await installPluginPackage({
+      pluginRoot: join(root, "plugins"),
+      runCommand: commandRunner,
+      source
+    });
+
+    await expect(readFile(join(destination, "package.json"), "utf8")).resolves.toBe(
+      `${JSON.stringify(
+        {
+          name: "source-plugin",
+          version: "1.0.0",
+          exports: {
+            "./server": {
+              import: "./dist/server.js"
+            }
+          },
+          peerDependencies: {
+            react: "^19.0.0"
+          }
+        },
+        null,
+        2
+      )}\n`
+    );
+  });
+
   it("tries to install pnpm before failing when pnpm is missing", async () => {
     const root = await createTemporaryDirectory();
     const source = join(root, "source-plugin");
