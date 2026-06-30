@@ -50,7 +50,7 @@ it("loads runtime web plugins from the API", async () => {
   render(
     <AppUiProvider>
       <AppPluginProvider
-        runtimePluginImporter={vi.fn(async () => ({ default: runtimePlugin }))}
+        runtimePluginImporter={vi.fn(async () => runtimePlugin)}
       >
         <SettingsProbe />
       </AppPluginProvider>

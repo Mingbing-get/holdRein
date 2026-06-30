@@ -7,6 +7,7 @@ export interface LinkServerPluginSharedPackagesOptions {
   readonly hostNodeModules: string;
   readonly packages?: readonly string[];
   readonly pluginRoot: string;
+  readonly resolvePackageTarget?: (packageName: string) => string;
 }
 
 export async function linkServerPluginSharedPackages(
@@ -18,7 +19,9 @@ export async function linkServerPluginSharedPackages(
       "node_modules",
       ...packageName.split("/")
     );
-    const targetPath = join(options.hostNodeModules, ...packageName.split("/"));
+    const targetPath =
+      options.resolvePackageTarget?.(packageName) ??
+      join(options.hostNodeModules, ...packageName.split("/"));
 
     await mkdir(dirname(linkPath), { recursive: true });
     await rm(linkPath, { force: true, recursive: true });

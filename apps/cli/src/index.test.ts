@@ -67,8 +67,39 @@ describe("runCli", () => {
     expect(result.exitCode).toBe(0);
     expect(output.lines.join("")).toContain("Usage: hold-rein <command>");
     expect(output.lines.join("")).toContain("Aliases: hold-rein, hr");
+    expect(output.lines.join("")).toContain("run");
     expect(output.lines.join("")).toContain("version");
     expect(output.lines.join("")).toContain("help");
+  });
+
+  it("starts the bundled service for the run command", async () => {
+    const output = collectOutput();
+    const calls: unknown[] = [];
+
+    const result = await runCli(["run", "--port", "4100"], {
+      packageVersion: "1.2.3",
+      startRunServer: async (options) => {
+        calls.push(options);
+        return {
+          host: "127.0.0.1",
+          port: options.port,
+          url: `http://127.0.0.1:${options.port}`
+        };
+      },
+      write: output.write
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(calls).toEqual([
+      {
+        host: "127.0.0.1",
+        port: 4100,
+        write: output.write
+      }
+    ]);
+    expect(output.lines).toEqual([
+      "Hold Rein is running at http://127.0.0.1:4100\n"
+    ]);
   });
 
   it("prints help for the help flag", async () => {

@@ -1,21 +1,16 @@
-import { createApp } from "./app";
-import { getApiEnv, loadApiEnv } from "./config/env";
-import { getDefaultAgentsService } from "./modules/agents";
-import { bootstrapServerPlugins } from "./plugin";
-
-loadApiEnv();
-const env = getApiEnv();
+import { startHoldReinServer } from "./runtime";
 
 const DEFAULT_PORT = 3001;
 const port = Number(process.env.PORT ?? DEFAULT_PORT);
+const host = process.env.HOST ?? "127.0.0.1";
 
 async function main() {
-  await bootstrapServerPlugins(env.pluginRoot);
-  getDefaultAgentsService();
-
-  const app = await createApp()
-  app.listen(port, () => {
-    console.log(`API server listening on port ${port}`);
+  await startHoldReinServer({
+    host,
+    port,
+    write: (value) => {
+      process.stdout.write(value);
+    }
   });
 }
 

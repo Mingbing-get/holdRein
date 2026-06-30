@@ -22,3 +22,19 @@ it("creates shared package symlinks in plugin node_modules", async () => {
     join(root, "host", "node_modules", "express")
   );
 });
+
+it("links shared packages to resolved package targets when provided", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hold-rein-link-"));
+
+  await linkServerPluginSharedPackages({
+    hostNodeModules: join(root, "host", "node_modules"),
+    packages: ["express"],
+    pluginRoot: join(root, "plugins"),
+    resolvePackageTarget: (packageName) =>
+      join(root, "resolved", "node_modules", packageName)
+  });
+
+  expect(await readlink(join(root, "plugins", "node_modules", "express"))).toBe(
+    join(root, "resolved", "node_modules", "express")
+  );
+});

@@ -12,6 +12,7 @@ import { linkServerPluginSharedPackages } from "../shared/symlinks";
 export interface LoadInstalledServerPluginsOptions {
   readonly hostNodeModules: string;
   readonly pluginRoot: string;
+  readonly resolvePackageTarget?: (packageName: string) => string;
   readonly toImportUrl?: (path: string) => string;
 }
 
@@ -25,7 +26,10 @@ export async function loadInstalledServerPlugins(
 ): Promise<LoadedServerPlugins> {
   await linkServerPluginSharedPackages({
     hostNodeModules: options.hostNodeModules,
-    pluginRoot: options.pluginRoot
+    pluginRoot: options.pluginRoot,
+    ...(options.resolvePackageTarget === undefined
+      ? {}
+      : { resolvePackageTarget: options.resolvePackageTarget })
   });
 
   const manifests = await discoverServerPluginManifests(options.pluginRoot);

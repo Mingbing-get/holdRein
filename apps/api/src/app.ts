@@ -9,7 +9,9 @@ import { createV1Router, type CreateV1RouterOptions } from "./router/v1";
 import { pluginRegistry } from './plugin'
 import { sendError, sendSuccess, RESPONSE_CODE_DEFINITIONS } from './response'
 
-export interface CreateAppOptions extends CreateV1RouterOptions {}
+export interface CreateAppOptions extends CreateV1RouterOptions {
+  readonly webAssetsDirectory?: string;
+}
 
 export async function createApp(options: CreateAppOptions = {}): Promise<Express> {
   const app = express();
@@ -20,6 +22,14 @@ export async function createApp(options: CreateAppOptions = {}): Promise<Express
   app.use("/api/v1", createV1Router(options));
   app.use("/plugin-assets/:pluginDir", createPluginAssetsMiddleware());
   app.use("/plugin", pluginRouter);
+  if (options.webAssetsDirectory !== undefined) {
+    const webAssetsDirectory = options.webAssetsDirectory;
+
+    app.use(express.static(webAssetsDirectory));
+    app.use((_request, response) => {
+      response.sendFile(join(webAssetsDirectory, "index.html"));
+    });
+  }
   app.use(notFoundMiddleware);
   app.use(errorMiddleware);
 

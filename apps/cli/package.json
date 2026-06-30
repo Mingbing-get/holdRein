@@ -36,13 +36,18 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json --emitDeclarationOnly && vite build",
+    "build": "corepack pnpm --filter @hold-rein/api build && corepack pnpm --filter @hold-rein/web build && tsc -p tsconfig.json --emitDeclarationOnly && vite build && node scripts/copy-runtime.mjs",
     "dev": "tsx src/cli.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@earendil-works/pi-agent-core": "0.75.4",
+    "@earendil-works/pi-ai": "0.76.0",
     "@hold-rein/plugin-server": "workspace:^",
-    "chalk": "^5.6.2"
+    "better-sqlite3": "12.10.0",
+    "chalk": "^5.6.2",
+    "drizzle-orm": "0.45.2",
+    "express": "5.2.1"
   },
   "devDependencies": {
     "vite": "6.3.5"

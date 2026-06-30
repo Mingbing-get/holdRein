@@ -90,12 +90,27 @@ importers:
 
   apps/cli:
     dependencies:
+      '@earendil-works/pi-agent-core':
+        specifier: 0.75.4
+        version: 0.75.4(@google/genai@1.31.0)(typebox@1.1.38)
+      '@earendil-works/pi-ai':
+        specifier: 0.76.0
+        version: 0.76.0(@google/genai@1.31.0)(typebox@1.1.38)
       '@hold-rein/plugin-server':
         specifier: workspace:^
         version: link:../../packages/plugin-server
+      better-sqlite3:
+        specifier: 12.10.0
+        version: 12.10.0
       chalk:
         specifier: ^5.6.2
         version: 5.6.2
+      drizzle-orm:
+        specifier: 0.45.2
+        version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)
+      express:
+        specifier: 5.2.1
+        version: 5.2.1
     devDependencies:
       vite:
         specifier: 6.3.5
