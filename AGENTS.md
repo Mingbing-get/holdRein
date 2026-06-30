@@ -26,6 +26,8 @@
 
 ## Dependency And Runtime Boundaries
 
+- Run pnpm commands through `corepack pnpm` so the project uses the
+  `packageManager` version declared in `package.json`.
 - Do not pass Node built-in capabilities such as `fs`, `path`, `crypto`, or
   `process` through function parameters as injectable dependencies.
 - Use Node built-ins directly inside the module that needs them.
