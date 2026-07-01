@@ -11,6 +11,8 @@ import {
 } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AppPluginProvider } from "../../app/app-plugin";
+import { AppUiProvider } from "../../app/app-ui-context";
 import { PluginManagementView } from "./plugin-management-view";
 
 class ResizeObserverMock {
@@ -143,6 +145,77 @@ describe("PluginManagementView", () => {
     });
     await waitFor(() => {
       expect(screen.queryByTestId("plugin-card-demo")).not.toBeInTheDocument();
+    });
+  });
+
+  it("reloads frontend runtime plugins after disabling a plugin", async () => {
+    fetchMock.mockImplementation(async (input) => {
+      const url = String(input);
+
+      if (url === "/api/v1/plugins") {
+        return {
+          json: async () => ({ code: 0, data: { plugins: [] }, msg: "ok" }),
+          ok: true
+        } as Response;
+      }
+
+      if (url.endsWith("/api/v1/plugins/demo")) {
+        return {
+          json: async () => ({
+            code: 0,
+            data: {
+              disabled: true,
+              id: "demo",
+              name: "Demo Plugin",
+              packageName: "@scope/demo",
+              version: "1.0.0",
+              webEntry: "/plugin-assets/demo/web.js"
+            },
+            msg: "ok"
+          }),
+          ok: true
+        } as Response;
+      }
+
+      return {
+        json: async () => ({
+          code: 0,
+          data: {
+            plugins: [
+              {
+                disabled: false,
+                id: "demo",
+                name: "Demo Plugin",
+                packageName: "@scope/demo",
+                version: "1.0.0",
+                webEntry: "/plugin-assets/demo/web.js"
+              }
+            ]
+          },
+          msg: "ok"
+        }),
+        ok: true
+      } as Response;
+    });
+
+    render(
+      <AppUiProvider>
+        <AppPluginProvider>
+          <PluginManagementView apiBaseUrl="http://localhost:4000" />
+        </AppPluginProvider>
+      </AppUiProvider>
+    );
+
+    const card = await screen.findByTestId("plugin-card-demo");
+
+    fireEvent.click(within(card).getByRole("switch", { name: "禁用 Demo Plugin" }));
+
+    await waitFor(() => {
+      const runtimePluginReloads = fetchMock.mock.calls.filter(
+        ([input]) => String(input) === "/api/v1/plugins"
+      );
+
+      expect(runtimePluginReloads).toHaveLength(2);
     });
   });
 

@@ -33,6 +33,7 @@ export interface AppPluginProviderProps extends PropsWithChildren {
 
 export interface AppPluginContextValue {
   pluginRegistry: WebPluginRegistry;
+  reloadRuntimePlugins: () => Promise<void>;
   rightPanels: WebPlugin.RightPanel[];
   runtimeContributions: WebPlugin.ResolvedBrowserRuntimeContributions;
   settings: WebPlugin.SettingsItem[];
@@ -56,7 +57,10 @@ export function AppPluginProvider({
 }: AppPluginProviderProps) {
   const pluginRegistry = useRef<WebPluginRegistry>(createWebPluginRegistry())
   const loadGeneration = useRef(0)
+  const reloadQueue = useRef<Promise<void>>(Promise.resolve())
   const browserToolDisposers = useRef<(() => void)[]>([])
+  const runtimePluginIds = useRef<Set<string>>(new Set())
+  const runtimePluginManifests = useRef<readonly RuntimePluginManifest[]>([])
   const [rightPanels, setRightPanels] = useState<WebPlugin.RightPanel[]>([])
   const [runtimeContributions, setRuntimeContributions] =
     useState<WebPlugin.ResolvedBrowserRuntimeContributions>(
@@ -179,6 +183,19 @@ export function AppPluginProvider({
     setSenderSuggestions([])
   }, [clearBrowserToolRegistrations])
 
+  const unregisterRuntimePlugins = useCallback(() => {
+    for (const manifest of runtimePluginManifests.current) {
+      removePluginStyle(manifest)
+    }
+
+    for (const pluginId of runtimePluginIds.current) {
+      pluginRegistry.current.unregister(pluginId)
+    }
+
+    runtimePluginIds.current = new Set()
+    runtimePluginManifests.current = []
+  }, [])
+
   const loadFromPlugins = useCallback(async (
     plugins: readonly WebPlugin.Plugin[],
     generation: number
@@ -207,42 +224,71 @@ export function AppPluginProvider({
     }
   }, [appUi])
 
-  useEffect(() => {
+  const performRuntimePluginReload = useCallback(async () => {
     const generation = loadGeneration.current + 1
     loadGeneration.current = generation
 
+    unregisterRuntimePlugins()
     clear()
+
+    loadFromPlugins(pluginRegistry.current.list(), generation)
+
+    const { data } = await request<RuntimePluginsResponse>({
+      method: "GET",
+      path: "/api/v1/plugins"
+    })
+
+    if (generation !== loadGeneration.current) return
+
+    const loadedPlugins = await loadRuntimeWebPlugins({
+      ...(runtimePluginImporter === undefined
+        ? {}
+        : { importer: runtimePluginImporter }),
+      manifests: data.plugins,
+      registry: pluginRegistry.current
+    })
+
+    if (generation !== loadGeneration.current) {
+      return
+    }
+
+    runtimePluginManifests.current = data.plugins
+    runtimePluginIds.current = new Set(
+      loadedPlugins.map((plugin) => plugin.id)
+    )
+  }, [clear, loadFromPlugins, runtimePluginImporter, unregisterRuntimePlugins])
+
+  const reloadRuntimePlugins = useCallback(async () => {
+    const reload = reloadQueue.current
+      .catch(() => undefined)
+      .then(() => performRuntimePluginReload())
+
+    reloadQueue.current = reload
+    await reload
+  }, [performRuntimePluginReload])
+
+  useEffect(() => {
     const offPluginRegistered = pluginRegistry.current.on((plugin) => {
       loadFromPlugins([plugin], loadGeneration.current)
     })
 
-    loadFromPlugins(pluginRegistry.current.list(), generation)
-
-    request<RuntimePluginsResponse>({
-      method: "GET",
-      path: "/api/v1/plugins"
-    })
-      .then(async ({ data }) => {
-        if (generation !== loadGeneration.current) return
-
-        await loadRuntimeWebPlugins({
-          ...(runtimePluginImporter === undefined
-            ? {}
-            : { importer: runtimePluginImporter }),
-          manifests: data.plugins,
-          registry: pluginRegistry.current
-        })
-      })
-      .catch(() => undefined)
+    void reloadRuntimePlugins().catch(() => undefined)
 
     return () => {
       offPluginRegistered()
       clearBrowserToolRegistrations()
+      unregisterRuntimePlugins()
     }
-  }, [clear, clearBrowserToolRegistrations, loadFromPlugins, runtimePluginImporter])
+  }, [
+    clearBrowserToolRegistrations,
+    loadFromPlugins,
+    reloadRuntimePlugins,
+    unregisterRuntimePlugins
+  ])
 
   const contextValue = useMemo(() => ({
     pluginRegistry: pluginRegistry.current,
+    reloadRuntimePlugins,
     rightPanels,
     runtimeContributions,
     settings,
@@ -252,6 +298,7 @@ export function AppPluginProvider({
     turnFooterRenders
   }), [
     rightPanels,
+    reloadRuntimePlugins,
     runtimeContributions,
     senderActions,
     settings,
@@ -265,6 +312,21 @@ export function AppPluginProvider({
       { children }
     </AppPluginContext.Provider>
   )
+}
+
+function removePluginStyle(manifest: RuntimePluginManifest): void {
+  if (!manifest.webStyle || typeof document === "undefined") {
+    return;
+  }
+
+  const styleUrl = new URL(manifest.webStyle, document.baseURI).href;
+  for (const link of document.head.querySelectorAll<HTMLLinkElement>(
+    'link[rel="stylesheet"]'
+  )) {
+    if (link.href === styleUrl) {
+      link.remove()
+    }
+  }
 }
 
 export function useAppPlugins() {

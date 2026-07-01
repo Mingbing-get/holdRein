@@ -37,6 +37,7 @@ describe("plugins router", () => {
 
   it("updates disabled state, installs plugins, and uninstalls plugins", async () => {
     const app = express();
+    const reloadPlugins = vi.fn(async () => undefined);
     const service = createPluginsServiceMock({
       installPlugin: vi.fn(async () => ({
         disabled: false,
@@ -58,7 +59,10 @@ describe("plugins router", () => {
     });
 
     app.use(express.json());
-    app.use("/api/v1/plugins", createPluginsRouter({ pluginsService: service }));
+    app.use(
+      "/api/v1/plugins",
+      createPluginsRouter({ pluginsService: service, reloadPlugins })
+    );
 
     const updateResponse = await request(app)
       .patch("/api/v1/plugins/%40scope%2Fdemo")
@@ -81,6 +85,7 @@ describe("plugins router", () => {
     expect(uninstallResponse.status).toBe(200);
     expect(uninstallResponse.body.data).toEqual({ id: "@scope/demo" });
     expect(service.uninstallPlugin).toHaveBeenCalledWith("@scope/demo");
+    expect(reloadPlugins).toHaveBeenCalledTimes(3);
   });
 });
 

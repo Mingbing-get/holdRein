@@ -38,6 +38,7 @@ export type { LinkServerPluginSharedPackagesOptions } from "./runtime/shared/sym
 
 export interface ServerPluginRegistry {
   register: (plugin: ServerPlugin.Plugin) => void;
+  replaceAll: (nextPlugins: readonly ServerPlugin.Plugin[]) => void;
   list: () => ServerPlugin.Plugin[];
   get: (id: string) => ServerPlugin.Plugin | undefined;
   has: (id: string) => boolean;
@@ -68,6 +69,17 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
       }
 
       plugins.set(plugin.id, plugin);
+    },
+    replaceAll(nextPlugins) {
+      plugins.clear();
+
+      for (const plugin of nextPlugins) {
+        if (plugins.has(plugin.id)) {
+          throw new Error(`Server plugin "${plugin.id}" is already registered.`);
+        }
+
+        plugins.set(plugin.id, plugin);
+      }
     },
     list() {
       return [...plugins.values()];

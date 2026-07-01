@@ -5,16 +5,27 @@ import { fileURLToPath } from "node:url";
 import {
   createServerPluginRegistry,
   loadInstalledServerPlugins,
+  type ServerPlugin,
   type RuntimePluginManifest
 } from "@hold-rein/plugin-server";
+import { Router, type RequestHandler } from "express";
+import { getApiEnv } from "./config/env";
 import { createPluginsService } from "./modules/plugins/plugins-service";
 
 export const pluginRegistry = createServerPluginRegistry();
 
 let runtimeWebPlugins: RuntimePluginManifest[] = [];
+let activePluginRouter: Router = Router();
+let activeRouteContext: ServerPlugin.RouteContext | null = null;
 const runtimeModuleDirectory = dirname(fileURLToPath(import.meta.url));
 
 export async function bootstrapServerPlugins(pluginRoot: string): Promise<void> {
+  await reloadServerPlugins(pluginRoot);
+}
+
+export async function reloadServerPlugins(
+  pluginRoot = getApiEnv().pluginRoot
+): Promise<void> {
   const pluginsService = createPluginsService({ pluginRoot });
   const loaded = await loadInstalledServerPlugins({
     disabledPluginIds: await pluginsService.listDisabledPluginIds(),
@@ -23,23 +34,36 @@ export async function bootstrapServerPlugins(pluginRoot: string): Promise<void> 
     resolvePackageTarget: resolveRuntimePackageTarget
   });
 
-  for (const plugin of loaded.plugins) {
-    registerPluginIfMissing(plugin);
-  }
-
+  pluginRegistry.replaceAll(loaded.plugins);
   runtimeWebPlugins = loaded.webPlugins;
+
+  if (activeRouteContext) {
+    await rebuildPluginRouter(activeRouteContext);
+  }
 }
 
 export function getRuntimeWebPlugins(): readonly RuntimePluginManifest[] {
   return runtimeWebPlugins;
 }
 
-function registerPluginIfMissing(
-  plugin: Parameters<typeof pluginRegistry.register>[0]
-): void {
-  if (!pluginRegistry.has(plugin.id)) {
-    pluginRegistry.register(plugin);
-  }
+export async function createRuntimePluginRequestHandler(
+  context: ServerPlugin.RouteContext
+): Promise<RequestHandler> {
+  activeRouteContext = context;
+  await rebuildPluginRouter(context);
+
+  return (request, response, next) => {
+    activePluginRouter(request, response, next);
+  };
+}
+
+async function rebuildPluginRouter(
+  context: ServerPlugin.RouteContext
+): Promise<void> {
+  const nextPluginRouter = Router();
+
+  await pluginRegistry.registerRoutes(nextPluginRouter, context);
+  activePluginRouter = nextPluginRouter;
 }
 
 function resolveRuntimePackageTarget(packageName: string): string {

@@ -11,7 +11,7 @@ afterEach(() => {
 it("imports and registers web plugins", async () => {
   const register = vi.fn();
 
-  await loadRuntimeWebPlugins({
+  const loadedPlugins = await loadRuntimeWebPlugins({
     importer: vi.fn(async () => ({ id: "demo" })),
     manifests: [
       {
@@ -26,6 +26,7 @@ it("imports and registers web plugins", async () => {
   });
 
   expect(register).toHaveBeenCalledWith({ id: "demo" });
+  expect(loadedPlugins).toEqual([{ id: "demo" }]);
 });
 
 it("skips disabled web plugin manifests", async () => {
@@ -100,4 +101,28 @@ it("does not duplicate existing plugin styles", async () => {
   });
 
   expect(document.head.querySelectorAll('link[href$="/demo.css"]')).toHaveLength(1);
+});
+
+it("skips plugins that are already registered under the imported module id", async () => {
+  const register = vi.fn();
+
+  const loadedPlugins = await loadRuntimeWebPlugins({
+    importer: vi.fn(async () => ({ id: "module-demo" })),
+    manifests: [
+      {
+        id: "manifest-demo",
+        name: "Demo",
+        packageName: "@scope/demo",
+        version: "1.0.0",
+        webEntry: "/demo.js"
+      }
+    ],
+    registry: {
+      has: (id) => id === "module-demo",
+      register
+    }
+  });
+
+  expect(register).not.toHaveBeenCalled();
+  expect(loadedPlugins).toEqual([]);
 });

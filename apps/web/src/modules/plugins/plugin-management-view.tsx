@@ -14,6 +14,7 @@ import type {
   InstalledPlugin,
   PluginInstallRequest
 } from "./plugin-management-types";
+import { useOptionalAppPlugins } from "../../app/app-plugin";
 
 interface PluginManagementViewProps {
   apiBaseUrl: string;
@@ -25,6 +26,7 @@ type LoadState =
   | { message: string; status: "error" };
 
 export function PluginManagementView({ apiBaseUrl }: PluginManagementViewProps) {
+  const appPlugins = useOptionalAppPlugins();
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [installModalOpen, setInstallModalOpen] = useState(false);
   const [busyPluginId, setBusyPluginId] = useState<string | null>(null);
@@ -71,6 +73,7 @@ export function PluginManagementView({ apiBaseUrl }: PluginManagementViewProps) 
             }
           : currentState
       );
+      await appPlugins?.reloadRuntimePlugins();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Failed to update plugin"
@@ -85,6 +88,7 @@ export function PluginManagementView({ apiBaseUrl }: PluginManagementViewProps) 
     setErrorMessage("");
     try {
       await uninstallPlugin(apiBaseUrl, plugin.id);
+      await appPlugins?.reloadRuntimePlugins();
       setLoadState((currentState) =>
         currentState.status === "success"
           ? {
@@ -109,6 +113,7 @@ export function PluginManagementView({ apiBaseUrl }: PluginManagementViewProps) 
     setErrorMessage("");
     try {
       await installPlugin(apiBaseUrl, values);
+      await appPlugins?.reloadRuntimePlugins();
       setInstallModalOpen(false);
       await refreshPlugins();
     } catch (error) {

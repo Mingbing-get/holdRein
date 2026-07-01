@@ -10,8 +10,9 @@ export interface LoadRuntimeWebPluginsOptions {
 
 export async function loadRuntimeWebPlugins(
   options: LoadRuntimeWebPluginsOptions
-): Promise<void> {
+): Promise<WebPlugin.Plugin[]> {
   const importer = options.importer ?? importRuntimePlugin;
+  const loadedPlugins: WebPlugin.Plugin[] = [];
 
   for (const manifest of options.manifests) {
     if (manifest.disabled === true) {
@@ -32,8 +33,15 @@ export async function loadRuntimeWebPlugins(
       );
     }
 
+    if (options.registry.has(module.id)) {
+      continue;
+    }
+
     options.registry.register(module);
+    loadedPlugins.push(module);
   }
+
+  return loadedPlugins;
 }
 
 async function importRuntimePlugin(

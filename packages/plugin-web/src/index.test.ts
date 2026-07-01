@@ -36,6 +36,20 @@ describe("createWebPluginRegistry", () => {
     );
   });
 
+  it("unregisters web plugins for runtime reloads", () => {
+    const registry = createWebPluginRegistry();
+    const plugin: WebPlugin.Plugin = {
+      id: "toolbar"
+    };
+
+    registry.register(plugin);
+
+    expect(registry.unregister("toolbar")).toBe(true);
+    expect(registry.unregister("toolbar")).toBe(false);
+    expect(registry.has("toolbar")).toBe(false);
+    expect(registry.list()).toEqual([]);
+  });
+
   it("registers plugins with frontend contribution resolvers", async () => {
     const registry = createWebPluginRegistry();
     const plugin: WebPlugin.Plugin = {

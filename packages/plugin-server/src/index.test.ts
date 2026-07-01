@@ -26,6 +26,23 @@ describe("createServerPluginRegistry", () => {
     expect(registry.list()).toEqual([plugin]);
   });
 
+  it("replaces registered server plugins for runtime reloads", () => {
+    const registry = createServerPluginRegistry();
+    const firstPlugin: ServerPlugin.Plugin = {
+      id: "first"
+    };
+    const secondPlugin: ServerPlugin.Plugin = {
+      id: "second"
+    };
+
+    registry.register(firstPlugin);
+    registry.replaceAll([secondPlugin]);
+
+    expect(registry.has("first")).toBe(false);
+    expect(registry.has("second")).toBe(true);
+    expect(registry.list()).toEqual([secondPlugin]);
+  });
+
   it("rejects duplicate server plugin ids", () => {
     const registry = createServerPluginRegistry();
     const plugin: ServerPlugin.Plugin = {

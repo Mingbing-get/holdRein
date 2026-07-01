@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 
 import { sendError, sendSuccess } from "../../response";
 import { RESPONSE_CODE_DEFINITIONS } from "../../response/response-codes";
+import { reloadServerPlugins } from "../../plugin";
 import { createPluginsService } from "./plugins-service";
 import type {
   PluginInstallRequest,
@@ -11,6 +12,7 @@ import type {
 
 export interface CreatePluginsRouterOptions {
   readonly pluginsService?: PluginsService;
+  readonly reloadPlugins?: () => Promise<void>;
 }
 
 interface InstallPluginBody {
@@ -28,6 +30,7 @@ export function createPluginsRouter(
   const router = Router();
   const getService = (): PluginsService =>
     options.pluginsService ?? createPluginsService();
+  const reloadPlugins = options.reloadPlugins ?? (() => reloadServerPlugins());
 
   router.get("/", (_request: Request, response: Response): void => {
     void getService()
@@ -67,6 +70,10 @@ export function createPluginsRouter(
 
       void getService()
         .installPlugin(installRequest)
+        .then(async (plugin) => {
+          await reloadPlugins();
+          return plugin;
+        })
         .then((plugin) => sendSuccess(response, plugin))
         .catch((error) =>
           sendRouteError(response, error, "Failed to install plugin")
@@ -91,11 +98,12 @@ export function createPluginsRouter(
 
       void getService()
         .setPluginDisabled(request.params.pluginId, request.body.disabled)
-        .then((plugin) => {
+        .then(async (plugin) => {
           if (!plugin) {
             sendError(response, RESPONSE_CODE_DEFINITIONS.notFound, "Unknown plugin");
             return;
           }
+          await reloadPlugins();
           sendSuccess(response, plugin);
         })
         .catch((error) =>
@@ -109,11 +117,12 @@ export function createPluginsRouter(
     (request: Request<{ pluginId: string }>, response: Response): void => {
       void getService()
         .uninstallPlugin(request.params.pluginId)
-        .then((deleted) => {
+        .then(async (deleted) => {
           if (!deleted) {
             sendError(response, RESPONSE_CODE_DEFINITIONS.notFound, "Unknown plugin");
             return;
           }
+          await reloadPlugins();
           sendSuccess(response, { id: request.params.pluginId });
         })
         .catch((error) =>

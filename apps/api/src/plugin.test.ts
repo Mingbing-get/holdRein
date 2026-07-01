@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
   installPluginPackage: vi.fn(),
   readFileSync: vi.fn(),
   realpathSync: vi.fn(),
-  loadInstalledServerPlugins: vi.fn()
+  loadInstalledServerPlugins: vi.fn(),
+  replaceAll: vi.fn()
 }));
 
 type NodeFsMockModule = {
@@ -34,25 +35,41 @@ vi.mock("node:fs", async (importOriginal) => {
 vi.mock("@hold-rein/plugin-server", () => ({
   createServerPluginRegistry: () => ({
     has: vi.fn(() => true),
-    register: vi.fn()
+    register: vi.fn(),
+    replaceAll: mocks.replaceAll
   }),
   installPluginPackage: mocks.installPluginPackage,
   loadInstalledServerPlugins: mocks.loadInstalledServerPlugins
 }));
 
-const { bootstrapServerPlugins } = await import("./plugin");
+const { bootstrapServerPlugins, reloadServerPlugins } = await import("./plugin");
 
 beforeEach(async () => {
   mocks.installPluginPackage.mockReset();
   mocks.readFileSync.mockReset();
   mocks.realpathSync.mockReset();
   mocks.loadInstalledServerPlugins.mockReset();
+  mocks.replaceAll.mockReset();
   mocks.readFileSync.mockImplementation(nodeReadFileSync);
   mocks.realpathSync.mockImplementation(nodeRealpathSync);
   mocks.loadInstalledServerPlugins.mockResolvedValue({
     plugins: [],
     webPlugins: []
   });
+});
+
+it("replaces the active server plugins when plugins are reloaded", async () => {
+  const pluginRoot = "/tmp/hold-rein-plugins";
+  const plugins = [{ id: "enabled-plugin" }];
+
+  mocks.loadInstalledServerPlugins.mockResolvedValueOnce({
+    plugins,
+    webPlugins: []
+  });
+
+  await reloadServerPlugins(pluginRoot);
+
+  expect(mocks.replaceAll).toHaveBeenCalledWith(plugins);
 });
 
 it("resolves shared plugin packages from the API runtime module", async () => {

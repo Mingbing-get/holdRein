@@ -12,6 +12,7 @@ export type WebPluginListener = (plugin: WebPlugin.Plugin) => void;
 
 export interface WebPluginRegistry {
   register: (plugin: WebPlugin.Plugin) => void;
+  unregister: (pluginId: string) => boolean;
   on: (listener: WebPluginListener) => (() => void)
   list: () => readonly WebPlugin.Plugin[];
   get: (id: string) => WebPlugin.Plugin | undefined;
@@ -102,6 +103,9 @@ export function createWebPluginRegistry(): WebPluginRegistry {
 
       plugins.set(plugin.id, plugin);
       triggerListener(plugin)
+    },
+    unregister(pluginId) {
+      return plugins.delete(pluginId);
     },
     on(listener: WebPluginListener) {
       listeners.push(listener)

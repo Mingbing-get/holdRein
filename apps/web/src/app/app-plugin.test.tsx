@@ -1,19 +1,37 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor
+} from "@testing-library/react";
 import { useEffect } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { WebPlugin } from "@hold-rein/plugin-web";
 import { clearBrowserToolExecutorsForTests, executeBrowserTool } from "@hold-rein/plugin-web";
 import { AppPluginProvider, useAppPlugins } from "./app-plugin";
 import { AppUiProvider, useAppUi } from "./app-ui-context";
 
+const fetchMock = vi.fn<typeof fetch>();
+
 describe("AppPluginProvider", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", fetchMock);
+    fetchMock.mockResolvedValue({
+      json: async () => ({ code: 0, data: { plugins: [] }, msg: "ok" }),
+      ok: true
+    } as Response);
+  });
+
   afterEach(() => {
     clearBrowserToolExecutorsForTests();
     cleanup();
+    fetchMock.mockReset();
   });
 
   it("adds plugin-prefixed turn footer renders to the plugin context", async () => {
@@ -34,7 +52,7 @@ describe("AppPluginProvider", () => {
   });
 
   it("does not reload function contributions when app ui changes", async () => {
-    const resolverQueue: Array<(contribution: WebPlugin.Contribution) => void> =
+    const resolverQueue: ((contribution: WebPlugin.Contribution) => void)[] =
       [];
     let toggleThemeMode: (() => void) | undefined;
     const contribution: WebPlugin.Contribution = {
@@ -145,6 +163,126 @@ describe("AppPluginProvider", () => {
     expect(executor).toHaveBeenCalled();
   });
 
+  it("reloads runtime plugins and removes contributions for disabled manifests", async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: {
+            plugins: [
+              {
+                disabled: false,
+                id: "runtime-demo",
+                name: "Runtime Demo",
+                packageName: "@scope/runtime-demo",
+                version: "1.0.0",
+                webEntry: "/plugin-assets/runtime-demo/web.js"
+              }
+            ]
+          },
+          msg: "ok"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: {
+            plugins: [
+              {
+                disabled: true,
+                id: "runtime-demo",
+                name: "Runtime Demo",
+                packageName: "@scope/runtime-demo",
+                version: "1.0.0",
+                webEntry: "/plugin-assets/runtime-demo/web.js"
+              }
+            ]
+          },
+          msg: "ok"
+        }),
+        ok: true
+      } as Response);
+
+    render(
+      <AppUiProvider>
+        <AppPluginProvider runtimePluginImporter={async () => ({
+          contributionResolver: {
+            systemPrompts: ["Runtime prompt."]
+          },
+          id: "runtime-demo"
+        })}>
+          <ReloadRuntimePluginsButton />
+          <RuntimeContributionProbe />
+        </AppPluginProvider>
+      </AppUiProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("runtime-contributions")).toHaveTextContent(
+        "Runtime prompt."
+      );
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "重新加载插件" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("runtime-contributions")).toHaveTextContent(
+        ",,"
+      );
+    });
+  });
+
+  it("tracks imported runtime plugin ids when reloading plugins", async () => {
+    fetchMock.mockResolvedValue({
+      json: async () => ({
+        code: 0,
+        data: {
+          plugins: [
+            {
+              disabled: false,
+              id: "manifest-demo",
+              name: "Runtime Demo",
+              packageName: "@scope/runtime-demo",
+              version: "1.0.0",
+              webEntry: "/plugin-assets/runtime-demo/web.js"
+            }
+          ]
+        },
+        msg: "ok"
+      }),
+      ok: true
+    } as Response);
+
+    render(
+      <AppUiProvider>
+        <AppPluginProvider runtimePluginImporter={async () => ({
+          contributionResolver: {
+            systemPrompts: ["Runtime prompt."]
+          },
+          id: "module-demo"
+        })}>
+          <ReloadRuntimePluginsButton />
+          <RuntimeContributionProbe />
+        </AppPluginProvider>
+      </AppUiProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("runtime-contributions")).toHaveTextContent(
+        "Runtime prompt."
+      );
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "重新加载插件" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("runtime-contributions")).toHaveTextContent(
+        "Runtime prompt."
+      );
+    });
+  });
+
   it("registers browser tool beforeExecute hooks from runtime contributions", async () => {
     const executor = vi.fn().mockResolvedValue("Selected text");
     const beforeExecute = vi.fn().mockResolvedValue({
@@ -214,7 +352,7 @@ function RegisterPlugin() {
 function RegisterAsyncPlugin({
   resolverQueue
 }: {
-  resolverQueue: Array<(contribution: WebPlugin.Contribution) => void>;
+  resolverQueue: ((contribution: WebPlugin.Contribution) => void)[];
 }) {
   const { pluginRegistry } = useAppPlugins();
 
@@ -337,5 +475,17 @@ function RuntimeContributionProbe() {
         runtimeContributions.systemPrompts.join("|")
       ].join(",")}
     </div>
+  );
+}
+
+function ReloadRuntimePluginsButton() {
+  const { reloadRuntimePlugins } = useAppPlugins();
+
+  return (
+    <button onClick={() => {
+      void reloadRuntimePlugins();
+    }} type="button">
+      重新加载插件
+    </button>
   );
 }
