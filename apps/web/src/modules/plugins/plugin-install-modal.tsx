@@ -3,6 +3,7 @@ import { Button, Form, Input, Modal, Segmented } from "antd";
 import { useEffect, useState } from "react";
 
 import { FileSelector } from "../../components/fileSelector";
+import "./plugin-install-modal.css";
 import type {
   PluginInstallRequest,
   PluginInstallSourceType
@@ -77,6 +78,7 @@ export function PluginInstallModal({
           <Form.Item label="安装来源" name="sourceType">
             <Segmented
               block
+              className="plugin-install-source-segmented"
               options={[...SOURCE_TYPE_OPTIONS]}
               onChange={(value) => {
                 const nextSourceType = value as PluginInstallSourceType;
