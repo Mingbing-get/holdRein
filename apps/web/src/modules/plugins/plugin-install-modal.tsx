@@ -31,7 +31,7 @@ const SOURCE_TYPE_OPTIONS = [
 const NPM_PACKAGE_PATTERN =
   /^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/u;
 const GITHUB_REPOSITORY_PATTERN =
-  /^(?:https:\/\/github\.com\/[^/\s]+\/[^/\s]+?(?:\.git)?\/?|git@github\.com:[^/\s]+\/[^/\s]+?(?:\.git)?)$/u;
+  /^(?:https:\/\/github\.com\/[^/\s]+\/[^/\s]+?(?:(?:\.git)?\/?|\/tree\/[^/\s]+(?:\/[^/\s]+)+)|git@github\.com:[^/\s]+\/[^/\s]+?(?:\.git)?)$/u;
 
 export function PluginInstallModal({
   apiBaseUrl,
@@ -94,6 +94,7 @@ export function PluginInstallModal({
               rules={[{ message: "请选择本地插件文件夹", required: true }]}
             >
               <Input
+                onClick={() => setSelectorOpen(true)}
                 readOnly
                 suffix={
                   <Button

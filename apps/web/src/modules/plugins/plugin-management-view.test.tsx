@@ -220,13 +220,42 @@ describe("PluginManagementView", () => {
 
     cleanup();
     render(<PluginManagementView apiBaseUrl="http://localhost:4000" />);
+    const githubTreeSource =
+      "https://github.com/Mingbing-get/holdRein/tree/main/packages/plugins/ts-standards";
+    fireEvent.click(screen.getByRole("button", { name: "安装插件" }));
+    fireEvent.click(screen.getByText("GitHub"));
+    fireEvent.change(screen.getByLabelText("GitHub 仓库地址"), {
+      target: { value: githubTreeSource }
+    });
+    fireEvent.click(screen.getByRole("button", { name: "确认安装插件" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:4000/api/v1/plugins/install",
+        expect.objectContaining({
+          body: JSON.stringify({
+            source: githubTreeSource,
+            sourceType: "github"
+          })
+        })
+      );
+    });
+
+    cleanup();
+    render(<PluginManagementView apiBaseUrl="http://localhost:4000" />);
     fireEvent.click(screen.getByRole("button", { name: "安装插件" }));
     fireEvent.click(screen.getByText("本地"));
 
-    expect(screen.getByRole("button", { name: "选择文件夹" })).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText("本地插件文件夹"), {
-      target: { value: "/Users/me/plugin-demo" }
-    });
+    fireEvent.click(screen.getByLabelText("本地插件文件夹"));
+    const localFolderRow = await screen.findByTestId(
+      "file-selector-entry-plugin-demo"
+    );
+    fireEvent.click(
+      within(localFolderRow).getByRole("button", {
+        name: "plugin-demo folder selectable"
+      })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "确定" }));
     fireEvent.click(screen.getByRole("button", { name: "确认安装插件" }));
 
     await waitFor(() => {
