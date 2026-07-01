@@ -87,18 +87,23 @@ export function createAgentRuntime(
           thinkingLevel: input.thinkingLevel,
           model: activeModel
         }
-        const contribution = await pluginRegistry.resolveContributions(pluginContext)
+        const contribution = await (input.activePlugins === undefined
+          ? pluginRegistry.resolveContributions(pluginContext)
+          : pluginRegistry.resolveContributions(pluginContext, { activePluginIds: input.activePlugins }))
         const skillDirs = await getRuntimeSkillDirs(
           input.workspacePath,
           [...(options.skillDirs || []), ...(contribution.skillDirs || [])],
           options.skillsService
         );
         const { skills: loadedSkills } = await loadSkills(env, skillDirs);
+        const activeSkillNames = input.activeSkills === undefined
+          ? undefined
+          : new Set(input.activeSkills);
         const skills = [
           ...loadedSkills,
           ...(contribution.skills || []),
           ...toRuntimeSkills(input.runtimeContributions?.skills)
-        ];
+        ].filter((skill) => activeSkillNames === undefined || activeSkillNames.has(skill.name));
         const browserTools = createBrowserRuntimeTools({
           agentId: harnessOptions.agentId, eventBus: options.eventBus,
           store: browserToolCalls, tools: input.runtimeContributions?.tools

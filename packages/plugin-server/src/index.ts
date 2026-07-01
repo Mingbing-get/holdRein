@@ -44,8 +44,13 @@ export interface ServerPluginRegistry {
   has: (id: string) => boolean;
   registerRoutes: (prefixRouter: Router, context: ServerPlugin.RouteContext) => Promise<void>;
   resolveContributions: (
-    context: ServerPlugin.RuntimeContext
+    context: ServerPlugin.RuntimeContext,
+    options?: ResolveContributionsOptions
   ) => Promise<ServerPlugin.Contribution>;
+}
+
+export interface ResolveContributionsOptions {
+  activePluginIds?: readonly string[];
 }
 
 async function resolveContribution(
@@ -100,7 +105,13 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
       }
     },
 
-    async resolveContributions(context: ServerPlugin.RuntimeContext) {
+    async resolveContributions(
+      context: ServerPlugin.RuntimeContext,
+      options: ResolveContributionsOptions = {}
+    ) {
+      const activePluginIds = options.activePluginIds === undefined
+        ? undefined
+        : new Set(options.activePluginIds);
       const tools: ServerPlugin.PluginTool[] = [];
       const skills: NonNullable<ServerPlugin.Contribution["skills"]>[number][] = [];
       const skillDirs: string[] = [];
@@ -109,6 +120,9 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
       const agentEndHandlers: NonNullable<ServerPlugin.Contribution["onAgentEnd"]>[] = [];
 
       for (const plugin of plugins.values()) {
+        if (activePluginIds && !activePluginIds.has(plugin.id)) {
+          continue;
+        }
         if (!plugin.contributionResolver) {
           continue;
         }

@@ -3,6 +3,8 @@ import type { ThinkingLevel } from "@earendil-works/pi-agent-core";
 import type { TaskRow, WorkspaceRow } from "../../db";
 
 export interface StartAgentInput {
+  activePlugins?: readonly string[];
+  activeSkills?: readonly string[];
   approvalPolicy?: ApprovalPolicy;
   modelId: string;
   prompt: string;

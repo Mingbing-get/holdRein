@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   createServerPluginRegistry,
   SERVER_PLUGIN_SHARED_PACKAGES
@@ -133,6 +133,39 @@ describe("createServerPluginRegistry", () => {
 
     contribution.subscribe?.(event);
     expect(subscribeCalls).toEqual(["static", "dynamic"]);
+  });
+
+  it("resolves contributions only for active plugin ids when provided", async () => {
+    const registry = createServerPluginRegistry();
+    const activeResolver = vi.fn().mockReturnValue({
+      systemPrompts: ["Active prompt"],
+      tools: [{ name: "active-tool" }]
+    });
+    const inactiveResolver = vi.fn().mockReturnValue({
+      systemPrompts: ["Inactive prompt"],
+      tools: [{ name: "inactive-tool" }]
+    });
+
+    registry.register({
+      id: "active-plugin",
+      contributionResolver: activeResolver
+    });
+    registry.register({
+      id: "inactive-plugin",
+      contributionResolver: inactiveResolver
+    });
+
+    const contribution = await registry.resolveContributions(
+      {} as ServerPlugin.RuntimeContext,
+      { activePluginIds: ["active-plugin"] }
+    );
+
+    expect(activeResolver).toHaveBeenCalledOnce();
+    expect(inactiveResolver).not.toHaveBeenCalled();
+    expect(contribution.systemPrompts).toEqual(["Active prompt"]);
+    expect(contribution.tools?.map((tool) => tool.name)).toEqual([
+      "active-tool"
+    ]);
   });
 
   it("uses the first plugin agent-end continuation in registration order", async () => {

@@ -34,6 +34,33 @@ describe("agents service runtime contributions", () => {
     );
   });
 
+  it("forwards active capabilities when starting a task", async () => {
+    const runtime = createRuntime();
+    const service = createAgentsService({
+      approvalStore: createAgentApprovalStore(),
+      eventBus: createAgentEventBus(),
+      repository: createInMemoryWorkspaceRepository(),
+      runtime,
+      titleGenerator: { generateTitle: vi.fn().mockResolvedValue("Inspect") }
+    });
+
+    await service.startAgent({
+      activePlugins: ["demo-plugin"],
+      activeSkills: ["demo-skill"],
+      modelId: "gpt-4.1",
+      prompt: "Inspect",
+      provider: "openai",
+      workspacePath: "/tmp/workspace"
+    });
+
+    expect(runtime.start).toHaveBeenCalledWith(
+      expect.objectContaining({
+        activePlugins: ["demo-plugin"],
+        activeSkills: ["demo-skill"]
+      })
+    );
+  });
+
   it("forwards runtime contributions when continuing a task", async () => {
     const runtime = createRuntime();
     const repository = createInMemoryWorkspaceRepository({
