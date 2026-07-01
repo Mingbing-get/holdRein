@@ -5,13 +5,19 @@ import {
   rmSync,
   writeFileSync
 } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
 import { PLUGIN_DIR } from "./const";
 import { getApiEnv, loadApiEnv } from "./env";
+
+const API_PACKAGE_JSON_PATH = join(
+  dirname(fileURLToPath(import.meta.url)),
+  "../../package.json"
+);
 
 describe("loadApiEnv", () => {
   it("loads .env values and lets .env.local override them", () => {
@@ -100,6 +106,19 @@ describe("getApiEnv", () => {
     expect(
       getApiEnv({ HOLD_REIN_PLUGIN_ROOT: "/tmp/custom-plugins" }).pluginRoot
     ).toBe("/tmp/custom-plugins");
+  });
+});
+
+describe("api dev runtime", () => {
+  it("excludes runtime plugin storage from tsx watch restarts", () => {
+    const packageJson = JSON.parse(
+      readFileSync(API_PACKAGE_JSON_PATH, "utf8")
+    ) as { readonly scripts?: Record<string, string> };
+
+    expect(packageJson.scripts?.dev).toContain("--exclude");
+    expect(packageJson.scripts?.dev).toContain(
+      "${HOLD_REIN_PLUGIN_ROOT:-$HOME/.hold-rein/plugins}/**"
+    );
   });
 });
 

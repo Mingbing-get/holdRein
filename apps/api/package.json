@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch --exclude \"${HOLD_REIN_PLUGIN_ROOT:-$HOME/.hold-rein/plugins}/**\" src/server.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",

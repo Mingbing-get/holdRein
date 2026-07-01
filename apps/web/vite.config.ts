@@ -1,6 +1,7 @@
 import { defineConfig, loadEnv } from "vite";
 
 const DEFAULT_API_PROXY_TARGET = "http://localhost:3001";
+const API_PROXY_TIMEOUT_MS = 600_000;
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
@@ -15,10 +16,14 @@ export default defineConfig(({ mode }) => {
       proxy: {
         "/api": {
           changeOrigin: true,
+          proxyTimeout: API_PROXY_TIMEOUT_MS,
+          timeout: API_PROXY_TIMEOUT_MS,
           target: apiProxyTarget
         },
         "/plugin": {
           changeOrigin: true,
+          proxyTimeout: API_PROXY_TIMEOUT_MS,
+          timeout: API_PROXY_TIMEOUT_MS,
           target: apiProxyTarget
         }
       }

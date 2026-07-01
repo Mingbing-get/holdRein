@@ -18,7 +18,28 @@ describe("web vite config", () => {
     expect(resolvedConfig.server?.proxy).toMatchObject({
       "/api": {
         changeOrigin: true,
+        proxyTimeout: 600_000,
         target: "http://localhost:3001"
+      }
+    });
+  });
+
+  it("keeps dev proxy connections open for long-running plugin installs", async () => {
+    const configModulePath = new URL("../vite.config.ts", import.meta.url).href;
+    const { default: viteConfig } = await import(configModulePath);
+    const resolvedConfig =
+      typeof viteConfig === "function"
+        ? await viteConfig({ command: "serve", isSsrBuild: false, mode: "test" })
+        : viteConfig;
+
+    expect(resolvedConfig.server?.proxy).toMatchObject({
+      "/api": {
+        proxyTimeout: 600_000,
+        timeout: 600_000
+      },
+      "/plugin": {
+        proxyTimeout: 600_000,
+        timeout: 600_000
       }
     });
   });
