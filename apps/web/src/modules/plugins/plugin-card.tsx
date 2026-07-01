@@ -67,6 +67,7 @@ export function PluginCard({
             size="small"
           />
           <Popconfirm
+            cancelText="取消"
             okButtonProps={{ danger: true }}
             okText="卸载"
             onConfirm={() => onUninstall(plugin)}
