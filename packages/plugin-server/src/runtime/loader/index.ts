@@ -10,6 +10,7 @@ import {
 import { linkServerPluginSharedPackages } from "../shared/symlinks";
 
 export interface LoadInstalledServerPluginsOptions {
+  readonly disabledPluginIds?: readonly string[];
   readonly hostNodeModules: string;
   readonly pluginRoot: string;
   readonly resolvePackageTarget?: (packageName: string) => string;
@@ -33,6 +34,7 @@ export async function loadInstalledServerPlugins(
   });
 
   const manifests = await discoverServerPluginManifests(options.pluginRoot);
+  const disabledPluginIds = new Set(options.disabledPluginIds ?? []);
   const plugins: ServerPlugin.Plugin[] = [];
   const webPlugins: RuntimePluginManifest[] = [];
 
@@ -40,6 +42,11 @@ export async function loadInstalledServerPlugins(
     const manifest = parseServerPluginManifest(
       JSON.parse(await readFile(manifestPath, "utf8"))
     );
+
+    if (disabledPluginIds.has(manifest.id)) {
+      continue;
+    }
+
     const packageDir = dirname(manifestPath);
     const entryPath = resolve(packageDir, manifest.serverEntry);
     const module = await import(

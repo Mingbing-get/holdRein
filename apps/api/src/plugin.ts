@@ -7,6 +7,7 @@ import {
   loadInstalledServerPlugins,
   type RuntimePluginManifest
 } from "@hold-rein/plugin-server";
+import { createPluginsService } from "./modules/plugins/plugins-service";
 
 export const pluginRegistry = createServerPluginRegistry();
 
@@ -14,7 +15,9 @@ let runtimeWebPlugins: RuntimePluginManifest[] = [];
 const runtimeModuleDirectory = dirname(fileURLToPath(import.meta.url));
 
 export async function bootstrapServerPlugins(pluginRoot: string): Promise<void> {
+  const pluginsService = createPluginsService({ pluginRoot });
   const loaded = await loadInstalledServerPlugins({
+    disabledPluginIds: await pluginsService.listDisabledPluginIds(),
     hostNodeModules: join(process.cwd(), "node_modules"),
     pluginRoot,
     resolvePackageTarget: resolveRuntimePackageTarget

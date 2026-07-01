@@ -1,15 +1,25 @@
 import { join } from "node:path";
+import {
+  readFileSync as nodeReadFileSync,
+  realpathSync as nodeRealpathSync
+} from "node:fs";
 
 import { beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  installPluginPackage: vi.fn(),
   readFileSync: vi.fn(),
   realpathSync: vi.fn(),
   loadInstalledServerPlugins: vi.fn()
 }));
 
+type NodeFsMockModule = {
+  readFileSync: typeof nodeReadFileSync;
+  realpathSync: typeof nodeRealpathSync;
+} & Record<string, unknown>;
+
 vi.mock("node:fs", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("node:fs")>();
+  const actual = (await importOriginal()) as NodeFsMockModule;
 
   mocks.readFileSync.mockImplementation(actual.readFileSync);
   mocks.realpathSync.mockImplementation(actual.realpathSync);
@@ -26,21 +36,19 @@ vi.mock("@hold-rein/plugin-server", () => ({
     has: vi.fn(() => true),
     register: vi.fn()
   }),
+  installPluginPackage: mocks.installPluginPackage,
   loadInstalledServerPlugins: mocks.loadInstalledServerPlugins
 }));
 
 const { bootstrapServerPlugins } = await import("./plugin");
 
 beforeEach(async () => {
+  mocks.installPluginPackage.mockReset();
   mocks.readFileSync.mockReset();
   mocks.realpathSync.mockReset();
   mocks.loadInstalledServerPlugins.mockReset();
-  mocks.readFileSync.mockImplementation(
-    (await vi.importActual<typeof import("node:fs")>("node:fs")).readFileSync
-  );
-  mocks.realpathSync.mockImplementation(
-    (await vi.importActual<typeof import("node:fs")>("node:fs")).realpathSync
-  );
+  mocks.readFileSync.mockImplementation(nodeReadFileSync);
+  mocks.realpathSync.mockImplementation(nodeRealpathSync);
   mocks.loadInstalledServerPlugins.mockResolvedValue({
     plugins: [],
     webPlugins: []
@@ -49,24 +57,24 @@ beforeEach(async () => {
 
 it("resolves shared plugin packages from the API runtime module", async () => {
   const pluginRoot = "/tmp/hold-rein-plugins";
+  const expressRoot = mockRuntimePackage("express");
+  const agentCoreRoot = mockRuntimePackage("@earendil-works/pi-agent-core");
+  const piAiRoot = mockRuntimePackage("@earendil-works/pi-ai");
 
   await bootstrapServerPlugins(pluginRoot);
 
   const options = mocks.loadInstalledServerPlugins.mock.calls[0]?.[0];
 
   expect(options).toMatchObject({
+    disabledPluginIds: [],
     hostNodeModules: join(process.cwd(), "node_modules"),
     pluginRoot
   });
-  expect(options.resolvePackageTarget("express")).toContain(
-    `${join("node_modules", "express")}`
+  expect(options.resolvePackageTarget("express")).toBe(expressRoot);
+  expect(options.resolvePackageTarget("@earendil-works/pi-agent-core")).toBe(
+    agentCoreRoot
   );
-  expect(options.resolvePackageTarget("@earendil-works/pi-agent-core")).toContain(
-    `${join("node_modules", "@earendil-works", "pi-agent-core")}`
-  );
-  expect(options.resolvePackageTarget("@earendil-works/pi-ai")).toContain(
-    `${join("node_modules", "@earendil-works", "pi-ai")}`
-  );
+  expect(options.resolvePackageTarget("@earendil-works/pi-ai")).toBe(piAiRoot);
 });
 
 it("resolves shared plugin packages from the CLI runtime root", async () => {
@@ -95,3 +103,38 @@ it("resolves shared plugin packages from the CLI runtime root", async () => {
 
   expect(options.resolvePackageTarget(packageName)).toBe(packageRoot);
 });
+
+function mockRuntimePackage(packageName: string): string {
+  const packageRoot = join(
+    "/runtime-root",
+    "node_modules",
+    ...packageName.split("/")
+  );
+  const previousRealpathSync = mocks.realpathSync.getMockImplementation();
+  const previousReadFileSync = mocks.readFileSync.getMockImplementation();
+
+  mocks.realpathSync.mockImplementation((path) => {
+    if (path.toString().endsWith(join("node_modules", ...packageName.split("/")))) {
+      return packageRoot;
+    }
+
+    if (previousRealpathSync) {
+      return previousRealpathSync(path);
+    }
+
+    throw new Error(`ENOENT: ${path.toString()}`);
+  });
+  mocks.readFileSync.mockImplementation((path) => {
+    if (path.toString() === join(packageRoot, "package.json")) {
+      return JSON.stringify({ name: packageName });
+    }
+
+    if (previousReadFileSync) {
+      return previousReadFileSync(path);
+    }
+
+    throw new Error(`ENOENT: ${path.toString()}`);
+  });
+
+  return packageRoot;
+}

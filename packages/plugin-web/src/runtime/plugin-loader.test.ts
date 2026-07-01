@@ -28,6 +28,29 @@ it("imports and registers web plugins", async () => {
   expect(register).toHaveBeenCalledWith({ id: "demo" });
 });
 
+it("skips disabled web plugin manifests", async () => {
+  const importer = vi.fn(async () => ({ id: "demo" }));
+  const register = vi.fn();
+
+  await loadRuntimeWebPlugins({
+    importer,
+    manifests: [
+      {
+        disabled: true,
+        id: "demo",
+        name: "Demo",
+        packageName: "@scope/demo",
+        version: "1.0.0",
+        webEntry: "/demo.js"
+      }
+    ],
+    registry: { has: () => false, register }
+  });
+
+  expect(importer).not.toHaveBeenCalled();
+  expect(register).not.toHaveBeenCalled();
+});
+
 it("loads plugin styles before importing web plugins", async () => {
   const importer = vi.fn(async () => ({ id: "demo" }));
 

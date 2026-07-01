@@ -17,7 +17,10 @@ import {
   createModelProxiesRouter,
   type CreateModelProxiesRouterOptions
 } from "../../modules/model-proxies";
-import { createPluginsRouter } from "../../modules/plugins/plugins-router";
+import {
+  createPluginsRouter,
+  type CreatePluginsRouterOptions
+} from "../../modules/plugins/plugins-router";
 import {
   createSkillsRouter,
   type CreateSkillsRouterOptions
@@ -30,13 +33,13 @@ import {
   createUsageStatsRouter,
   type CreateUsageStatsRouterOptions
 } from "../../modules/usage-stats";
-import { getRuntimeWebPlugins } from "../../plugin";
 
 export interface CreateV1RouterOptions
   extends CreateAgentsRouterOptions,
     CreateFileSystemRouterOptions,
     CreateModelProvidersRouterOptions,
     CreateModelProxiesRouterOptions,
+    CreatePluginsRouterOptions,
     CreateSkillsRouterOptions,
     CreateUsageStatsRouterOptions,
     CreateWorkspacesRouterOptions {}
@@ -50,12 +53,7 @@ export function createV1Router(options: CreateV1RouterOptions = {}): Router {
   router.use(createWorkspacesRouter(options));
   router.use(createModelProxiesRouter(options));
   router.use(createModelProvidersRouter(options));
-  router.use(
-    "/plugins",
-    createPluginsRouter({
-      plugins: getRuntimeWebPlugins()
-    })
-  );
+  router.use("/plugins", createPluginsRouter(options));
   router.use(createSkillsRouter(options));
   router.use(createUsageStatsRouter(options));
 

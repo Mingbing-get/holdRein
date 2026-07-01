@@ -71,6 +71,17 @@ describe("HoldReinShell plugin settings", () => {
         } as Response;
       }
 
+      if (url.endsWith("/api/v1/plugins")) {
+        return {
+          json: async () => ({
+            code: 0,
+            data: { plugins: [] },
+            msg: "ok"
+          }),
+          ok: true
+        } as Response;
+      }
+
       return {
         json: async () => ({
           code: 0,
@@ -109,6 +120,7 @@ describe("HoldReinShell plugin settings", () => {
       "返回",
       "模型配置",
       "技能管理",
+      "插件管理",
       "用量统计",
       "插件设置"
     ]);

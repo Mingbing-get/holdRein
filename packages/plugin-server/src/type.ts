@@ -126,6 +126,7 @@ export interface PackageEntryManifest {
 }
 
 export interface RuntimePluginManifest {
+  readonly disabled?: boolean;
   readonly id: string;
   readonly name: string;
   readonly packageName: string;

@@ -2,6 +2,7 @@ import {
   ArrowLeftOutlined,
   BarChartOutlined,
   ExperimentOutlined,
+  ProductOutlined,
   ToolOutlined
 } from "@ant-design/icons";
 import { Button, Typography } from "antd";
@@ -107,6 +108,25 @@ export function SettingsNav() {
           type="text"
         >
           {sidebarCollapsed ? null : "技能管理"}
+        </Button>
+        <Button
+          aria-label="插件管理"
+          block
+          icon={<ProductOutlined />}
+          onClick={() => setActiveMainView("plugins")}
+          style={{
+            background:
+              activeMainView === "plugins"
+                ? "var(--app-color-fill-secondary)"
+                : undefined,
+            borderRadius: 6,
+            color: "var(--app-color-text)",
+            fontSize: 12,
+            justifyContent: sidebarCollapsed ? "center" : "flex-start"
+          }}
+          type="text"
+        >
+          {sidebarCollapsed ? null : "插件管理"}
         </Button>
         <Button
           aria-label="用量统计"

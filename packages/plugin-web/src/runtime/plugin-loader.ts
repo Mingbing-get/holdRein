@@ -14,6 +14,10 @@ export async function loadRuntimeWebPlugins(
   const importer = options.importer ?? importRuntimePlugin;
 
   for (const manifest of options.manifests) {
+    if (manifest.disabled === true) {
+      continue;
+    }
+
     if (options.registry.has(manifest.id)) {
       continue;
     }

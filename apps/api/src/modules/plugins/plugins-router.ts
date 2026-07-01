@@ -1,20 +1,122 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 
-import { sendSuccess } from "../../response";
-import type { RuntimePluginManifest } from "@hold-rein/plugin-server";
+import { sendError, sendSuccess } from "../../response";
+import { RESPONSE_CODE_DEFINITIONS } from "../../response/response-codes";
+import { createPluginsService } from "./plugins-service";
+import type {
+  PluginInstallRequest,
+  PluginInstallSourceType,
+  PluginsService
+} from "./plugins-types";
 
 export interface CreatePluginsRouterOptions {
-  readonly plugins: readonly RuntimePluginManifest[];
+  readonly pluginsService?: PluginsService;
 }
 
-export function createPluginsRouter(options: CreatePluginsRouterOptions): Router {
-  const router = Router();
+interface InstallPluginBody {
+  readonly source?: unknown;
+  readonly sourceType?: unknown;
+}
 
-  router.get("/", (_request, response) => {
-    sendSuccess(response, {
-      plugins: options.plugins
-    });
+interface UpdatePluginBody {
+  readonly disabled?: unknown;
+}
+
+export function createPluginsRouter(
+  options: CreatePluginsRouterOptions = {}
+): Router {
+  const router = Router();
+  const getService = (): PluginsService =>
+    options.pluginsService ?? createPluginsService();
+
+  router.get("/", (_request: Request, response: Response): void => {
+    void getService()
+      .listPlugins()
+      .then((plugins) => sendSuccess(response, { plugins }))
+      .catch((error) => sendRouteError(response, error, "Failed to list plugins"));
   });
 
+  router.post(
+    "/install",
+    (
+      request: Request<unknown, unknown, InstallPluginBody>,
+      response: Response
+    ): void => {
+      if (typeof request.body.source !== "string") {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "source must be a string"
+        );
+        return;
+      }
+
+      if (!isPluginInstallSourceType(request.body.sourceType)) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "sourceType must be npm, github, or local"
+        );
+        return;
+      }
+
+      const installRequest: PluginInstallRequest = {
+        source: request.body.source,
+        sourceType: request.body.sourceType
+      };
+
+      void getService()
+        .installPlugin(installRequest)
+        .then((plugin) => sendSuccess(response, plugin))
+        .catch((error) =>
+          sendRouteError(response, error, "Failed to install plugin")
+        );
+    }
+  );
+
+  router.patch(
+    "/:pluginId",
+    (
+      request: Request<{ pluginId: string }, unknown, UpdatePluginBody>,
+      response: Response
+    ): void => {
+      if (typeof request.body.disabled !== "boolean") {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "disabled must be a boolean"
+        );
+        return;
+      }
+
+      void getService()
+        .setPluginDisabled(request.params.pluginId, request.body.disabled)
+        .then((plugin) => {
+          if (!plugin) {
+            sendError(response, RESPONSE_CODE_DEFINITIONS.notFound, "Unknown plugin");
+            return;
+          }
+          sendSuccess(response, plugin);
+        })
+        .catch((error) =>
+          sendRouteError(response, error, "Failed to update plugin")
+        );
+    }
+  );
+
   return router;
+}
+
+function isPluginInstallSourceType(
+  value: unknown
+): value is PluginInstallSourceType {
+  return value === "github" || value === "local" || value === "npm";
+}
+
+function sendRouteError(response: Response, error: unknown, fallback: string): void {
+  sendError(
+    response,
+    RESPONSE_CODE_DEFINITIONS.badRequest,
+    error instanceof Error ? error.message : fallback
+  );
 }
