@@ -11,7 +11,7 @@ import {
 export const pluginRegistry = createServerPluginRegistry();
 
 let runtimeWebPlugins: RuntimePluginManifest[] = [];
-const apiPackageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
+const runtimeModuleDirectory = dirname(fileURLToPath(import.meta.url));
 
 export async function bootstrapServerPlugins(pluginRoot: string): Promise<void> {
   const loaded = await loadInstalledServerPlugins({
@@ -40,13 +40,23 @@ function registerPluginIfMissing(
 }
 
 function resolveRuntimePackageTarget(packageName: string): string {
-  let directory = realpathSync(
-    join(apiPackageRoot, "node_modules", ...packageName.split("/"))
-  );
+  let directory = runtimeModuleDirectory;
 
   while (true) {
-    if (hasPackageName(directory, packageName)) {
-      return directory;
+    const packageDirectory = join(
+      directory,
+      "node_modules",
+      ...packageName.split("/")
+    );
+
+    try {
+      const resolvedDirectory = realpathSync(packageDirectory);
+
+      if (hasPackageName(resolvedDirectory, packageName)) {
+        return resolvedDirectory;
+      }
+    } catch {
+      // Continue walking parent directories until the runtime package is found.
     }
 
     const parent = dirname(directory);
