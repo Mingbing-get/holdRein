@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { AgentHarness, NodeExecutionEnv, formatSkillsForSystemPrompt, loadSkills } from "@earendil-works/pi-agent-core/node";
+import { AgentHarness, NodeExecutionEnv, formatSkillsForSystemPrompt } from "@earendil-works/pi-agent-core/node";
 import type { ServerPlugin } from '@hold-rein/plugin-server'
 import { toStoredAgentMessage } from "../message/storage";
 import { resolveAgentModel } from "../model/resolver";
@@ -7,7 +7,7 @@ import { appendVisibleCustomMessage } from "./messages";
 import { addPendingSubagentResult, appendSubagentResult, flushPendingSubagentResults } from "./subagent-results";
 import { createRuntimeRevokeSubagentTool, createRuntimeSubagentTools } from "./subagent-tools";
 import { startContinuationSubagent } from "./continuation-subagent";
-import { createSessionRepo, getEnvApiKey, getRuntimeSkillDirs, interruptHarness, toAgentSessionMetadata } from "./support";
+import { createSessionRepo, getEnvApiKey, interruptHarness, toAgentSessionMetadata } from "./support";
 import { createRuntimeTokenCollectionOptions, createTokenCollection } from "./token-collection";
 import { runToolBeforeExecute } from "../approval/tool-approval";
 import { extractAssistantText, getNextCompletedSubagent, hasRunningSubagent, type SubagentRun } from "../subagent";
@@ -16,7 +16,7 @@ import { formatWorkspaceAgentInstructionsForSystemPrompt, readWorkspaceAgentInst
 import { createModelProxyRuntimeController, type ModelProxyRuntimeController } from "../../model-proxies/model-proxy-runtime";
 import { createBrowserToolCallStore } from "./browser-tool-call-store";
 import { createBrowserRuntimeTools } from "./browser-runtime-tools";
-import { toRuntimeSkills } from "./browser-runtime-contributions";
+import { loadRuntimeSkills } from "./skills";
 import type { AgentRuntime, CreateAgentRuntimeOptions, RunningAgent, HarnessSession, CreateHarnessOptions, PendingVisibleCustomMessage, StartHarnessOptions, StartHarnessResult } from './type'
 import type { Api, Model } from "@earendil-works/pi-ai";
 const AGENT_CONTINUATION_CUSTOM_TYPE = "agent_continuation";
@@ -90,20 +90,16 @@ export function createAgentRuntime(
         const contribution = await (input.activePlugins === undefined
           ? pluginRegistry.resolveContributions(pluginContext)
           : pluginRegistry.resolveContributions(pluginContext, { activePluginIds: input.activePlugins }))
-        const skillDirs = await getRuntimeSkillDirs(
-          input.workspacePath,
-          [...(options.skillDirs || []), ...(contribution.skillDirs || [])],
-          options.skillsService
-        );
-        const { skills: loadedSkills } = await loadSkills(env, skillDirs);
-        const activeSkillNames = input.activeSkills === undefined
-          ? undefined
-          : new Set(input.activeSkills);
-        const skills = [
-          ...loadedSkills,
-          ...(contribution.skills || []),
-          ...toRuntimeSkills(input.runtimeContributions?.skills)
-        ].filter((skill) => activeSkillNames === undefined || activeSkillNames.has(skill.name));
+        const skills = await loadRuntimeSkills({
+          activeSkills: input.activeSkills,
+          contributionSkillDirs: contribution.skillDirs,
+          contributionSkills: contribution.skills,
+          env,
+          runtimeContributionSkills: input.runtimeContributions?.skills,
+          skillDirs: options.skillDirs,
+          skillsService: options.skillsService,
+          workspacePath: input.workspacePath
+        });
         const browserTools = createBrowserRuntimeTools({
           agentId: harnessOptions.agentId, eventBus: options.eventBus,
           store: browserToolCalls, tools: input.runtimeContributions?.tools
