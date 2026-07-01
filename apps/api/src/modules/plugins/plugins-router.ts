@@ -104,6 +104,24 @@ export function createPluginsRouter(
     }
   );
 
+  router.delete(
+    "/:pluginId",
+    (request: Request<{ pluginId: string }>, response: Response): void => {
+      void getService()
+        .uninstallPlugin(request.params.pluginId)
+        .then((deleted) => {
+          if (!deleted) {
+            sendError(response, RESPONSE_CODE_DEFINITIONS.notFound, "Unknown plugin");
+            return;
+          }
+          sendSuccess(response, { id: request.params.pluginId });
+        })
+        .catch((error) =>
+          sendRouteError(response, error, "Failed to uninstall plugin")
+        );
+    }
+  );
+
   return router;
 }
 

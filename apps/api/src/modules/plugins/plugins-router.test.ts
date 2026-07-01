@@ -35,7 +35,7 @@ describe("plugins router", () => {
     );
   });
 
-  it("updates disabled state and installs plugins", async () => {
+  it("updates disabled state, installs plugins, and uninstalls plugins", async () => {
     const app = express();
     const service = createPluginsServiceMock({
       installPlugin: vi.fn(async () => ({
@@ -53,7 +53,8 @@ describe("plugins router", () => {
         packageName: "@scope/demo",
         version: "1.0.0",
         webEntry: "/plugin-assets/demo/web.js"
-      }))
+      })),
+      uninstallPlugin: vi.fn(async () => true)
     });
 
     app.use(express.json());
@@ -65,6 +66,9 @@ describe("plugins router", () => {
     const installResponse = await request(app)
       .post("/api/v1/plugins/install")
       .send({ source: "@scope/review", sourceType: "npm" });
+    const uninstallResponse = await request(app).delete(
+      "/api/v1/plugins/%40scope%2Fdemo"
+    );
 
     expect(updateResponse.status).toBe(200);
     expect(updateResponse.body.data.disabled).toBe(true);
@@ -74,6 +78,9 @@ describe("plugins router", () => {
       source: "@scope/review",
       sourceType: "npm"
     });
+    expect(uninstallResponse.status).toBe(200);
+    expect(uninstallResponse.body.data).toEqual({ id: "@scope/demo" });
+    expect(service.uninstallPlugin).toHaveBeenCalledWith("@scope/demo");
   });
 });
 
@@ -87,6 +94,7 @@ function createPluginsServiceMock(
     listDisabledPluginIds: async () => [],
     listPlugins: async () => [],
     setPluginDisabled: async () => null,
+    uninstallPlugin: async () => false,
     ...overrides
   };
 }

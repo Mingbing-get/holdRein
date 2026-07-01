@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
 
 import {
@@ -114,6 +114,18 @@ export function createPluginsService(
       });
 
       return { ...plugin, disabled };
+    },
+    uninstallPlugin: async (pluginId) => {
+      const manifestPath = await findRuntimePluginManifestPath(pluginRoot, pluginId);
+
+      if (!manifestPath) {
+        return false;
+      }
+
+      await rm(dirname(manifestPath), { force: true, recursive: true });
+      const config = await readConfig();
+      await persistConfig(omitConfigEntry(config, pluginId));
+      return true;
     }
   };
 }
@@ -133,6 +145,23 @@ async function readRuntimePluginManifests(
   }
 
   return plugins;
+}
+
+async function findRuntimePluginManifestPath(
+  pluginRoot: string,
+  pluginId: string
+): Promise<string | null> {
+  const manifestPaths = await discoverServerPluginManifests(pluginRoot);
+
+  for (const manifestPath of manifestPaths) {
+    const plugin = await readRuntimePluginManifest(manifestPath, {});
+
+    if (plugin?.id === pluginId) {
+      return manifestPath;
+    }
+  }
+
+  return null;
 }
 
 async function readRuntimePluginManifest(
@@ -185,6 +214,15 @@ function normalizeConfigEntry(entry: Record<string, unknown>): PluginConfigEntry
   }
 
   return normalizedEntry;
+}
+
+function omitConfigEntry(
+  config: PluginsConfig,
+  pluginIdToRemove: string
+): PluginsConfig {
+  return Object.fromEntries(
+    Object.entries(config).filter(([pluginId]) => pluginId !== pluginIdToRemove)
+  );
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

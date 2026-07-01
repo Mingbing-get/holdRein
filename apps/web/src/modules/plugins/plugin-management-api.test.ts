@@ -5,6 +5,7 @@ import {
   createPluginUrl,
   fetchInstalledPlugins,
   installPlugin,
+  uninstallPlugin,
   setPluginDisabled
 } from "./plugin-management-api";
 
@@ -72,6 +73,14 @@ describe("plugin management api", () => {
           msg: "ok"
         }),
         ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: { id: "demo" },
+          msg: "ok"
+        }),
+        ok: true
       } as Response);
 
     await expect(fetchInstalledPlugins("http://localhost:4000")).resolves.toEqual([
@@ -82,6 +91,7 @@ describe("plugin management api", () => {
       source: "/Users/me/local-plugin",
       sourceType: "local"
     });
+    await uninstallPlugin("http://localhost:4000", "demo");
 
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
@@ -107,6 +117,11 @@ describe("plugin management api", () => {
         headers: { "Content-Type": "application/json" },
         method: "POST"
       }
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      "http://localhost:4000/api/v1/plugins/demo",
+      { method: "DELETE" }
     );
   });
 });

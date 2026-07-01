@@ -58,6 +58,22 @@ describe("plugins service", () => {
     });
   });
 
+  it("uninstalls a plugin package and removes stale disabled config", async () => {
+    await createPluginPackage("@scope/demo", "1.0.0");
+    await writeFile(
+      join(pluginRoot, "plugins.json"),
+      JSON.stringify({ "@scope/demo": { disabled: true } }),
+      "utf8"
+    );
+    const service = createPluginsService({ pluginRoot });
+
+    await expect(service.uninstallPlugin("@scope/demo")).resolves.toBe(true);
+
+    await expect(service.listPlugins()).resolves.toEqual([]);
+    await expect(readConfig()).resolves.toEqual({});
+    await expect(service.uninstallPlugin("@scope/demo")).resolves.toBe(false);
+  });
+
   it("installs a plugin package through the plugin-server installer", async () => {
     const installPluginPackage = vi.fn(async () => {
       await createPluginPackage("@scope/review", "2.0.0");

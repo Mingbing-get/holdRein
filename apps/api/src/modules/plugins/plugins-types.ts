@@ -19,4 +19,5 @@ export interface PluginsService {
     pluginId: string,
     disabled: boolean
   ) => Promise<InstalledPlugin | null>;
+  uninstallPlugin: (pluginId: string) => Promise<boolean>;
 }

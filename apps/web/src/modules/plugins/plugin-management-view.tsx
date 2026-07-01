@@ -6,7 +6,8 @@ import { PluginCard } from "./plugin-card";
 import {
   fetchInstalledPlugins,
   installPlugin,
-  setPluginDisabled
+  setPluginDisabled,
+  uninstallPlugin
 } from "./plugin-management-api";
 import { PluginInstallModal } from "./plugin-install-modal";
 import type {
@@ -79,6 +80,30 @@ export function PluginManagementView({ apiBaseUrl }: PluginManagementViewProps) 
     }
   };
 
+  const removePlugin = async (plugin: InstalledPlugin) => {
+    setBusyPluginId(plugin.id);
+    setErrorMessage("");
+    try {
+      await uninstallPlugin(apiBaseUrl, plugin.id);
+      setLoadState((currentState) =>
+        currentState.status === "success"
+          ? {
+              plugins: currentState.plugins.filter(
+                (currentPlugin) => currentPlugin.id !== plugin.id
+              ),
+              status: "success"
+            }
+          : currentState
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Failed to uninstall plugin"
+      );
+    } finally {
+      setBusyPluginId(null);
+    }
+  };
+
   const submitInstall = async (values: PluginInstallRequest) => {
     setIsInstalling(true);
     setErrorMessage("");
@@ -140,6 +165,7 @@ export function PluginManagementView({ apiBaseUrl }: PluginManagementViewProps) 
               key={plugin.id}
               loading={busyPluginId === plugin.id}
               onToggle={togglePlugin}
+              onUninstall={removePlugin}
               plugin={plugin}
             />
           ))}

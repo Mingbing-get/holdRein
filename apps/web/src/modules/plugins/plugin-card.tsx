@@ -1,14 +1,21 @@
-import { Card, Flex, Switch, Tag, Typography } from "antd";
+import { DeleteOutlined } from "@ant-design/icons";
+import { Button, Card, Flex, Popconfirm, Switch, Tag, Typography } from "antd";
 
 import type { InstalledPlugin } from "./plugin-management-types";
 
 interface PluginCardProps {
   loading: boolean;
   onToggle: (plugin: InstalledPlugin, enabled: boolean) => void;
+  onUninstall: (plugin: InstalledPlugin) => void;
   plugin: InstalledPlugin;
 }
 
-export function PluginCard({ loading, onToggle, plugin }: PluginCardProps) {
+export function PluginCard({
+  loading,
+  onToggle,
+  onUninstall,
+  plugin
+}: PluginCardProps) {
   const enabled = plugin.disabled !== true;
 
   return (
@@ -51,13 +58,30 @@ export function PluginCard({ loading, onToggle, plugin }: PluginCardProps) {
             版本: {plugin.version}
           </Typography.Text>
         </Flex>
-        <Switch
-          aria-label={`${enabled ? "禁用" : "启用"} ${plugin.name}`}
-          checked={enabled}
-          disabled={loading}
-          onChange={(checked) => onToggle(plugin, checked)}
-          size="small"
-        />
+        <Flex align="center" gap={8}>
+          <Switch
+            aria-label={`${enabled ? "禁用" : "启用"} ${plugin.name}`}
+            checked={enabled}
+            disabled={loading}
+            onChange={(checked) => onToggle(plugin, checked)}
+            size="small"
+          />
+          <Popconfirm
+            okButtonProps={{ danger: true }}
+            okText="卸载"
+            onConfirm={() => onUninstall(plugin)}
+            title={`卸载 ${plugin.name}`}
+          >
+            <Button
+              aria-label={`卸载 ${plugin.name}`}
+              danger
+              disabled={loading}
+              icon={<DeleteOutlined />}
+              size="small"
+              type="text"
+            />
+          </Popconfirm>
+        </Flex>
       </Flex>
     </Card>
   );

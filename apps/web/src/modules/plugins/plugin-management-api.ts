@@ -61,6 +61,19 @@ export async function installPlugin(
   return payload.data;
 }
 
+export async function uninstallPlugin(
+  apiBaseUrl: string,
+  pluginId: string
+): Promise<void> {
+  const response = await fetch(createPluginUrl(apiBaseUrl, pluginId), {
+    method: "DELETE"
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to uninstall plugin");
+  }
+}
+
 export function createPluginsUrl(apiBaseUrl: string): string {
   return `${normalizeApiBaseUrl(apiBaseUrl)}/api/v1/plugins`;
 }

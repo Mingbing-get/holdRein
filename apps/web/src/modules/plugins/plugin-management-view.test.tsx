@@ -57,7 +57,7 @@ describe("PluginManagementView", () => {
     cleanup();
   });
 
-  it("renders installed plugins and toggles disabled state", async () => {
+  it("renders installed plugins, toggles disabled state, and uninstalls plugins", async () => {
     fetchMock
       .mockResolvedValueOnce({
         json: async () => ({
@@ -92,6 +92,14 @@ describe("PluginManagementView", () => {
           msg: "ok"
         }),
         ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: { id: "demo" },
+          msg: "ok"
+        }),
+        ok: true
       } as Response);
 
     render(<PluginManagementView apiBaseUrl="http://localhost:4000" />);
@@ -100,6 +108,9 @@ describe("PluginManagementView", () => {
 
     expect(within(card).getByText("Demo Plugin")).toBeVisible();
     expect(within(card).getByText("@scope/demo")).toBeVisible();
+    expect(
+      within(card).getByRole("button", { name: "卸载 Demo Plugin" })
+    ).toBeVisible();
     fireEvent.click(within(card).getByRole("switch", { name: "禁用 Demo Plugin" }));
 
     await waitFor(() => {
@@ -111,6 +122,27 @@ describe("PluginManagementView", () => {
           method: "PATCH"
         }
       );
+    });
+    fireEvent.click(
+      within(card).getByRole("button", { name: "卸载 Demo Plugin" })
+    );
+    await screen.findByText("卸载 Demo Plugin");
+    const uninstallButtons = screen.getAllByRole("button", { name: /卸\s*载/u });
+    const confirmUninstallButton = uninstallButtons.at(-1);
+
+    if (!confirmUninstallButton) {
+      throw new Error("Expected uninstall confirmation button");
+    }
+    fireEvent.click(confirmUninstallButton);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:4000/api/v1/plugins/demo",
+        { method: "DELETE" }
+      );
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId("plugin-card-demo")).not.toBeInTheDocument();
     });
   });
 
