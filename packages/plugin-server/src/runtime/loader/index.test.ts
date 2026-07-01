@@ -15,6 +15,7 @@ it("imports plugin default exports and returns web manifests", async () => {
     join(dir, "dist", "server", "index.js"),
     'export default { id: "demo" };'
   );
+  await writeFile(join(dir, "dist", "style.css"), ":root {}");
   await writeFile(
     join(dir, "package.json"),
     JSON.stringify({

@@ -39,15 +39,16 @@ export async function loadInstalledServerPlugins(
   const webPlugins: RuntimePluginManifest[] = [];
 
   for (const manifestPath of manifests) {
+    const packageDir = dirname(manifestPath);
     const manifest = parseServerPluginManifest(
-      JSON.parse(await readFile(manifestPath, "utf8"))
+      JSON.parse(await readFile(manifestPath, "utf8")),
+      { packageDirectory: packageDir }
     );
 
     if (disabledPluginIds.has(manifest.id)) {
       continue;
     }
 
-    const packageDir = dirname(manifestPath);
     const entryPath = resolve(packageDir, manifest.serverEntry);
     const module = await import(
       (options.toImportUrl ?? ((path) => pathToFileURL(path).href))(entryPath)

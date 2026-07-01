@@ -40,6 +40,19 @@ describe("plugins service", () => {
     ]);
   });
 
+  it("omits webStyle for installed plugins when the exported style file is missing", async () => {
+    await createPluginPackage("@scope/demo", "1.0.0", {
+      style: "./dist/style.css"
+    });
+    const service = createPluginsService({ pluginRoot });
+
+    await expect(service.listPlugins()).resolves.toEqual([
+      expect.not.objectContaining({
+        webStyle: expect.any(String)
+      })
+    ]);
+  });
+
   it("persists disabled plugin state to the config file", async () => {
     await createPluginPackage("@scope/demo", "1.0.0");
     const service = createPluginsService({ pluginRoot });
@@ -102,8 +115,19 @@ describe("plugins service", () => {
     );
   });
 
-  async function createPluginPackage(packageName: string, version: string) {
+  async function createPluginPackage(
+    packageName: string,
+    version: string,
+    options: { readonly style?: string } = {}
+  ) {
     const directory = join(pluginRoot, packageName.replaceAll("/", "__"));
+    const webExport =
+      options.style === undefined
+        ? "./dist/web.js"
+        : {
+            import: "./dist/web.js",
+            style: options.style
+          };
 
     await mkdir(directory, { recursive: true });
     await writeFile(
@@ -111,7 +135,7 @@ describe("plugins service", () => {
       JSON.stringify({
         exports: {
           "./server": "./dist/server.js",
-          "./web": "./dist/web.js"
+          "./web": webExport
         },
         name: packageName,
         version

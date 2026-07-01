@@ -35,6 +35,36 @@ describe("plugin manifests", () => {
     });
   });
 
+  it("omits web style exports when the referenced file is missing", async () => {
+    const root = await mkdtemp(join(tmpdir(), "hold-rein-plugin-"));
+
+    await expect(
+      parseServerPluginManifest(
+        {
+          name: "@scope/demo",
+          version: "1.0.0",
+          exports: {
+            ".": {
+              import: "./dist/server/index.js"
+            },
+            "./web": {
+              import: "./dist/web/index.js",
+              style: "./dist/style.css"
+            }
+          }
+        },
+        { packageDirectory: root }
+      )
+    ).toEqual({
+      id: "@scope/demo",
+      name: "@scope/demo",
+      packageName: "@scope/demo",
+      serverEntry: "./dist/server/index.js",
+      version: "1.0.0",
+      webEntry: "./dist/web/index.js"
+    });
+  });
+
   it("rejects missing server entries", () => {
     expect(() =>
       parseServerPluginManifest({

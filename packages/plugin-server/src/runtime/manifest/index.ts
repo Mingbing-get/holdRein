@@ -1,7 +1,12 @@
+import { existsSync } from "node:fs";
 import { access, readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 
 import type { PackageEntryManifest } from "../../type";
+
+export interface ParseServerPluginManifestOptions {
+  readonly packageDirectory?: string;
+}
 
 function requirePackageString(
   input: Record<string, unknown>,
@@ -16,7 +21,8 @@ function requirePackageString(
 }
 
 export function parseServerPluginManifest(
-  input: unknown
+  input: unknown,
+  options: ParseServerPluginManifestOptions = {}
 ): PackageEntryManifest {
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     throw new Error("Plugin package manifest must be an object.");
@@ -30,7 +36,11 @@ export function parseServerPluginManifest(
     "./server"
   ) ?? resolvePackageExport(packageManifest.exports, ".");
   const webEntry = resolvePackageExport(packageManifest.exports, "./web");
-  const webStyle = resolvePackageStyleExport(packageManifest.exports, "./web");
+  const webStyle = resolvePackageStyleExport(
+    packageManifest.exports,
+    "./web",
+    options.packageDirectory
+  );
 
   if (!serverEntry) {
     throw new Error('Plugin package "exports" must define a server entry.');
@@ -107,7 +117,8 @@ function resolvePackageExport(
 
 function resolvePackageStyleExport(
   exportsField: unknown,
-  subpath: "./web"
+  subpath: "./web",
+  packageDirectory: string | undefined
 ): string | undefined {
   if (
     !exportsField ||
@@ -131,7 +142,15 @@ function resolvePackageStyleExport(
   const conditions = exportValue as Record<string, unknown>;
   const style = conditions.style;
 
-  return typeof style === "string" ? style : undefined;
+  if (typeof style !== "string") {
+    return undefined;
+  }
+
+  if (packageDirectory && !existsSync(resolve(packageDirectory, style))) {
+    return undefined;
+  }
+
+  return style;
 }
 
 function resolveExportValue(value: unknown): string | undefined {

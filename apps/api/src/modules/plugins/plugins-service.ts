@@ -168,15 +168,17 @@ async function readRuntimePluginManifest(
   manifestPath: string,
   config: PluginsConfig
 ): Promise<InstalledPlugin | null> {
+  const packageDir = dirname(manifestPath);
   const manifest = parseServerPluginManifest(
-    JSON.parse(await readFile(manifestPath, "utf8"))
+    JSON.parse(await readFile(manifestPath, "utf8")),
+    { packageDirectory: packageDir }
   );
 
   if (!manifest.webEntry) {
     return null;
   }
 
-  const pluginDir = basename(dirname(manifestPath));
+  const pluginDir = basename(packageDir);
 
   return {
     disabled: config[manifest.id]?.disabled === true,
