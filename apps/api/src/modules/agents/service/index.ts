@@ -38,6 +38,7 @@ import {
   createInMemorySubagentRepository,
   type SubagentRepository
 } from "../subagent/repository";
+import { resolveWorkspaceCapabilities } from "./workspace-settings";
 
 export interface AgentsService {
   approveAgentAction: (
@@ -68,6 +69,8 @@ export interface RenameTaskInput extends GetTaskTitleInput {
 }
 
 interface ContinueTaskBaseInput {
+  activePlugins?: readonly string[];
+  activeSkills?: readonly string[];
   approvalPolicy?: ApprovalPolicy;
   prompt: string;
   runtimeContributions?: BrowserRuntimeContributions;
@@ -125,7 +128,6 @@ export function createAgentsService(options: CreateAgentsServiceOptions): Agents
       if (titleJob) {
         return titleJob;
       }
-
       startTitleJob({
         input: {
           approvalPolicy: task.approvalPolicy,
@@ -175,6 +177,11 @@ export function createAgentsService(options: CreateAgentsServiceOptions): Agents
         approvalPolicy: input.approvalPolicy ?? task.approvalPolicy,
         thinkingLevel: input.thinkingLevel ?? task.thinkingLevel
       };
+      const workspaceCapabilities = await resolveWorkspaceCapabilities({
+        activePlugins: input.activePlugins,
+        activeSkills: input.activeSkills,
+        workspacePath: workspace.path
+      });
       options.repository.updateTaskOptions(
         taskId,
         optionUpdate,
@@ -195,6 +202,7 @@ export function createAgentsService(options: CreateAgentsServiceOptions): Agents
           prompt,
           provider: selectedModel?.lastModelProvider ?? task.lastModelProvider,
           ...optionUpdate,
+          ...workspaceCapabilities,
           ...(input.runtimeContributions === undefined
             ? {}
             : { runtimeContributions: input.runtimeContributions }),
@@ -258,6 +266,7 @@ export function createAgentsService(options: CreateAgentsServiceOptions): Agents
         repository: options.repository,
         workspacePath: input.workspacePath
       });
+      const workspaceCapabilities = await resolveWorkspaceCapabilities(input);
       const configuredModel =
         options.modelProvidersService?.getConfiguredModelForProvider(
           input.provider,
@@ -303,7 +312,12 @@ export function createAgentsService(options: CreateAgentsServiceOptions): Agents
         now,
         repository: options.repository,
         runtime: options.runtime,
-        runtimeInput: { ...input, ...taskOptions, taskId: task.id },
+        runtimeInput: {
+          ...input,
+          ...taskOptions,
+          ...workspaceCapabilities,
+          taskId: task.id
+        },
         taskId: task.id
       });
       const updatedTask = options.repository.updateTaskSession(task.id, run.session) ?? task;
@@ -355,11 +369,7 @@ async function loadSubagentMessages(input: {
 function getSubagentSession(
   subagent: ReturnType<SubagentRepository["findByTaskId"]>[number]
 ): AgentSessionMetadata | undefined {
-  if (
-    !subagent.sessionCreatedAt ||
-    !subagent.sessionId ||
-    !subagent.sessionPath
-  ) {
+  if (!subagent.sessionCreatedAt || !subagent.sessionId || !subagent.sessionPath) {
     return undefined;
   }
 
