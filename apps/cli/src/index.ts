@@ -44,15 +44,15 @@ Usage: hold-rein <command>
 Aliases: hold-rein, hr
 
 Commands:
-  run        Start the bundled Hold Rein service
+  start      Start the bundled Hold Rein service
   plugin init    Initialize a plugin package
   plugin install Install a plugin package
   version    Print the current CLI version
   help       Print this help message
 
 Options:
-  run --host <host>    Bind to a specific host (default: 127.0.0.1)
-  run --port <port>    Bind to a specific port (default: 3001)
+  start --host <host>    Bind to a specific host (default: 127.0.0.1)
+  start --port <port>    Bind to a specific port (default: 3001)
   plugin init --path <path>    Initialize in a specific path
   plugin init --name <name>    Initialize in a child directory
   plugin install --target <path>    Install into a specific plugin directory
@@ -83,7 +83,7 @@ export const runCli = async (
     return { exitCode: 0 };
   }
 
-  if (command === "run") {
+  if (command === "start") {
     try {
       const runOptions = parseRunOptions([subcommand, ...commandArgs]);
       const startRunServer = options.startRunServer ?? startBundledRunServer;

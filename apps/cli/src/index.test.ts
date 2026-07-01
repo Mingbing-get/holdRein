@@ -67,16 +67,16 @@ describe("runCli", () => {
     expect(result.exitCode).toBe(0);
     expect(output.lines.join("")).toContain("Usage: hold-rein <command>");
     expect(output.lines.join("")).toContain("Aliases: hold-rein, hr");
-    expect(output.lines.join("")).toContain("run");
+    expect(output.lines.join("")).toContain("start");
     expect(output.lines.join("")).toContain("version");
     expect(output.lines.join("")).toContain("help");
   });
 
-  it("starts the bundled service for the run command", async () => {
+  it("starts the bundled service for the start command", async () => {
     const output = collectOutput();
     const calls: unknown[] = [];
 
-    const result = await runCli(["run", "--port", "4100"], {
+    const result = await runCli(["start", "--port", "4100"], {
       packageVersion: "1.2.3",
       startRunServer: async (options) => {
         calls.push(options);
