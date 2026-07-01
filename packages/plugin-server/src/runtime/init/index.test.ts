@@ -26,10 +26,15 @@ describe("plugin package init", () => {
     const folderName = basename(directory);
     const packageJson = JSON.parse(
       await readFile(join(directory, "package.json"), "utf8")
-    ) as { readonly name: string };
+    ) as {
+      readonly name: string;
+      readonly peerDependencies: Record<string, string>;
+    };
 
     expect(result.packageName).toBe(`hold-rein-plugin-${folderName}`);
     expect(packageJson.name).toBe(`hold-rein-plugin-${folderName}`);
+    expect(packageJson.peerDependencies.react).toBe("^19.0.0");
+    expect(packageJson.peerDependencies["react-dom"]).toBe("^19.0.0");
     await expect(
       readFile(join(directory, "tsconfig.json"), "utf8")
     ).resolves.toContain('"rootDir": "src"');

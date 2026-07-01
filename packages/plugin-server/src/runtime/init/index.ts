@@ -66,8 +66,8 @@ const basePackageJson = {
     "@monaco-editor/react": "4.7.0",
     antd: "6.4.3",
     "monaco-editor": "0.55.1",
-    react: "19.2.6",
-    "react-dom": "19.2.6"
+    react: "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   devDependencies: {
     "@earendil-works/pi-agent-core": "0.75.4",
