@@ -3,6 +3,7 @@ import type { Server } from "node:http";
 import { createApp } from "./app";
 import { getApiEnv, loadApiEnv } from "./config/env";
 import { getDefaultAgentsService } from "./modules/agents";
+import { getDefaultScheduledTasksService } from "./modules/scheduled-tasks";
 import { bootstrapServerPlugins } from "./plugin";
 
 export interface StartHoldReinServerOptions {
@@ -26,7 +27,8 @@ export async function startHoldReinServer(
   const env = getApiEnv();
 
   await bootstrapServerPlugins(env.pluginRoot);
-  getDefaultAgentsService();
+  const agentsService = getDefaultAgentsService();
+  getDefaultScheduledTasksService({ agentsService }).start();
 
   const app =
     options.webAssetsDirectory === undefined

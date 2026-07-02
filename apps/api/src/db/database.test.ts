@@ -19,6 +19,7 @@ describe("database", () => {
     expect(schema).toHaveProperty("workspaces");
     expect(schema).toHaveProperty("tasks");
     expect(schema).toHaveProperty("subagents");
+    expect(schema).toHaveProperty("scheduledAgentTasks");
     expect(schema).toHaveProperty("modelTokenUsageHourly");
     expect(schema).not.toHaveProperty("taskMessages");
   });
@@ -46,7 +47,22 @@ describe("database", () => {
     expect(exec).toHaveBeenCalledWith(
       expect.stringContaining("CREATE INDEX IF NOT EXISTS model_proxy_candidate_limits_candidate_idx")
     );
-    expect(exec).toHaveBeenCalledTimes(35);
+    expect(exec).toHaveBeenCalledWith(
+      expect.stringContaining("CREATE TABLE IF NOT EXISTS scheduled_agent_tasks")
+    );
+    expect(exec).toHaveBeenCalledWith(
+      expect.stringContaining("CREATE INDEX IF NOT EXISTS scheduled_agent_tasks_enabled_idx")
+    );
+    expect(exec).toHaveBeenCalledWith(
+      expect.stringContaining("CREATE INDEX IF NOT EXISTS tasks_source_idx")
+    );
+    expect(exec).toHaveBeenCalledWith(
+      expect.stringContaining("ALTER TABLE tasks ADD COLUMN source_type")
+    );
+    expect(exec).toHaveBeenCalledWith(
+      expect.stringContaining("ALTER TABLE tasks ADD COLUMN source_mark")
+    );
+    expect(exec).toHaveBeenCalledTimes(40);
     expect(exec).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_model_providers")
@@ -85,6 +101,14 @@ describe("database", () => {
     );
     expect(exec).toHaveBeenNthCalledWith(
       16,
+      expect.stringContaining("source_type TEXT NOT NULL DEFAULT 'manual'")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      16,
+      expect.stringContaining("source_mark TEXT")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      16,
       expect.stringContaining("last_model_provider_source TEXT NOT NULL")
     );
     expect(exec).toHaveBeenNthCalledWith(
@@ -120,7 +144,7 @@ describe("database", () => {
       expect.stringContaining("status TEXT NOT NULL")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      18,
+      20,
       expect.stringContaining("CHECK(status IN ('running', 'completed', 'interrupted'))")
     );
     expect(exec).toHaveBeenNthCalledWith(
@@ -129,38 +153,50 @@ describe("database", () => {
     );
     expect(exec).toHaveBeenNthCalledWith(
       18,
-      expect.stringContaining("CREATE TABLE IF NOT EXISTS subagents")
-    );
-    expect(exec).toHaveBeenNthCalledWith(
-      18,
-      expect.stringContaining("agent_name TEXT NOT NULL")
-    );
-    expect(exec).toHaveBeenNthCalledWith(
-      18,
-      expect.stringContaining("session_id TEXT")
-    );
-    expect(exec).toHaveBeenNthCalledWith(
-      18,
-      expect.stringContaining("session_path TEXT")
-    );
-    expect(exec).toHaveBeenNthCalledWith(
-      18,
-      expect.stringContaining("session_created_at TEXT")
+      expect.stringContaining("CREATE TABLE IF NOT EXISTS scheduled_agent_tasks")
     );
     expect(exec).toHaveBeenNthCalledWith(
       19,
-      expect.stringContaining("CREATE INDEX IF NOT EXISTS subagents_task_id_idx")
+      expect.stringContaining("CREATE INDEX IF NOT EXISTS scheduled_agent_tasks_enabled_idx")
     );
     expect(exec).toHaveBeenNthCalledWith(
       20,
-      expect.stringContaining("CREATE TABLE IF NOT EXISTS model_token_usage_hourly")
+      expect.stringContaining("CREATE TABLE IF NOT EXISTS subagents")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      20,
+      expect.stringContaining("agent_name TEXT NOT NULL")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      20,
+      expect.stringContaining("session_id TEXT")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      20,
+      expect.stringContaining("session_path TEXT")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      20,
+      expect.stringContaining("session_created_at TEXT")
     );
     expect(exec).toHaveBeenNthCalledWith(
       21,
+      expect.stringContaining("CREATE INDEX IF NOT EXISTS subagents_task_id_idx")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      22,
+      expect.stringContaining("CREATE TABLE IF NOT EXISTS model_token_usage_hourly")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      23,
       expect.stringContaining("CREATE UNIQUE INDEX IF NOT EXISTS model_token_usage_hourly_model_hour_idx")
     );
     expect(exec).toHaveBeenNthCalledWith(
-      31,
+      35,
+      expect.stringContaining("CREATE INDEX IF NOT EXISTS tasks_source_idx")
+    );
+    expect(exec).toHaveBeenNthCalledWith(
+      36,
       expect.stringContaining("ALTER TABLE subagents ADD COLUMN agent_name")
     );
     expect(exec).toHaveBeenLastCalledWith(
@@ -212,9 +248,88 @@ describe("database", () => {
         )
         .run();
 
+      sqlite
+        .prepare(
+          `
+            INSERT INTO tasks (
+              id,
+              workspace_id,
+              title,
+              initial_user_message,
+              last_model_provider_source,
+              last_model_provider,
+              last_model_name,
+              created_at,
+              updated_at,
+              last_continued_at,
+              status,
+              thinking_level,
+              source_type,
+              source_mark
+            )
+            VALUES (
+              'task-scheduled',
+              'workspace-1',
+              '',
+              'Run scheduled check',
+              'built_in',
+              'openai',
+              'gpt-4.1',
+              '2026-07-02T00:00:00.000Z',
+              '2026-07-02T00:00:00.000Z',
+              '2026-07-02T00:00:00.000Z',
+              'running',
+              'medium',
+              'scheduled',
+              'scheduled-1'
+            )
+          `
+        )
+        .run();
+      sqlite
+        .prepare(
+          `
+            INSERT INTO scheduled_agent_tasks (
+              id,
+              name,
+              workspace_path,
+              prompt,
+              provider,
+              model_id,
+              thinking_level,
+              cron_expression,
+              timezone,
+              enabled,
+              allow_concurrent_runs,
+              last_run_at,
+              next_run_at,
+              created_at,
+              updated_at
+            )
+            VALUES (
+              'scheduled-1',
+              'Every five minutes',
+              '/tmp/workspace',
+              'Run scheduled check',
+              'openai',
+              'gpt-4.1',
+              'medium',
+              '*/5 * * * *',
+              'Asia/Shanghai',
+              1,
+              0,
+              NULL,
+              '2026-07-02T00:05:00.000Z',
+              '2026-07-02T00:00:00.000Z',
+              '2026-07-02T00:00:00.000Z'
+            )
+          `
+        )
+        .run();
+
       const task = sqlite
         .prepare(
-          "SELECT title, input_token, output_token, last_model_provider_source, session_id, session_path, session_created_at, status FROM tasks"
+          "SELECT title, input_token, output_token, last_model_provider_source, session_id, session_path, session_created_at, status, source_type, source_mark FROM tasks WHERE id = 'task-1'"
         )
         .get();
 
@@ -225,8 +340,23 @@ describe("database", () => {
         session_created_at: null,
         session_id: null,
         session_path: null,
+        source_mark: null,
+        source_type: "manual",
         status: "completed",
         title: "Add persistence"
+      });
+      expect(
+        sqlite
+          .prepare(
+            "SELECT id, cron_expression, enabled, allow_concurrent_runs, next_run_at FROM scheduled_agent_tasks WHERE id = 'scheduled-1'"
+          )
+          .get()
+      ).toEqual({
+        allow_concurrent_runs: 0,
+        cron_expression: "*/5 * * * *",
+        enabled: 1,
+        id: "scheduled-1",
+        next_run_at: "2026-07-02T00:05:00.000Z"
       });
       expect(
         sqlite
@@ -381,7 +511,7 @@ describe("database", () => {
       expect(
         sqlite
           .prepare(
-            "SELECT id, input_token, output_token, session_id, session_path, session_created_at, status FROM tasks WHERE id = 'task-1'"
+            "SELECT id, input_token, output_token, session_id, session_path, session_created_at, status, source_type, source_mark FROM tasks WHERE id = 'task-1'"
           )
           .get()
       ).toEqual({
@@ -391,6 +521,8 @@ describe("database", () => {
         session_created_at: null,
         session_id: null,
         session_path: null,
+        source_mark: null,
+        source_type: "manual",
         status: "completed"
       });
       expect(

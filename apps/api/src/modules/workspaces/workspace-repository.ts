@@ -1,4 +1,4 @@
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 
 import type {
   AppDatabase,
@@ -39,6 +39,10 @@ export interface WorkspaceRepository {
   deleteTasksByWorkspaceId: (workspaceId: string) => void;
   deleteWorkspaceById: (workspaceId: string) => void;
   findTaskById: (taskId: string) => TaskRow | undefined;
+  findRunningTaskBySource: (input: {
+    sourceMark: string;
+    sourceType: "scheduled";
+  }) => TaskRow | undefined;
   findWorkspaceById: (workspaceId: string) => WorkspaceRow | undefined;
   findWorkspaceByPath: (workspacePath: string) => WorkspaceRow | undefined;
   listTasksAfterLastContinuedAt: (
@@ -153,6 +157,13 @@ export function createInMemoryWorkspaceRepository(
       }
     },
     findTaskById: (taskId) => taskRows.find((task) => task.id === taskId),
+    findRunningTaskBySource: (input) =>
+      taskRows.find(
+        (task) =>
+          task.sourceType === input.sourceType &&
+          task.sourceMark === input.sourceMark &&
+          task.status === "running"
+      ),
     findWorkspaceById: (workspaceId) =>
       workspaceRows.find((workspace) => workspace.id === workspaceId),
     findWorkspaceByPath: (workspacePath) =>
@@ -321,6 +332,18 @@ export function createSqliteWorkspaceRepository(
         .from(tasks)
         .where(eq(tasks.id, taskId))
         .get(),
+    findRunningTaskBySource: (input) =>
+      database.db
+        .select()
+        .from(tasks)
+        .where(
+          and(
+            eq(tasks.sourceType, input.sourceType),
+            eq(tasks.sourceMark, input.sourceMark),
+            eq(tasks.status, "running")
+          )
+        )
+        .get(),
     findWorkspaceById: (workspaceId) =>
       database.db
         .select()
@@ -450,6 +473,8 @@ function toTaskRow(task: NewTaskRow): TaskRow {
     sessionCreatedAt: task.sessionCreatedAt ?? null,
     sessionId: task.sessionId ?? null,
     sessionPath: task.sessionPath ?? null,
+    sourceMark: task.sourceMark ?? null,
+    sourceType: task.sourceType ?? "manual",
     status: task.status ?? "completed",
     thinkingLevel: task.thinkingLevel ?? "medium"
   };

@@ -1,7 +1,15 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
-import type { TaskRow, WorkspaceRow } from "../../db";
-import { createInMemoryWorkspaceRepository } from "./workspace-repository";
+import { createDatabase, migrateDatabase, type TaskRow, type WorkspaceRow } from "../../db";
+import {
+  createInMemoryWorkspaceRepository,
+  createSqliteWorkspaceRepository,
+  type WorkspaceRepository
+} from "./workspace-repository";
 
 describe("workspace repository task token usage", () => {
   it("adds token usage to existing task totals", () => {
@@ -94,6 +102,65 @@ describe("workspace repository task token usage", () => {
   });
 });
 
+describe("workspace repository running task source lookup", () => {
+  it.each([
+    ["in-memory", createInMemoryWorkspaceRepository],
+    [
+      "sqlite",
+      () => {
+        const database = createDatabase(
+          join(mkdtempSync(join(tmpdir(), "hold-rein-workspace-repo-")), "test.sqlite")
+        );
+        migrateDatabase(database.sqlite);
+        return createSqliteWorkspaceRepository(database);
+      }
+    ]
+  ] satisfies [string, () => WorkspaceRepository][])(
+    "finds only running scheduled tasks by source in %s repository",
+    (_name, createRepository) => {
+      const repository = createRepository();
+      repository.createWorkspace(createWorkspace());
+      repository.createTask(
+        createTask({
+          id: "running-scheduled-task",
+          sourceMark: "scheduled-1",
+          sourceType: "scheduled",
+          status: "running"
+        })
+      );
+      repository.createTask(
+        createTask({
+          id: "completed-scheduled-task",
+          sourceMark: "scheduled-1",
+          sourceType: "scheduled",
+          status: "completed"
+        })
+      );
+      repository.createTask(
+        createTask({
+          id: "running-manual-task",
+          sourceMark: null,
+          sourceType: "manual",
+          status: "running"
+        })
+      );
+
+      expect(
+        repository.findRunningTaskBySource({
+          sourceMark: "scheduled-1",
+          sourceType: "scheduled"
+        })?.id
+      ).toBe("running-scheduled-task");
+      expect(
+        repository.findRunningTaskBySource({
+          sourceMark: "missing",
+          sourceType: "scheduled"
+        })
+      ).toBeUndefined();
+    }
+  );
+});
+
 function createWorkspace(): WorkspaceRow {
   return {
     createdAt: "2026-06-11T00:00:00.000Z",
@@ -104,29 +171,29 @@ function createWorkspace(): WorkspaceRow {
   };
 }
 
-function createTask(input: {
-  inputToken: number;
-  outputToken: number;
-}): TaskRow {
+function createTask(input: Partial<TaskRow> = {}): TaskRow {
   return {
     approvalPolicy: "approval",
     createdAt: "2026-06-11T00:00:00.000Z",
     id: "task-one",
     initialUserMessage: "Hello",
-    inputToken: input.inputToken,
+    inputToken: 0,
     lastContinuedAt: "2026-06-11T00:00:00.000Z",
     lastModelId: "gpt-4.1",
     lastModelName: "gpt-4.1",
     lastModelProvider: "openai",
     lastModelProviderSource: "built_in",
-    outputToken: input.outputToken,
+    outputToken: 0,
     sessionCreatedAt: null,
     sessionId: null,
     sessionPath: null,
+    sourceMark: null,
+    sourceType: "manual",
     status: "completed",
     thinkingLevel: "medium",
     title: "Hello",
     updatedAt: "2026-06-11T00:00:00.000Z",
-    workspaceId: "workspace-one"
+    workspaceId: "workspace-one",
+    ...input
   };
 }

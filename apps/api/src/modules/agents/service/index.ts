@@ -10,11 +10,7 @@ import type { ActiveTaskRunRegistry } from "../task/active-run-registry";
 import type { AgentEventBus, AgentEventListener } from "../event/event-bus";
 import type { AgentRuntime } from "../runtime/type";
 import type { TaskTitleGenerator } from "../task/title-generator";
-import {
-  deleteTask,
-  type DeleteTaskResult,
-  renameTask
-} from "../task/actions";
+import { deleteTask, type DeleteTaskResult, renameTask } from "../task/actions";
 import { startTaskRun } from "../task/run-monitor";
 import { interruptTaskRun } from "./interrupt-task";
 import type {
@@ -287,6 +283,9 @@ export function createAgentsService(options: CreateAgentsServiceOptions): Agents
         sessionCreatedAt: null,
         sessionId: null,
         sessionPath: null,
+        sourceMark:
+          input.source?.type === "scheduled" ? input.source.mark ?? null : null,
+        sourceType: input.source?.type ?? "manual",
         status: "running",
         thinkingLevel: taskOptions.thinkingLevel,
         title: "",

@@ -159,6 +159,12 @@ export const tasks = sqliteTable(
     sessionCreatedAt: text("session_created_at"),
     sessionId: text("session_id"),
     sessionPath: text("session_path"),
+    sourceMark: text("source_mark"),
+    sourceType: text("source_type", {
+      enum: ["manual", "scheduled"]
+    })
+      .notNull()
+      .default("manual"),
     status: text("status", {
       enum: ["running", "completed", "error"]
     })
@@ -176,7 +182,43 @@ export const tasks = sqliteTable(
       .references(() => workspaces.id)
   },
   (table) => ({
+    tasksSourceIndex: index("tasks_source_idx").on(
+      table.sourceType,
+      table.sourceMark
+    ),
     workspaceIdIndex: index("tasks_workspace_id_idx").on(table.workspaceId)
+  })
+);
+
+export const scheduledAgentTasks = sqliteTable(
+  "scheduled_agent_tasks",
+  {
+    allowConcurrentRuns: integer("allow_concurrent_runs", {
+      mode: "boolean"
+    })
+      .notNull()
+      .default(false),
+    createdAt: text("created_at").notNull(),
+    cronExpression: text("cron_expression").notNull(),
+    enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+    id: text("id").primaryKey(),
+    lastRunAt: text("last_run_at"),
+    modelId: text("model_id").notNull(),
+    name: text("name").notNull(),
+    nextRunAt: text("next_run_at"),
+    prompt: text("prompt").notNull(),
+    provider: text("provider").notNull(),
+    thinkingLevel: text("thinking_level", {
+      enum: ["off", "minimal", "low", "medium", "high", "xhigh"]
+    })
+      .notNull()
+      .default("medium"),
+    timezone: text("timezone").notNull(),
+    updatedAt: text("updated_at").notNull(),
+    workspacePath: text("workspace_path").notNull()
+  },
+  (table) => ({
+    enabledIndex: index("scheduled_agent_tasks_enabled_idx").on(table.enabled)
   })
 );
 
@@ -239,6 +281,8 @@ export type WorkspaceRow = typeof workspaces.$inferSelect;
 export type NewWorkspaceRow = typeof workspaces.$inferInsert;
 export type TaskRow = typeof tasks.$inferSelect;
 export type NewTaskRow = typeof tasks.$inferInsert;
+export type ScheduledAgentTaskRow = typeof scheduledAgentTasks.$inferSelect;
+export type NewScheduledAgentTaskRow = typeof scheduledAgentTasks.$inferInsert;
 export type SubagentRow = typeof subagents.$inferSelect;
 export type NewSubagentRow = typeof subagents.$inferInsert;
 export type ModelTokenUsageHourlyRow = typeof modelTokenUsageHourly.$inferSelect;

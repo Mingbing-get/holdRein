@@ -244,6 +244,8 @@ function createTask(
     sessionCreatedAt: input.sessionPath ? "2026-06-11T00:00:00.000Z" : null,
     sessionId: input.sessionPath ? "session-one" : null,
     sessionPath: input.sessionPath ?? null,
+    sourceMark: null,
+    sourceType: "manual",
     status: input.status ?? "completed",
     thinkingLevel: "medium",
     title: "Hello",

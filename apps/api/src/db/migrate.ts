@@ -141,6 +141,8 @@ const CREATE_TASKS_TABLE_SQL = `
     session_id TEXT,
     session_path TEXT,
     session_created_at TEXT,
+    source_type TEXT NOT NULL DEFAULT 'manual' CHECK(source_type IN ('manual', 'scheduled')),
+    source_mark TEXT,
     status TEXT NOT NULL DEFAULT 'completed' CHECK(status IN ('running', 'completed', 'error')),
     thinking_level TEXT NOT NULL DEFAULT 'medium' CHECK(thinking_level IN ('off', 'minimal', 'low', 'medium', 'high', 'xhigh')),
     FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
@@ -150,6 +152,36 @@ const CREATE_TASKS_TABLE_SQL = `
 const CREATE_TASKS_WORKSPACE_ID_INDEX_SQL = `
   CREATE INDEX IF NOT EXISTS tasks_workspace_id_idx
   ON tasks (workspace_id)
+`;
+
+const CREATE_TASKS_SOURCE_INDEX_SQL = `
+  CREATE INDEX IF NOT EXISTS tasks_source_idx
+  ON tasks (source_type, source_mark)
+`;
+
+const CREATE_SCHEDULED_AGENT_TASKS_TABLE_SQL = `
+  CREATE TABLE IF NOT EXISTS scheduled_agent_tasks (
+    id TEXT PRIMARY KEY NOT NULL,
+    name TEXT NOT NULL,
+    workspace_path TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    model_id TEXT NOT NULL,
+    thinking_level TEXT NOT NULL DEFAULT 'medium' CHECK(thinking_level IN ('off', 'minimal', 'low', 'medium', 'high', 'xhigh')),
+    cron_expression TEXT NOT NULL,
+    timezone TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1 CHECK(enabled IN (0, 1)),
+    allow_concurrent_runs INTEGER NOT NULL DEFAULT 0 CHECK(allow_concurrent_runs IN (0, 1)),
+    last_run_at TEXT,
+    next_run_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  ) STRICT
+`;
+
+const CREATE_SCHEDULED_AGENT_TASKS_ENABLED_INDEX_SQL = `
+  CREATE INDEX IF NOT EXISTS scheduled_agent_tasks_enabled_idx
+  ON scheduled_agent_tasks (enabled)
 `;
 
 const CREATE_SUBAGENTS_TABLE_SQL = `
@@ -224,6 +256,14 @@ const ADD_TASKS_OUTPUT_TOKEN_COLUMN_SQL = `
   ALTER TABLE tasks ADD COLUMN output_token INTEGER NOT NULL DEFAULT 0
 `;
 
+const ADD_TASKS_SOURCE_TYPE_COLUMN_SQL = `
+  ALTER TABLE tasks ADD COLUMN source_type TEXT NOT NULL DEFAULT 'manual' CHECK(source_type IN ('manual', 'scheduled'))
+`;
+
+const ADD_TASKS_SOURCE_MARK_COLUMN_SQL = `
+  ALTER TABLE tasks ADD COLUMN source_mark TEXT
+`;
+
 const ADD_SUBAGENTS_SESSION_ID_COLUMN_SQL = `
   ALTER TABLE subagents ADD COLUMN session_id TEXT
 `;
@@ -268,6 +308,8 @@ export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
   sqlite.exec(CREATE_WORKSPACES_PATH_INDEX_SQL);
   sqlite.exec(CREATE_TASKS_TABLE_SQL);
   sqlite.exec(CREATE_TASKS_WORKSPACE_ID_INDEX_SQL);
+  sqlite.exec(CREATE_SCHEDULED_AGENT_TASKS_TABLE_SQL);
+  sqlite.exec(CREATE_SCHEDULED_AGENT_TASKS_ENABLED_INDEX_SQL);
   sqlite.exec(CREATE_SUBAGENTS_TABLE_SQL);
   sqlite.exec(CREATE_SUBAGENTS_TASK_ID_INDEX_SQL);
   sqlite.exec(CREATE_MODEL_TOKEN_USAGE_HOURLY_TABLE_SQL);
@@ -281,6 +323,9 @@ export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
   addColumnIfMissing(sqlite, ADD_TASKS_THINKING_LEVEL_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_INPUT_TOKEN_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_TASKS_OUTPUT_TOKEN_COLUMN_SQL);
+  addColumnIfMissing(sqlite, ADD_TASKS_SOURCE_TYPE_COLUMN_SQL);
+  addColumnIfMissing(sqlite, ADD_TASKS_SOURCE_MARK_COLUMN_SQL);
+  sqlite.exec(CREATE_TASKS_SOURCE_INDEX_SQL);
   addColumnIfMissing(sqlite, ADD_SUBAGENTS_AGENT_NAME_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_SUBAGENTS_SESSION_ID_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_SUBAGENTS_SESSION_PATH_COLUMN_SQL);

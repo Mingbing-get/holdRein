@@ -26,6 +26,10 @@ import {
   type CreateSkillsRouterOptions
 } from "../../modules/skills";
 import {
+  createScheduledTasksRouter,
+  type CreateScheduledTasksRouterOptions
+} from "../../modules/scheduled-tasks";
+import {
   createWorkspacesRouter,
   type CreateWorkspacesRouterOptions
 } from "../../modules/workspaces";
@@ -40,6 +44,7 @@ export interface CreateV1RouterOptions
     CreateModelProvidersRouterOptions,
     CreateModelProxiesRouterOptions,
     CreatePluginsRouterOptions,
+    CreateScheduledTasksRouterOptions,
     CreateSkillsRouterOptions,
     CreateUsageStatsRouterOptions,
     CreateWorkspacesRouterOptions {}
@@ -54,6 +59,7 @@ export function createV1Router(options: CreateV1RouterOptions = {}): Router {
   router.use(createModelProxiesRouter(options));
   router.use(createModelProvidersRouter(options));
   router.use("/plugins", createPluginsRouter(options));
+  router.use(createScheduledTasksRouter(options));
   router.use(createSkillsRouter(options));
   router.use(createUsageStatsRouter(options));
 

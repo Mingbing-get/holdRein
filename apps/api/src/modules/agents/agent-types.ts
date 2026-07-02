@@ -10,8 +10,14 @@ export interface StartAgentInput {
   prompt: string;
   provider: string;
   runtimeContributions?: BrowserRuntimeContributions;
+  source?: AgentTaskSourceInput;
   thinkingLevel?: ThinkingLevel;
   workspacePath: string;
+}
+
+export interface AgentTaskSourceInput {
+  mark?: string;
+  type: "manual" | "scheduled";
 }
 
 export interface RunAgentInput extends Omit<StartAgentInput, "approvalPolicy" | "thinkingLevel"> {

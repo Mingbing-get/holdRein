@@ -161,6 +161,8 @@ describe("agents service", () => {
         sessionCreatedAt: "2026-06-08T00:00:00.000Z",
         sessionId: "session-1",
         sessionPath: "/sessions/session-1.jsonl",
+        sourceMark: null,
+        sourceType: "manual",
         status: "running",
         title: "",
         workspaceId: result.workspace.id
@@ -180,6 +182,51 @@ describe("agents service", () => {
     });
     expect(repository.findTaskById(result.task.id)?.title).toBe(
       "Inspect project structure"
+    );
+  });
+
+  it("stores scheduled source metadata when starting an agent", async () => {
+    const repository = createInMemoryWorkspaceRepository();
+    const service = createAgentsService({
+      approvalStore: createAgentApprovalStore(),
+      eventBus: createAgentEventBus(),
+      now: () => new Date("2026-07-02T00:00:00.000Z"),
+      repository,
+      runtime: {
+        interrupt: vi.fn(),
+        listMessages: vi.fn(),
+        start: vi.fn().mockResolvedValue({
+          agentId: "agent-1",
+          session: {
+            createdAt: "2026-07-02T00:00:00.000Z",
+            id: "session-1",
+            path: "/sessions/session-1.jsonl"
+          },
+          status: "running"
+        })
+      },
+      titleGenerator: { generateTitle: vi.fn().mockResolvedValue("Scheduled check") }
+    });
+
+    const result = await service.startAgent({
+      modelId: "gpt-4.1",
+      prompt: "Run scheduled check",
+      provider: "openai",
+      source: { mark: "scheduled-1", type: "scheduled" },
+      workspacePath: "/tmp/workspace"
+    });
+
+    expect(result.task).toEqual(
+      expect.objectContaining({
+        sourceMark: "scheduled-1",
+        sourceType: "scheduled"
+      })
+    );
+    expect(repository.findTaskById(result.task.id)).toEqual(
+      expect.objectContaining({
+        sourceMark: "scheduled-1",
+        sourceType: "scheduled"
+      })
     );
   });
 
