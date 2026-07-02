@@ -7,6 +7,7 @@ import {
   Popconfirm,
   Switch,
   Table,
+  Tooltip,
   Typography
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
@@ -20,6 +21,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { describeCronExpression } from "../../components/cronExpressionInput";
 import "./scheduled-tasks-view.css";
 import { THINKING_LEVEL_OPTIONS } from "../chat/sender/task-options";
+import { getWorkspaceLabelFromPath } from "../chat/workspace-selector";
+import { fetchCachedProviderModels } from "../model-providers/model-provider-api";
 import {
   createScheduledTask,
   deleteScheduledTask,
@@ -60,6 +63,7 @@ export function ScheduledTasksView({
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [modelLabels, setModelLabels] = useState<Record<string, string>>({});
   const [tasks, setTasks] = useState<ScheduledTask[]>([]);
 
   const refreshTasks = useCallback(async () => {
@@ -78,6 +82,34 @@ export function ScheduledTasksView({
   useEffect(() => {
     void refreshTasks();
   }, [refreshTasks]);
+
+  useEffect(() => {
+    let isCurrent = true;
+    const providerIds = [...new Set(tasks.map((task) => task.provider))];
+
+    void Promise.all(
+      providerIds.map(async (providerId) => ({
+        models: await fetchCachedProviderModels(apiBaseUrl, providerId).catch(
+          () => []
+        ),
+        providerId
+      }))
+    ).then((providerModels) => {
+      if (!isCurrent) return;
+
+      setModelLabels(
+        Object.fromEntries(
+          providerModels.flatMap(({ models, providerId }) =>
+            models.map((model) => [createModelKey(providerId, model.id), model.name])
+          )
+        )
+      );
+    });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [apiBaseUrl, tasks]);
 
   const closeEditor = () => {
     setEditingTask(null);
@@ -136,12 +168,15 @@ export function ScheduledTasksView({
       {
         dataIndex: "workspacePath",
         ellipsis: true,
-        title: "Workspace",
+        render: (value: string) => (
+          <Tooltip title={value}>{getWorkspaceLabelFromPath(value)}</Tooltip>
+        ),
+        title: "工作空间",
         width: 260
       },
       {
         dataIndex: "modelId",
-        render: (_value, task) => formatModelName(task),
+        render: (_value, task) => formatModelName(task, modelLabels),
         title: "模型",
         width: 180
       },
@@ -155,7 +190,7 @@ export function ScheduledTasksView({
       {
         dataIndex: "cronExpression",
         render: (value: string) => formatCronExpression(value),
-        title: "Cron",
+        title: "执行周期",
         width: 220
       },
       {
@@ -226,7 +261,7 @@ export function ScheduledTasksView({
         width: 90
       }
     ],
-    [removeTask, toggleTask]
+    [modelLabels, removeTask, toggleTask]
   );
 
   return (
@@ -282,8 +317,18 @@ function formatDateTime(value: string | null): string {
   }).format(new Date(value));
 }
 
-function formatModelName(task: Pick<ScheduledTask, "modelId" | "provider">): string {
-  return `${task.provider}/${task.modelId}`;
+function formatModelName(
+  task: Pick<ScheduledTask, "modelId" | "provider">,
+  modelLabels: Readonly<Record<string, string>>
+): string {
+  return (
+    modelLabels[createModelKey(task.provider, task.modelId)] ??
+    createModelKey(task.provider, task.modelId)
+  );
+}
+
+function createModelKey(providerId: string, modelId: string): string {
+  return `${providerId}/${modelId}`;
 }
 
 function formatThinkingLevel(value: ScheduledTask["thinkingLevel"]): string {

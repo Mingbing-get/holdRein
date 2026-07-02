@@ -79,12 +79,12 @@ export function ScheduledTaskEditModal({
         }}
       >
         <Form.Item
-          label="Workspace Path"
+          label="工作空间"
           name="workspacePath"
-          rules={[{ message: "请选择 workspace", required: true }]}
+          rules={[{ message: "请选择工作空间", required: true }]}
         >
           <WorkspaceSelector
-            ariaLabel="Workspace Path"
+            ariaLabel="工作空间"
             apiBaseUrl={apiBaseUrl}
             className="scheduled-task-form-control"
             disabled={workspaceLocked}

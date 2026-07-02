@@ -18,6 +18,14 @@ import { AppWorkspaceProvider } from "../../app/app-workspace-context";
 import type { SelectedModel } from "../chat/model-selector";
 import { ScheduledTasksView } from "./scheduled-tasks-view";
 
+const { fetchCachedProviderModelsMock } = vi.hoisted(() => ({
+  fetchCachedProviderModelsMock: vi.fn()
+}));
+
+vi.mock("../model-providers/model-provider-api", () => ({
+  fetchCachedProviderModels: fetchCachedProviderModelsMock
+}));
+
 vi.mock("../chat/model-selector", () => ({
   ModelSelector: ({
     className,
@@ -50,6 +58,8 @@ vi.mock("../chat/model-selector", () => ({
 }));
 
 vi.mock("../chat/workspace-selector", () => ({
+  getWorkspaceLabelFromPath: (path: string) =>
+    path.replace(/\/+$/, "").split("/").filter(Boolean).at(-1) ?? path,
   WorkspaceSelector: ({
     ariaLabel,
     className,
@@ -112,6 +122,8 @@ describe("ScheduledTasksView", () => {
 
   beforeEach(() => {
     fetchMock.mockReset();
+    fetchCachedProviderModelsMock.mockReset();
+    fetchCachedProviderModelsMock.mockReturnValue(new Promise(() => undefined));
   });
 
   afterEach(() => {
@@ -173,6 +185,9 @@ describe("ScheduledTasksView", () => {
   });
 
   it("renders task model, thinking level, and cron expression as readable labels", async () => {
+    fetchCachedProviderModelsMock.mockResolvedValue([
+      { id: "gpt-4.1", name: "GPT-4.1", reasoning: false }
+    ]);
     fetchMock.mockResolvedValueOnce({
       json: async () => ({
         code: 0,
@@ -185,11 +200,42 @@ describe("ScheduledTasksView", () => {
     renderScheduledTasksView({ workspacePath: "/workspace" });
 
     expect(await screen.findByText("Every five minutes")).toBeVisible();
-    expect(screen.getByText("openai/gpt-4.1")).toBeVisible();
+    expect(await screen.findByText("GPT-4.1")).toBeVisible();
+    expect(screen.getByRole("columnheader", { name: "执行周期" })).toBeVisible();
+    expect(screen.queryByText("openai/gpt-4.1")).not.toBeInTheDocument();
     expect(screen.getByText("中")).toBeVisible();
     expect(screen.getByText("在晚上 08:19")).toBeVisible();
     expect(screen.queryByText("medium")).not.toBeInTheDocument();
     expect(screen.queryByText("*/5 * * * *")).not.toBeInTheDocument();
+  });
+
+  it("shows the workspace folder name and reveals the full path in a tooltip", async () => {
+    fetchMock.mockResolvedValueOnce({
+      json: async () => ({
+        code: 0,
+        data: [
+          createTaskFixture({
+            workspacePath: "/Users/mingbing/apps/ai-project/holdRein"
+          })
+        ],
+        msg: "ok"
+      }),
+      ok: true
+    } as Response);
+
+    renderScheduledTasksView({ workspacePath: "/workspace" });
+
+    const workspaceName = await screen.findByText("holdRein");
+    expect(screen.getByRole("columnheader", { name: "工作空间" })).toBeVisible();
+    expect(
+      screen.queryByText("/Users/mingbing/apps/ai-project/holdRein")
+    ).not.toBeInTheDocument();
+
+    fireEvent.mouseEnter(workspaceName);
+
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "/Users/mingbing/apps/ai-project/holdRein"
+    );
   });
 
   it("keeps fixed table columns opaque while horizontally scrolling", () => {
@@ -278,7 +324,7 @@ describe("ScheduledTasksView", () => {
     expect(screen.getByRole("button", { name: "选择模型" })).toHaveClass(
       "scheduled-task-form-control"
     );
-    expect(screen.getByLabelText("Workspace Path")).toHaveClass(
+    expect(screen.getByLabelText("工作空间")).toHaveClass(
       "scheduled-task-form-control"
     );
   });
@@ -311,7 +357,7 @@ describe("ScheduledTasksView", () => {
     fireEvent.click(await screen.findByRole("button", { name: "05" }));
     fireEvent.click(screen.getByRole("button", { name: /确\s*定/ }));
     fireEvent.click(screen.getByRole("button", { name: "选择模型" }));
-    expect(screen.getByLabelText("Workspace Path")).toBeDisabled();
+    expect(screen.getByLabelText("工作空间")).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "保存定时任务" }));
 
     await waitFor(() => {
