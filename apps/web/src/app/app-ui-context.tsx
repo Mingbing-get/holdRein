@@ -161,8 +161,43 @@ const ANTD_THEME_TOKEN = {
   fontFamily: "var(--app-font-family)"
 } as const;
 
+const ANTD_INPUT_COMPONENT_TOKENS = {
+  activeBg: "var(--app-color-bg-container)",
+  activeBorderColor: "var(--app-color-primary)",
+  activeShadow:
+    "0 0 0 2px color-mix(in srgb, var(--app-color-primary) 20%, transparent)",
+  borderRadius: 4,
+  colorBgContainer: "var(--app-color-bg-container)",
+  colorText: "var(--app-color-text)",
+  colorTextPlaceholder: "var(--app-color-input-placeholder)",
+  hoverBg: "var(--app-color-bg-container)",
+  hoverBorderColor: "var(--app-color-primary-hover)"
+} as const;
+
+const ANTD_SELECT_COMPONENT_TOKENS = {
+  activeBorderColor: "var(--app-color-primary)",
+  activeOutlineColor:
+    "color-mix(in srgb, var(--app-color-primary) 20%, transparent)",
+  borderRadius: 4,
+  borderRadiusLG: 16,
+  boxShadowSecondary:
+    "0 18px 36px color-mix(in srgb, var(--app-color-shadow) 32%, transparent)",
+  colorBgElevated: "var(--app-color-bg-elevated)",
+  colorText: "var(--app-color-text)",
+  colorTextPlaceholder: "var(--app-color-input-placeholder)",
+  hoverBorderColor: "var(--app-color-primary-hover)",
+  optionActiveBg: "var(--app-color-fill-secondary)",
+  optionSelectedBg:
+    "color-mix(in srgb, var(--app-color-primary) 16%, var(--app-color-bg-elevated))",
+  optionSelectedColor: "var(--app-color-text)",
+  selectorBg: "var(--app-color-bg-container)"
+} as const;
+
 const ANTD_COMPONENT_TOKENS = {
   Button: {
+    borderRadius: 4,
+    borderRadiusLG: 4,
+    borderRadiusSM: 4,
     defaultActiveBg: "var(--app-color-fill-secondary)",
     defaultActiveBorderColor: "var(--app-color-border-secondary)",
     defaultActiveColor: "var(--app-color-text)",
@@ -176,6 +211,12 @@ const ANTD_COMPONENT_TOKENS = {
     textTextActiveColor: "var(--app-color-text)",
     textTextColor: "var(--app-color-text)",
     textTextHoverColor: "var(--app-color-text)"
+  },
+  Input: ANTD_INPUT_COMPONENT_TOKENS,
+  InputNumber: {
+    ...ANTD_INPUT_COMPONENT_TOKENS,
+    handleBg: "var(--app-color-bg-container)",
+    handleBorderColor: "var(--app-color-border-secondary)"
   },
   Segmented: {
     borderRadius: 4,
@@ -191,6 +232,7 @@ const ANTD_COMPONENT_TOKENS = {
     trackBg: "var(--app-color-fill-secondary)",
     trackPadding: 1
   },
+  Select: ANTD_SELECT_COMPONENT_TOKENS,
   Tag: {
     defaultBg: "var(--app-color-fill-secondary)",
     defaultColor: "var(--app-color-text-secondary)"

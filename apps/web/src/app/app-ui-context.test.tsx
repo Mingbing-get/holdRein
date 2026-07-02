@@ -2,12 +2,17 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { PropsWithChildren } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 interface CapturedTheme {
   components?: {
     Button?: {
+      borderRadius?: number;
+      borderRadiusLG?: number;
+      borderRadiusSM?: number;
       defaultActiveBg?: string;
       defaultActiveBorderColor?: string;
       defaultActiveColor?: string;
@@ -21,6 +26,45 @@ interface CapturedTheme {
       textTextColor?: string;
       textTextHoverColor?: string;
       textHoverBg?: string;
+    };
+    Input?: {
+      activeBg?: string;
+      activeBorderColor?: string;
+      activeShadow?: string;
+      colorBgContainer?: string;
+      colorText?: string;
+      colorTextPlaceholder?: string;
+      hoverBg?: string;
+      hoverBorderColor?: string;
+      borderRadius?: number;
+    };
+    InputNumber?: {
+      activeBg?: string;
+      activeBorderColor?: string;
+      activeShadow?: string;
+      colorBgContainer?: string;
+      colorText?: string;
+      colorTextPlaceholder?: string;
+      handleBg?: string;
+      handleBorderColor?: string;
+      hoverBg?: string;
+      hoverBorderColor?: string;
+      borderRadius?: number;
+    };
+    Select?: {
+      activeBorderColor?: string;
+      activeOutlineColor?: string;
+      borderRadius?: number;
+      borderRadiusLG?: number;
+      colorBgElevated?: string;
+      colorText?: string;
+      colorTextPlaceholder?: string;
+      hoverBorderColor?: string;
+      optionActiveBg?: string;
+      optionSelectedBg?: string;
+      optionSelectedColor?: string;
+      selectorBg?: string;
+      boxShadowSecondary?: string;
     };
     Segmented?: {
       itemActiveBg?: string;
@@ -44,6 +88,23 @@ interface CapturedSegmentedConfig {
 
 let capturedTheme: CapturedTheme | null = null;
 let capturedSegmentedConfig: CapturedSegmentedConfig | null = null;
+
+const EXPECTED_INPUT_COMPONENT_TOKENS = {
+  activeBg: "var(--app-color-bg-container)",
+  activeBorderColor: "var(--app-color-primary)",
+  activeShadow:
+    "0 0 0 2px color-mix(in srgb, var(--app-color-primary) 20%, transparent)",
+  borderRadius: 4,
+  colorBgContainer: "var(--app-color-bg-container)",
+  colorText: "var(--app-color-text)",
+  colorTextPlaceholder: "var(--app-color-input-placeholder)",
+  hoverBg: "var(--app-color-bg-container)",
+  hoverBorderColor: "var(--app-color-primary-hover)"
+} as const;
+
+function getWebSourcePath(pathFromWebSrc: string): string {
+  return join(process.cwd(), "apps", "web", "src", pathFromWebSrc);
+}
 
 vi.mock("antd", () => ({
   App: ({ children }: PropsWithChildren) => <>{children}</>,
@@ -166,6 +227,9 @@ describe("AppUiProvider", () => {
     fireEvent.click(screen.getByRole("button", { name: "Toggle dark mode" }));
 
     expect(capturedTheme?.components?.Button).toMatchObject({
+      borderRadius: 4,
+      borderRadiusLG: 4,
+      borderRadiusSM: 4,
       defaultActiveBg: "var(--app-color-fill-secondary)",
       defaultActiveBorderColor: "var(--app-color-border-secondary)",
       defaultActiveColor: "var(--app-color-text)",
@@ -199,6 +263,68 @@ describe("AppUiProvider", () => {
       border: "1px solid var(--app-color-border-secondary)",
       borderRadius: 4
     });
+  });
+
+  it("configures inputs globally with app theme variables", () => {
+    render(
+      <AppUiProvider>
+        <ThemeModeToggle />
+      </AppUiProvider>
+    );
+
+    expect(capturedTheme?.components?.Input).toMatchObject(
+      EXPECTED_INPUT_COMPONENT_TOKENS
+    );
+  });
+
+  it("configures input numbers globally with app theme variables", () => {
+    render(
+      <AppUiProvider>
+        <ThemeModeToggle />
+      </AppUiProvider>
+    );
+
+    expect(capturedTheme?.components?.InputNumber).toMatchObject({
+      ...EXPECTED_INPUT_COMPONENT_TOKENS,
+      handleBg: "var(--app-color-bg-container)",
+      handleBorderColor: "var(--app-color-border-secondary)"
+    });
+  });
+
+  it("configures selects globally to match input triggers and sender popup styles", () => {
+    render(
+      <AppUiProvider>
+        <ThemeModeToggle />
+      </AppUiProvider>
+    );
+
+    expect(capturedTheme?.components?.Select).toMatchObject({
+      activeBorderColor: "var(--app-color-primary)",
+      activeOutlineColor:
+        "color-mix(in srgb, var(--app-color-primary) 20%, transparent)",
+      borderRadius: 4,
+      borderRadiusLG: 16,
+      boxShadowSecondary:
+        "0 18px 36px color-mix(in srgb, var(--app-color-shadow) 32%, transparent)",
+      colorBgElevated: "var(--app-color-bg-elevated)",
+      colorText: "var(--app-color-text)",
+      colorTextPlaceholder: "var(--app-color-input-placeholder)",
+      hoverBorderColor: "var(--app-color-primary-hover)",
+      optionActiveBg: "var(--app-color-fill-secondary)",
+      optionSelectedBg:
+        "color-mix(in srgb, var(--app-color-primary) 16%, var(--app-color-bg-elevated))",
+      optionSelectedColor: "var(--app-color-text)",
+      selectorBg: "var(--app-color-bg-container)"
+    });
+  });
+
+  it("adds sender-style borders to select dropdown popups", () => {
+    const themeCssSource = readFileSync(getWebSourcePath("app/theme.css"), "utf8");
+
+    expect(themeCssSource).toContain(".ant-select-dropdown");
+    expect(themeCssSource).toContain(
+      "border: 1px solid var(--app-color-border-secondary);"
+    );
   });
 });
 

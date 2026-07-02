@@ -83,3 +83,7 @@ body {
 .ant-input-affix-wrapper input::placeholder {
   color: var(--app-color-input-placeholder);
 }
+
+.ant-select-dropdown {
+  border: 1px solid var(--app-color-border-secondary);
+}
