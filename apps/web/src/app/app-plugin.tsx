@@ -141,7 +141,8 @@ export function AppPluginProvider({
               ? {}
               : { description: tool.description }),
             inputSchema: tool.params,
-            name: tool.name
+            name: tool.name,
+            pluginId
           }))
         ]
       }))
@@ -150,14 +151,20 @@ export function AppPluginProvider({
     if (skills?.length) {
       setRuntimeContributions((old) => ({
         ...old,
-        skills: [...old.skills, ...skills]
+        skills: [
+          ...old.skills,
+          ...skills.map((skill) => ({ ...skill, pluginId }))
+        ]
       }))
     }
     const systemPrompts = contribution.systemPrompts
     if (systemPrompts?.length) {
       setRuntimeContributions((old) => ({
         ...old,
-        systemPrompts: [...old.systemPrompts, ...systemPrompts]
+        systemPrompts: [
+          ...old.systemPrompts,
+          ...systemPrompts.map((content) => ({ content, pluginId }))
+        ]
       }))
     }
     if (contribution.senderSuggestions?.length) {

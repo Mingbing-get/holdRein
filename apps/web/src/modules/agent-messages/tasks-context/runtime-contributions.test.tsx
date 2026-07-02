@@ -7,7 +7,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AppPluginProvider, useAppPlugins } from "../../../app/app-plugin";
 import { AppUiProvider } from "../../../app/app-ui-context";
-import { AppWorkspaceProvider } from "../../../app/app-workspace-context";
+import {
+  AppWorkspaceProvider,
+  useAppWorkspace
+} from "../../../app/app-workspace-context";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 import { AgentTasksProvider, useAgentTasks } from ".";
 import type { AgentMessageFetcher } from "../api";
@@ -40,6 +43,50 @@ describe("AgentTasksProvider runtime contributions", () => {
         prompt: "Inspect",
         provider: "openai",
         runtimeContributions: expectedRuntimeContributions(),
+        workspacePath: "/workspace"
+      });
+    });
+  });
+
+  it("filters plugin runtime contributions by active plugin ids", async () => {
+    const fetcher = createRuntimeContributionFetcher();
+
+    render(
+      <AppUiProvider>
+        <AppWorkspaceProvider>
+          <AppPluginProvider>
+            <AgentTasksProvider apiBaseUrl="" fetcher={fetcher}>
+              <WorkspaceSettingsSetter />
+              <RegisterRuntimePlugin />
+              <RegisterDisabledRuntimePlugin />
+              <StartWhenRuntimeContributionsReady />
+            </AgentTasksProvider>
+          </AppPluginProvider>
+        </AppWorkspaceProvider>
+      </AppUiProvider>
+    );
+
+    await waitFor(() => {
+      expect(requestBodyFor(fetcher, "/api/v1/agents/start")).toEqual({
+        modelId: "gpt-4.1",
+        prompt: "Inspect",
+        provider: "openai",
+        runtimeContributions: {
+          skills: [
+            {
+              content: "# Browser Context",
+              name: "browser-context"
+            }
+          ],
+          systemPrompts: ["Prefer browser tools."],
+          tools: [
+            {
+              description: "Read selected browser text.",
+              inputSchema: { type: "object" },
+              name: "read_browser_selection"
+            }
+          ]
+        },
         workspacePath: "/workspace"
       });
     });
@@ -103,6 +150,62 @@ function RegisterRuntimePlugin() {
       pluginRegistry.register(plugin);
     }
   }, [pluginRegistry]);
+
+  return null;
+}
+
+function RegisterDisabledRuntimePlugin() {
+  const { pluginRegistry } = useAppPlugins();
+
+  useEffect(() => {
+    const plugin: WebPlugin.Plugin = {
+      contributionResolver: {
+        skills: [
+          {
+            content: "# Hidden Context",
+            name: "hidden-context"
+          }
+        ],
+        systemPrompts: ["Do not send this prompt."],
+        tools: [
+          {
+            executor: () => "Hidden",
+            name: "hidden_browser_tool",
+            params: { type: "object" } as WebPlugin.BrowserRuntimeTool["params"]
+          }
+        ]
+      },
+      id: "disabled-runtime-demo"
+    };
+
+    if (!pluginRegistry.has(plugin.id)) {
+      pluginRegistry.register(plugin);
+    }
+  }, [pluginRegistry]);
+
+  return null;
+}
+
+function WorkspaceSettingsSetter() {
+  const { setWorkspaceSetting, setWorkspaces } = useAppWorkspace();
+
+  useEffect(() => {
+    setWorkspaces([
+      {
+        hasMore: false,
+        id: "workspace-1",
+        name: "Workspace",
+        path: "/workspace",
+        tasks: []
+      }
+    ]);
+    setWorkspaceSetting({
+      pluginOptions: [],
+      setting: { activePlugins: ["runtime-demo"] },
+      skillOptions: [],
+      workspaceId: "workspace-1"
+    });
+  }, [setWorkspaceSetting, setWorkspaces]);
 
   return null;
 }

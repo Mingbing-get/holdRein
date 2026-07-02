@@ -1,26 +1,30 @@
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
   useState
 } from "react";
-import type { PropsWithChildren } from "react";
 
 import { useOptionalAppPlugins } from "../../../app/app-plugin";
 import { useAppWorkspace } from "../../../app/app-workspace-context";
+import {
+  AgentTasksContext,
+  EMPTY_MESSAGES,
+  EMPTY_RUNTIME_CONTRIBUTIONS
+} from "./context";
+import type {
+  AgentTasksContextValue,
+  AgentTasksProviderProps
+} from "./context";
 import { getActiveAgentId } from "../agent-task-workspace-utils";
 import {
   cancelAgentTask,
   continueAgentTask,
   decideAgentApproval,
-  fetchTaskMessages,
   fetchTaskTitle,
   startAgentTask
 } from "../api";
-import type { AgentMessageFetcher } from "../api";
 import {
   getAgentEventMessage,
   startAgentEventSubscription
@@ -39,7 +43,8 @@ import {
   requestLocalBrowserApproval
 } from "./local-browser-approval";
 import type { LocalApprovalResolver } from "./local-browser-approval";
-import { discoverSubagents, initializeSubagentsFromHistory, reduceSubagentEvent, reduceSubagentResumeEvent } from "../subagent-message/store";
+import { useAgentTaskSubscriptions } from "./subscriptions";
+import { discoverSubagents, reduceSubagentResumeEvent } from "../subagent-message/store";
 import type {
   AgentEventEnvelope,
   AgentTaskState,
@@ -50,36 +55,7 @@ import type {
 } from "../agent-message-types";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
-const EMPTY_MESSAGES: WebPlugin.AgentMessage[] = [];
-const EMPTY_RUNTIME_CONTRIBUTIONS: WebPlugin.ResolvedBrowserRuntimeContributions =
-  { skills: [], systemPrompts: [], tools: [] };
-
-export interface AgentTasksContextValue {
-  cancelTask: (taskId: string) => Promise<void>;
-  continueTask: (taskId: string, input: ContinueTaskInput) => Promise<void>;
-  decideApproval: (
-    taskId: string,
-    approvalId: string,
-    approved: boolean,
-    reason?: string
-  ) => Promise<void>;
-  getSubagentMessages: (agentId: string) => WebPlugin.AgentMessage[];
-  getSubagentStatus: (
-    agentId: string
-  ) => SubagentStatesById[string]["status"] | undefined;
-  getPendingApproval: (taskId: string) => PendingApproval | undefined;
-  getTaskState: (taskId: string) => AgentTaskState | undefined;
-  hasPendingApproval: (taskId: string) => boolean;
-  hasUnreadCompletion: (taskId: string) => boolean;
-  startTask: (input: StartTaskInput) => Promise<void>;
-}
-
-export interface AgentTasksProviderProps extends PropsWithChildren {
-  apiBaseUrl: string;
-  fetcher?: AgentMessageFetcher;
-}
-
-const AgentTasksContext = createContext<AgentTasksContextValue | null>(null);
+export { useAgentTasks } from "./context";
 
 export function AgentTasksProvider({
   apiBaseUrl,
@@ -87,7 +63,7 @@ export function AgentTasksProvider({
   fetcher = fetch
 }: AgentTasksProviderProps) {
   const {
-    state: { activeTaskId, workspaces },
+    state: { activeTaskId, workspaceSettings, workspaces },
     updateTaskStatus,
     updateTaskTitle,
     upsertStartedTask
@@ -119,50 +95,6 @@ export function AgentTasksProvider({
       return next;
     });
   }, [activeTaskId]);
-
-  useEffect(
-    () => () => {
-      for (const controller of subscriptions.current.values()) {
-        controller.abort();
-      }
-      subscriptions.current.clear();
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (!activeTaskId || loadedTaskIds.current.has(activeTaskId)) return;
-    if (taskStates[activeTaskId]?.messages.length) {
-      loadedTaskIds.current.add(activeTaskId);
-      return;
-    }
-    loadedTaskIds.current.add(activeTaskId);
-
-    void fetchTaskMessages(apiBaseUrl, activeTaskId, fetcher)
-      .then((history) => {
-        setSubagentMessagesById((current) =>
-          discoverSubagents(
-            initializeSubagentsFromHistory(
-              current,
-              history.subagents,
-              activeTaskId
-            ),
-            history.messages,
-            activeTaskId
-          )
-        );
-        setTaskStates((current) => ({
-          ...current,
-          [activeTaskId]: reduceAgentTaskState(
-            current[activeTaskId] ?? createInitialAgentTaskState(activeTaskId),
-            { messages: history.messages, type: "history_loaded" }
-          )
-        }));
-      })
-      .catch(() => {
-        loadedTaskIds.current.delete(activeTaskId);
-      });
-  }, [activeTaskId, apiBaseUrl, fetcher, taskStates]);
 
   const handleTaskStatus = useCallback(
     (taskId: string, status: "completed" | "error") => {
@@ -240,68 +172,24 @@ export function AgentTasksProvider({
     [handleTaskStatus]
   );
 
-  useEffect(() => {
-    for (const task of workspaces.flatMap((workspace) => workspace.tasks)) {
-      if (
-        task.status !== "running" ||
-        !task.activeAgentId ||
-        subscriptions.current.has(task.activeAgentId)
-      ) {
-        continue;
-      }
-
-      startAgentEventSubscription({
-        agentId: task.activeAgentId,
-        apiBaseUrl,
-        fetcher,
-        onError: (error) => handleTaskSubscriptionError(task.id, error),
-        onEvent: (event) => handleTaskEvent(task.id, event),
-        subscriptions
-      });
-    }
-  }, [
+  useAgentTaskSubscriptions({
+    activeTaskId,
     apiBaseUrl,
     fetcher,
     handleTaskEvent,
     handleTaskSubscriptionError,
+    loadedTaskIds,
+    setSubagentMessagesById,
+    setTaskStates,
+    subagentMessagesById,
+    subscriptions,
+    taskStates,
     workspaces
-  ]);
-
-  useEffect(() => {
-    for (const [agentId, subagent] of Object.entries(subagentMessagesById)) {
-      if (subagent.status !== "running") continue;
-      if (subscriptions.current.has(agentId)) continue;
-      startAgentEventSubscription({
-        agentId,
-        apiBaseUrl,
-        fetcher,
-        onError: () => undefined,
-        onEvent: (event) => {
-          setSubagentMessagesById((current) =>
-            reduceSubagentEvent(current, agentId, event)
-          );
-          if (event.type === "approval_requested" && subagent.taskId) {
-            setTaskStates((current) => ({
-              ...current,
-              [subagent.taskId]: reduceAgentTaskState(
-                current[subagent.taskId] ??
-                  createInitialAgentTaskState(subagent.taskId),
-                { event, type: "event_received" }
-              )
-            }));
-          }
-        },
-        subscriptions
-      });
-    }
-  }, [apiBaseUrl, fetcher, subagentMessagesById]);
+  });
 
   const startTask = useCallback(
     async (input: StartTaskInput) => {
-      const requestInput = mergeStartTaskRuntimeContributions(
-        input,
-        pluginRuntimeContributions
-      );
+      const requestInput = mergeStartTaskRuntimeContributions(input, pluginRuntimeContributions, { workspaceSettings, workspaces });
       const result = await startAgentTask(apiBaseUrl, requestInput, fetcher);
       const taskId = result.task.id;
 
@@ -340,16 +228,15 @@ export function AgentTasksProvider({
       handleTaskSubscriptionError,
       pluginRuntimeContributions,
       updateTaskTitle,
-      upsertStartedTask
+      upsertStartedTask,
+      workspaceSettings,
+      workspaces
     ]
   );
 
   const continueTask = useCallback(
     async (taskId: string, input: ContinueTaskInput) => {
-      const requestInput = mergeContinueTaskRuntimeContributions(
-        input,
-        pluginRuntimeContributions
-      );
+      const requestInput = mergeContinueTaskRuntimeContributions(input, pluginRuntimeContributions, taskId, { workspaceSettings, workspaces });
       const result = await continueAgentTask(
         apiBaseUrl,
         taskId,
@@ -379,7 +266,9 @@ export function AgentTasksProvider({
       handleTaskEvent,
       handleTaskSubscriptionError,
       pluginRuntimeContributions,
-      updateTaskStatus
+      updateTaskStatus,
+      workspaceSettings,
+      workspaces
     ]
   );
 
@@ -484,14 +373,4 @@ export function AgentTasksProvider({
       {children}
     </AgentTasksContext.Provider>
   );
-}
-
-export function useAgentTasks(): AgentTasksContextValue {
-  const value = useContext(AgentTasksContext);
-
-  if (!value) {
-    throw new Error("useAgentTasks must be used within an AgentTasksProvider");
-  }
-
-  return value;
 }

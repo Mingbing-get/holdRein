@@ -147,7 +147,7 @@ describe("AppPluginProvider", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("runtime-contributions")).toHaveTextContent(
-        "read_browser_selection,browser-context,Prefer browser tools."
+        "read_browser_selection:runtime-demo,browser-context:runtime-demo,Prefer browser tools.:runtime-demo"
       );
     });
 
@@ -304,7 +304,7 @@ describe("AppPluginProvider", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("runtime-contributions")).toHaveTextContent(
-        "read_browser_selection,browser-context,Prefer browser tools."
+        "read_browser_selection:runtime-demo,browser-context:runtime-demo,Prefer browser tools.:runtime-demo"
       );
     });
 
@@ -470,9 +470,9 @@ function RuntimeContributionProbe() {
   return (
     <div data-testid="runtime-contributions">
       {[
-        runtimeContributions.tools.map((tool) => tool.name).join("|"),
-        runtimeContributions.skills.map((skill) => skill.name).join("|"),
-        runtimeContributions.systemPrompts.join("|")
+        runtimeContributions.tools.map((tool) => `${tool.name}:${tool.pluginId ?? ""}`).join("|"),
+        runtimeContributions.skills.map((skill) => `${skill.name}:${skill.pluginId ?? ""}`).join("|"),
+        runtimeContributions.systemPrompts.map((prompt) => `${prompt.content}:${prompt.pluginId ?? ""}`).join("|")
       ].join(",")}
     </div>
   );

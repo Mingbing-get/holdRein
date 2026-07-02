@@ -246,10 +246,25 @@ export namespace WebPlugin {
     readonly tools?: readonly BrowserRuntimeToolSchema[];
   }
 
+  export interface ResolvedBrowserRuntimeToolSchema
+    extends BrowserRuntimeToolSchema {
+    readonly pluginId?: string;
+  }
+
+  export interface ResolvedBrowserRuntimeSkill
+    extends BrowserRuntimeSkill {
+    readonly pluginId?: string;
+  }
+
+  export interface ResolvedBrowserRuntimeSystemPrompt {
+    readonly content: string;
+    readonly pluginId?: string;
+  }
+
   export interface ResolvedBrowserRuntimeContributions {
-    readonly skills: readonly BrowserRuntimeSkill[];
-    readonly systemPrompts: readonly string[];
-    readonly tools: readonly BrowserRuntimeToolSchema[];
+    readonly skills: readonly ResolvedBrowserRuntimeSkill[];
+    readonly systemPrompts: readonly ResolvedBrowserRuntimeSystemPrompt[];
+    readonly tools: readonly ResolvedBrowserRuntimeToolSchema[];
   }
 
   export type SettingsPanelProps = Readonly<Record<string, never>>;
