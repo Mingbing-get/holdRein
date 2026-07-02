@@ -14,6 +14,11 @@ export interface CreateWorkspacesRouterOptions {
   workspacesService?: WorkspacesService;
 }
 
+interface UpdateWorkspaceSettingBody {
+  activePlugins?: unknown;
+  activeSkills?: unknown;
+}
+
 const DEFAULT_TASK_PAGE_LIMIT = 20;
 const MAX_TASK_PAGE_LIMIT = 100;
 
@@ -69,6 +74,78 @@ export function createWorkspacesRouter(
   );
 
   router.get(
+    "/workspaces/:workspaceId/setting",
+    async (
+      request: Request<{ workspaceId: string }>,
+      response: Response,
+      next: NextFunction
+    ): Promise<void> => {
+      try {
+        const result = await getService().getWorkspaceSetting(
+          request.params.workspaceId
+        );
+
+        if (!result) {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.notFound,
+            "Unknown workspace"
+          );
+          return;
+        }
+
+        sendSuccess(response, result);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  router.patch(
+    "/workspaces/:workspaceId/setting",
+    async (
+      request: Request<
+        { workspaceId: string },
+        unknown,
+        UpdateWorkspaceSettingBody
+      >,
+      response: Response,
+      next: NextFunction
+    ): Promise<void> => {
+      const input = parseUpdateWorkspaceSettingBody(request.body);
+
+      if (!input) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "activePlugins and activeSkills must be arrays of strings or null"
+        );
+        return;
+      }
+
+      try {
+        const result = await getService().updateWorkspaceSetting(
+          request.params.workspaceId,
+          input
+        );
+
+        if (!result) {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.notFound,
+            "Unknown workspace"
+          );
+          return;
+        }
+
+        sendSuccess(response, result);
+      } catch (error) {
+        next(error);
+      }
+    }
+  );
+
+  router.get(
     "/workspaces/:workspaceId/tasks",
     (request: Request<{ workspaceId: string }>, response: Response): void => {
       const afterLastContinuedAt = getStringQuery(
@@ -115,6 +192,37 @@ export function createWorkspacesRouter(
   );
 
   return router;
+}
+
+function parseUpdateWorkspaceSettingBody(
+  body: UpdateWorkspaceSettingBody
+): {
+  activePlugins?: readonly string[] | null;
+  activeSkills?: readonly string[] | null;
+} | null {
+  if (
+    !isValidSettingField(body.activePlugins) ||
+    !isValidSettingField(body.activeSkills)
+  ) {
+    return null;
+  }
+
+  return {
+    ...(body.activePlugins === undefined
+      ? {}
+      : { activePlugins: body.activePlugins }),
+    ...(body.activeSkills === undefined ? {} : { activeSkills: body.activeSkills })
+  };
+}
+
+function isValidSettingField(
+  value: unknown
+): value is readonly string[] | null | undefined {
+  return (
+    value === undefined ||
+    value === null ||
+    (Array.isArray(value) && value.every((item) => typeof item === "string"))
+  );
 }
 
 function getStringQuery(value: Request["query"][string]): string | null {

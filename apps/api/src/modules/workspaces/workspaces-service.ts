@@ -1,6 +1,8 @@
 import { unlink } from "node:fs/promises";
 
 import type { ActiveTaskRunRegistry } from "../agents/task/active-run-registry";
+import type { PluginsService } from "../plugins/plugins-types";
+import type { SkillsService } from "../skills";
 import type {
   RecentWorkspaceTasksResult,
   WorkspaceNavigationTaskRow,
@@ -9,11 +11,19 @@ import type {
   WorkspaceWithTasksSummary
 } from "./workspace-types";
 import type { WorkspaceRepository } from "./workspace-repository";
+import {
+  createWorkspaceSettingsService,
+  type UpdateWorkspaceSettingInput,
+  type WorkspaceSettingDetails
+} from "./workspace-settings";
 
 export interface CreateWorkspacesServiceOptions {
   activeTaskRuns?: ActiveTaskRunRegistry;
   now?: () => Date;
+  pluginsService?: PluginsService;
   repository: WorkspaceRepository;
+  skillDirs?: string[];
+  skillsService?: SkillsService;
 }
 
 export interface ListWorkspaceTasksAfterOptions {
@@ -24,10 +34,17 @@ export interface ListWorkspaceTasksAfterOptions {
 
 export interface WorkspacesService {
   deleteWorkspace: (workspaceId: string) => Promise<DeleteWorkspaceResult>;
+  getWorkspaceSetting: (
+    workspaceId: string
+  ) => Promise<WorkspaceSettingDetails | undefined>;
   listRecentWorkspaceTasks: () => RecentWorkspaceTasksResult;
   listWorkspaceTasksAfter: (
     options: ListWorkspaceTasksAfterOptions
   ) => WorkspaceTaskPageResult | undefined;
+  updateWorkspaceSetting: (
+    workspaceId: string,
+    input: UpdateWorkspaceSettingInput
+  ) => Promise<{ setting: WorkspaceSettingDetails["setting"]; workspaceId: string } | undefined>;
 }
 
 export interface DeleteWorkspaceResult {
@@ -41,8 +58,18 @@ const RECENT_TASK_FETCH_LIMIT = 500;
 export function createWorkspacesService({
   activeTaskRuns,
   now = () => new Date(),
-  repository
+  pluginsService,
+  repository,
+  skillDirs,
+  skillsService
 }: CreateWorkspacesServiceOptions): WorkspacesService {
+  const workspaceSettingsService = createWorkspaceSettingsService({
+    ...(pluginsService === undefined ? {} : { pluginsService }),
+    repository,
+    ...(skillDirs === undefined ? {} : { skillDirs }),
+    ...(skillsService === undefined ? {} : { skillsService })
+  });
+
   return {
     deleteWorkspace: async (workspaceId) => {
       if (!repository.findWorkspaceById(workspaceId)) {
@@ -66,6 +93,7 @@ export function createWorkspacesService({
 
       return { status: "deleted", workspaceId };
     },
+    getWorkspaceSetting: workspaceSettingsService.getWorkspaceSetting,
     listRecentWorkspaceTasks: () => {
       const cutoff = new Date(now().getTime() - RECENT_TASK_WINDOW_MS).toISOString();
       const workspaceSummaries = sortWorkspacesByCreatedAtDescending(
@@ -125,7 +153,8 @@ export function createWorkspacesService({
           ),
         workspaceId
       };
-    }
+    },
+    updateWorkspaceSetting: workspaceSettingsService.updateWorkspaceSetting
   };
 }
 

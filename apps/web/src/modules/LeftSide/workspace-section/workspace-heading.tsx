@@ -4,7 +4,8 @@ import {
   EllipsisOutlined,
   FolderOpenOutlined,
   FolderOutlined,
-  PlusOutlined
+  PlusOutlined,
+  SettingOutlined
 } from "@ant-design/icons";
 import { Button, Dropdown, Typography } from "antd";
 
@@ -13,6 +14,7 @@ import type { WorkspaceSummary } from "../workspace-nav-types";
 export interface WorkspaceHeadingProps {
   collapsed: boolean;
   onDelete: () => void;
+  onOpenSettings: () => void;
   onStartNewConversation: () => void;
   onToggleCollapsed: () => void;
   workspace: WorkspaceSummary;
@@ -21,6 +23,7 @@ export interface WorkspaceHeadingProps {
 export function WorkspaceHeading({
   collapsed,
   onDelete,
+  onOpenSettings,
   onStartNewConversation,
   onToggleCollapsed,
   workspace
@@ -96,6 +99,12 @@ export function WorkspaceHeading({
                 key: "new-conversation",
                 label: "新对话",
                 onClick: onStartNewConversation
+              },
+              {
+                icon: <SettingOutlined data-testid="workspace-settings-icon" />,
+                key: "settings",
+                label: "设置",
+                onClick: onOpenSettings
               },
               {
                 danger: true,

@@ -30,6 +30,38 @@ export interface WorkspaceNavigationResponse {
   workspaces: WorkspaceSummary[];
 }
 
+export interface WorkspaceSetting {
+  activePlugins?: string[];
+  activeSkills?: string[];
+}
+
+export interface WorkspaceSettingOption {
+  id: string;
+  name: string;
+}
+
+export interface WorkspaceSkillSettingOption extends WorkspaceSettingOption {
+  path: string;
+  source: "global" | "workspace";
+}
+
+export interface WorkspaceSettingResponse {
+  pluginOptions: WorkspaceSettingOption[];
+  setting: WorkspaceSetting;
+  skillOptions: WorkspaceSkillSettingOption[];
+  workspaceId: string;
+}
+
+export interface UpdateWorkspaceSettingRequest {
+  activePlugins?: string[] | null;
+  activeSkills?: string[] | null;
+}
+
+export interface UpdateWorkspaceSettingResponse {
+  setting: WorkspaceSetting;
+  workspaceId: string;
+}
+
 export interface WorkspaceTaskPageResponse {
   hasMore: boolean;
   tasks: WorkspaceTaskSummary[];

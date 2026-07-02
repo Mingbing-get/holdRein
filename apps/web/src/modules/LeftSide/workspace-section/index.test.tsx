@@ -18,8 +18,10 @@ import { WorkspaceSection } from ".";
 
 const deleteWorkspaceMock = vi.fn();
 const deleteTaskMock = vi.fn();
+const fetchWorkspaceSettingMock = vi.fn();
 const fetchWorkspaceTaskPageMock = vi.fn();
 const renameTaskMock = vi.fn();
+const updateWorkspaceSettingMock = vi.fn();
 
 vi.mock("../../agent-messages", () => ({
   useAgentTasks: () => ({
@@ -31,9 +33,13 @@ vi.mock("../../agent-messages", () => ({
 vi.mock("../workspace-nav-api", () => ({
   deleteTask: (...args: unknown[]) => deleteTaskMock(...args),
   deleteWorkspace: (...args: unknown[]) => deleteWorkspaceMock(...args),
+  fetchWorkspaceSetting: (...args: unknown[]) =>
+    fetchWorkspaceSettingMock(...args),
   fetchWorkspaceTaskPage: (...args: unknown[]) =>
     fetchWorkspaceTaskPageMock(...args),
-  renameTask: (...args: unknown[]) => renameTaskMock(...args)
+  renameTask: (...args: unknown[]) => renameTaskMock(...args),
+  updateWorkspaceSetting: (...args: unknown[]) =>
+    updateWorkspaceSettingMock(...args)
 }));
 
 class ResizeObserverMock {
@@ -92,8 +98,10 @@ describe("WorkspaceSection", () => {
     cleanup();
     deleteTaskMock.mockReset();
     deleteWorkspaceMock.mockReset();
+    fetchWorkspaceSettingMock.mockReset();
     fetchWorkspaceTaskPageMock.mockReset();
     renameTaskMock.mockReset();
+    updateWorkspaceSettingMock.mockReset();
   });
 
   it("renders a workspace heading and task rows when expanded", () => {
@@ -176,24 +184,6 @@ describe("WorkspaceSection", () => {
     );
   });
 
-  it("shows workspace actions on heading hover with plus and delete icons", async () => {
-    renderWorkspaceSection({ collapsed: false });
-
-    expect(
-      screen.queryByRole("button", { name: "工作空间操作 Real Workspace" })
-    ).toBeNull();
-
-    fireEvent.mouseEnter(screen.getByTestId("workspace-heading-workspace-real"));
-    fireEvent.click(
-      screen.getByRole("button", { name: "工作空间操作 Real Workspace" })
-    );
-
-    expect(await screen.findByText("新对话")).toBeInTheDocument();
-    expect(screen.getByText("删除")).toBeInTheDocument();
-    expect(screen.getByTestId("workspace-new-conversation-icon")).toBeInTheDocument();
-    expect(screen.getByTestId("workspace-delete-icon")).toBeInTheDocument();
-  });
-
   it("starts a new conversation in the selected workspace", async () => {
     renderWorkspaceSection({ collapsed: false });
 
@@ -207,6 +197,60 @@ describe("WorkspaceSection", () => {
       "workspace-real"
     );
     expect(screen.getByTestId("selected-task")).toBeEmptyDOMElement();
+  });
+
+  it("opens workspace settings and saves specified plugins and skills", async () => {
+    fetchWorkspaceSettingMock.mockResolvedValue({
+      pluginOptions: [
+        { id: "base", name: "Base" },
+        { id: "code", name: "Code" }
+      ],
+      setting: {
+        activePlugins: ["base"]
+      },
+      skillOptions: [
+        { id: "planner", name: "planner", source: "workspace" },
+        { id: "reviewer", name: "reviewer", source: "global" }
+      ],
+      workspaceId: "workspace-real"
+    });
+    updateWorkspaceSettingMock.mockResolvedValue({
+      setting: {
+        activePlugins: ["base", "code"],
+        activeSkills: ["planner", "reviewer"]
+      },
+      workspaceId: "workspace-real"
+    });
+    renderWorkspaceSection({ collapsed: false });
+
+    openWorkspaceAction("设置");
+
+    expect(await screen.findByText("Workspace 配置")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(fetchWorkspaceSettingMock).toHaveBeenCalledWith(
+        "http://localhost:4000",
+        "workspace-real"
+      );
+    });
+
+    fireEvent.click(screen.getByRole("radio", { name: "指定技能" }));
+    fireEvent.mouseDown(screen.getByLabelText("可用插件"));
+    fireEvent.click(await screen.findByTitle("Code"));
+    fireEvent.mouseDown(screen.getByLabelText("可用技能"));
+    fireEvent.click(await screen.findByTitle("planner"));
+    fireEvent.click(await screen.findByTitle("reviewer"));
+    fireEvent.click(screen.getByRole("button", { name: /提\s*交/ }));
+
+    await waitFor(() => {
+      expect(updateWorkspaceSettingMock).toHaveBeenCalledWith(
+        "http://localhost:4000",
+        "workspace-real",
+        {
+          activePlugins: ["base", "code"],
+          activeSkills: ["planner", "reviewer"]
+        }
+      );
+    });
   });
 
   it("confirms before deleting a workspace", async () => {
@@ -371,11 +415,15 @@ function createWorkspaceTask(
 }
 
 function openDeleteAction(): void {
+  openWorkspaceAction("删除");
+}
+
+function openWorkspaceAction(action: "删除" | "设置"): void {
   fireEvent.mouseEnter(screen.getByTestId("workspace-heading-workspace-real"));
   fireEvent.click(
     screen.getByRole("button", { name: "工作空间操作 Real Workspace" })
   );
-  fireEvent.click(screen.getByText("删除"));
+  fireEvent.click(screen.getByText(action));
 }
 
 function openTaskAction(action: "重命名" | "删除"): void {

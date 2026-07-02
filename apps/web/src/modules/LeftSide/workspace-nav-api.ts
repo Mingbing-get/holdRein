@@ -1,6 +1,9 @@
 import type {
   ApiResponse,
+  UpdateWorkspaceSettingRequest,
+  UpdateWorkspaceSettingResponse,
   WorkspaceNavigationResponse,
+  WorkspaceSettingResponse,
   WorkspaceTaskPageResponse
 } from "./workspace-nav-types";
 
@@ -58,6 +61,24 @@ export async function fetchWorkspaceNavigation(
   return payload.data;
 }
 
+export async function fetchWorkspaceSetting(
+  apiBaseUrl: string,
+  workspaceId: string,
+  fetcher: WorkspaceNavigationFetcher = fetch
+): Promise<WorkspaceSettingResponse> {
+  const response = await fetcher(
+    createWorkspaceSettingUrl(apiBaseUrl, workspaceId)
+  );
+  const payload =
+    (await response.json()) as ApiResponse<WorkspaceSettingResponse | null>;
+
+  if (!response.ok || !payload.data) {
+    throw new Error(payload.msg || "Failed to load workspace setting");
+  }
+
+  return payload.data;
+}
+
 export async function fetchWorkspaceTaskPage(
   apiBaseUrl: string,
   workspaceId: string,
@@ -102,6 +123,30 @@ export async function renameTask(
   );
 }
 
+export async function updateWorkspaceSetting(
+  apiBaseUrl: string,
+  workspaceId: string,
+  request: UpdateWorkspaceSettingRequest,
+  fetcher: WorkspaceNavigationFetcher = fetch
+): Promise<UpdateWorkspaceSettingResponse> {
+  const response = await fetcher(
+    createWorkspaceSettingUrl(apiBaseUrl, workspaceId),
+    {
+      body: JSON.stringify(request),
+      headers: { "Content-Type": "application/json" },
+      method: "PATCH"
+    }
+  );
+  const payload =
+    (await response.json()) as ApiResponse<UpdateWorkspaceSettingResponse | null>;
+
+  if (!response.ok || !payload.data) {
+    throw new Error(payload.msg || "Failed to update workspace setting");
+  }
+
+  return payload.data;
+}
+
 export function createWorkspaceNavigationUrl(apiBaseUrl: string): string {
   return `${apiBaseUrl.replace(/\/$/, "")}/api/v1/workspaces/recent-tasks`;
 }
@@ -118,6 +163,13 @@ function createWorkspaceTaskPageUrl(
   });
 
   return `${apiBaseUrl.replace(/\/$/, "")}/api/v1/workspaces/${encodeURIComponent(workspaceId)}/tasks?${params.toString()}`;
+}
+
+function createWorkspaceSettingUrl(
+  apiBaseUrl: string,
+  workspaceId: string
+): string {
+  return `${apiBaseUrl.replace(/\/$/, "")}/api/v1/workspaces/${encodeURIComponent(workspaceId)}/setting`;
 }
 
 async function requestTaskMutation<T>(

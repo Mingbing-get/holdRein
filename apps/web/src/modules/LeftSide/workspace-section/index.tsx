@@ -7,14 +7,19 @@ import { useAgentTasks } from "../../agent-messages";
 import {
   deleteTask,
   deleteWorkspace,
+  fetchWorkspaceSetting,
   fetchWorkspaceTaskPage,
-  renameTask
+  renameTask,
+  updateWorkspaceSetting
 } from "../workspace-nav-api";
 import type {
+  UpdateWorkspaceSettingRequest,
+  WorkspaceSettingResponse,
   WorkspaceSummary,
   WorkspaceTaskSummary
 } from "../workspace-nav-types";
 import { WorkspaceHeading } from "./workspace-heading";
+import { WorkspaceSettingsModal } from "./workspace-settings-modal";
 import { getTaskVisibleTitle, WorkspaceTask } from "./workspace-task";
 
 const WORKSPACE_TASK_PAGE_SIZE = 20;
@@ -50,7 +55,14 @@ export function WorkspaceSection({
   );
   const [editingTitle, setEditingTitle] = useState("");
   const [isLoadingMoreTasks, setIsLoadingMoreTasks] = useState(false);
+  const [isLoadingWorkspaceSetting, setIsLoadingWorkspaceSetting] =
+    useState(false);
+  const [isSubmittingWorkspaceSetting, setIsSubmittingWorkspaceSetting] =
+    useState(false);
   const [workspaceCollapsed, setWorkspaceCollapsed] = useState(false);
+  const [workspaceSetting, setWorkspaceSetting] =
+    useState<WorkspaceSettingResponse | null>(null);
+  const [workspaceSettingOpen, setWorkspaceSettingOpen] = useState(false);
   const isActiveWorkspace = workspace.id === activeWorkspaceId;
   const lastTask = workspace.tasks.at(-1);
   const canLoadMoreTasks =
@@ -153,12 +165,57 @@ export function WorkspaceSection({
     }
   };
 
+  const openWorkspaceSettings = async () => {
+    setWorkspaceSettingOpen(true);
+    setIsLoadingWorkspaceSetting(true);
+
+    try {
+      setWorkspaceSetting(
+        await fetchWorkspaceSetting(apiBaseUrl, workspace.id)
+      );
+    } catch (error) {
+      void message.error(
+        error instanceof Error ? error.message : "加载工作空间配置失败"
+      );
+    } finally {
+      setIsLoadingWorkspaceSetting(false);
+    }
+  };
+
+  const submitWorkspaceSettings = async (
+    request: UpdateWorkspaceSettingRequest
+  ) => {
+    setIsSubmittingWorkspaceSetting(true);
+
+    try {
+      const result = await updateWorkspaceSetting(
+        apiBaseUrl,
+        workspace.id,
+        request
+      );
+      setWorkspaceSetting((currentSetting) =>
+        currentSetting
+          ? { ...currentSetting, setting: result.setting }
+          : currentSetting
+      );
+      setWorkspaceSettingOpen(false);
+      void message.success("Workspace 配置已保存");
+    } catch (error) {
+      void message.error(
+        error instanceof Error ? error.message : "保存工作空间配置失败"
+      );
+    } finally {
+      setIsSubmittingWorkspaceSetting(false);
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
       {!collapsed ? (
         <WorkspaceHeading
           collapsed={workspaceCollapsed}
           onDelete={confirmDeleteWorkspace}
+          onOpenSettings={() => void openWorkspaceSettings()}
           onStartNewConversation={() => {
             startNewConversation(workspace.id);
             openWorkspaceNavigation();
@@ -229,6 +286,17 @@ export function WorkspaceSection({
           value={editingTitle}
         />
       </Modal>
+      <WorkspaceSettingsModal
+        isLoading={isLoadingWorkspaceSetting}
+        isSubmitting={isSubmittingWorkspaceSetting}
+        onCancel={() => {
+          setWorkspaceSettingOpen(false);
+        }}
+        onSubmit={(request) => void submitWorkspaceSettings(request)}
+        open={workspaceSettingOpen}
+        setting={workspaceSetting}
+        workspaceName={workspace.name}
+      />
     </div>
   );
 }

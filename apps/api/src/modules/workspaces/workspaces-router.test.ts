@@ -1,5 +1,8 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 import { createApp } from "../../app";
 import {
@@ -10,6 +13,9 @@ import {
 const NOW = new Date("2026-06-08T12:00:00.000Z");
 
 async function createTestApp() {
+  const rootDir = await mkdtemp(join(tmpdir(), "hold-rein-workspaces-router-"));
+  const alphaPath = join(rootDir, "alpha");
+  const betaPath = join(rootDir, "beta");
   const repository = createInMemoryWorkspaceRepository({
     tasks: [
       createTask({
@@ -51,27 +57,54 @@ async function createTestApp() {
         createdAt: "2026-06-01T00:00:00.000Z",
         id: "workspace-alpha",
         name: "Alpha Workspace",
-        path: "/tmp/alpha",
+        path: alphaPath,
         updatedAt: "2026-06-08T00:00:00.000Z"
       },
       {
         createdAt: "2026-06-02T00:00:00.000Z",
         id: "workspace-beta",
         name: "Beta Workspace",
-        path: "/tmp/beta",
+        path: betaPath,
         updatedAt: "2026-06-08T00:00:00.000Z"
       }
     ]
   });
 
-  return createApp({
-    workspacesService: createWorkspacesService({ now: () => NOW, repository })
-  });
+  return {
+    alphaPath,
+    app: await createApp({
+      workspacesService: createWorkspacesService({
+        now: () => NOW,
+        pluginsService: {
+          installPlugin: async () => {
+            throw new Error("not implemented");
+          },
+          listDisabledPluginIds: async () => [],
+          listPlugins: async () => [],
+          setPluginDisabled: async () => null,
+          uninstallPlugin: async () => false
+        },
+        repository,
+        skillsService: {
+          installSkill: async () => {
+            throw new Error("not implemented");
+          },
+          listEnabledSkillDirs: async () => [],
+          listSkills: async () => [],
+          load: async () => undefined,
+          setSkillDisabled: async () => null,
+          uninstallSkill: async () => false
+        }
+      })
+    }),
+    betaPath,
+    rootDir
+  };
 }
 
 describe("workspace routes", () => {
   it("deletes a workspace and all of its tasks", async () => {
-    const app = await createTestApp();
+    const { app } = await createTestApp();
     const deleteResponse = await request(app).delete(
       "/api/v1/workspaces/workspace-beta"
     );
@@ -94,7 +127,8 @@ describe("workspace routes", () => {
   });
 
   it("returns not found when deleting an unknown workspace", async () => {
-    const response = await request(await createTestApp()).delete(
+    const { app } = await createTestApp();
+    const response = await request(app).delete(
       "/api/v1/workspaces/missing"
     );
 
@@ -107,7 +141,8 @@ describe("workspace routes", () => {
   });
 
   it("returns conflict when deleting a workspace with a running task", async () => {
-    const response = await request(await createTestApp()).delete(
+    const { app } = await createTestApp();
+    const response = await request(app).delete(
       "/api/v1/workspaces/workspace-alpha"
     );
 
@@ -120,7 +155,8 @@ describe("workspace routes", () => {
   });
 
   it("lists every workspace with tasks continued in the last seven days", async () => {
-    const response = await request(await createTestApp()).get(
+    const { app, alphaPath, betaPath } = await createTestApp();
+    const response = await request(app).get(
       "/api/v1/workspaces/recent-tasks"
     );
 
@@ -134,7 +170,7 @@ describe("workspace routes", () => {
             hasMore: false,
             id: "workspace-beta",
             name: "Beta Workspace",
-            path: "/tmp/beta",
+            path: betaPath,
             tasks: [
               expect.objectContaining({
                 id: "task-beta-recent",
@@ -148,7 +184,7 @@ describe("workspace routes", () => {
             hasMore: true,
             id: "workspace-alpha",
             name: "Alpha Workspace",
-            path: "/tmp/alpha",
+            path: alphaPath,
             tasks: [
               expect.objectContaining({
                 id: "task-recent-2",
@@ -170,7 +206,8 @@ describe("workspace routes", () => {
   });
 
   it("lists the next page for one workspace after a lastContinuedAt cursor", async () => {
-    const response = await request(await createTestApp()).get(
+    const { app } = await createTestApp();
+    const response = await request(app).get(
       "/api/v1/workspaces/workspace-alpha/tasks?afterLastContinuedAt=2026-06-08T08%3A00%3A00.000Z&limit=1"
     );
 
@@ -193,7 +230,8 @@ describe("workspace routes", () => {
   });
 
   it("rejects invalid workspace task pagination query values", async () => {
-    const response = await request(await createTestApp()).get(
+    const { app } = await createTestApp();
+    const response = await request(app).get(
       "/api/v1/workspaces/workspace-alpha/tasks?afterLastContinuedAt=not-a-date&limit=0"
     );
 
@@ -202,6 +240,81 @@ describe("workspace routes", () => {
       code: 40000,
       msg: "afterLastContinuedAt must be an ISO date string",
       data: null
+    });
+  });
+
+  it("reads a workspace setting file with plugin and skill options", async () => {
+    const { alphaPath, app } = await createTestApp();
+    await mkdir(join(alphaPath, ".hold-rein"), { recursive: true });
+    await writeFile(
+      join(alphaPath, ".hold-rein", "setting.json"),
+      `${JSON.stringify({
+        activePlugins: ["@hold-rein/base"],
+        activeSkills: ["planner"]
+      })}\n`,
+      "utf8"
+    );
+    await mkdir(join(alphaPath, ".hold-rein", "skills", "planner"), {
+      recursive: true
+    });
+    await writeFile(
+      join(alphaPath, ".hold-rein", "skills", "planner", "SKILL.md"),
+      "---\nname: planner\n---\n",
+      "utf8"
+    );
+
+    const response = await request(app).get(
+      "/api/v1/workspaces/workspace-alpha/setting"
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toMatchObject({
+      setting: {
+        activePlugins: ["@hold-rein/base"],
+        activeSkills: ["planner"]
+      },
+      skillOptions: [
+        {
+          id: "planner",
+          name: "planner",
+          source: "workspace"
+        }
+      ],
+      workspaceId: "workspace-alpha"
+    });
+  });
+
+  it("updates a workspace setting file and removes global fields", async () => {
+    const { alphaPath, app } = await createTestApp();
+    await mkdir(join(alphaPath, ".hold-rein"), { recursive: true });
+    await writeFile(
+      join(alphaPath, ".hold-rein", "setting.json"),
+      `${JSON.stringify({
+        activePlugins: ["old-plugin"],
+        activeSkills: ["old-skill"],
+        model: "keep-me"
+      })}\n`,
+      "utf8"
+    );
+
+    const response = await request(app)
+      .patch("/api/v1/workspaces/workspace-alpha/setting")
+      .send({
+        activePlugins: ["@hold-rein/base"],
+        activeSkills: null
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.setting).toEqual({
+      activePlugins: ["@hold-rein/base"]
+    });
+    await expect(
+      readFile(join(alphaPath, ".hold-rein", "setting.json"), "utf8").then(
+        (content) => JSON.parse(content) as unknown
+      )
+    ).resolves.toEqual({
+      activePlugins: ["@hold-rein/base"],
+      model: "keep-me"
     });
   });
 });
