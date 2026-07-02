@@ -35,6 +35,7 @@ export interface SelectedModel {
 
 interface ModelSelectorProps {
   apiBaseUrl: string;
+  className?: string;
   onChange?: (value: SelectedModel) => void;
   style?: CSSProperties;
   value?: SelectedModel | undefined;
@@ -107,6 +108,7 @@ function setProviderModels(
 
 export function ModelSelector({
   apiBaseUrl,
+  className,
   onChange,
   style,
   variant = "borderless",
@@ -192,6 +194,7 @@ export function ModelSelector({
         suffixIcon={<DownOutlined style={{ color: "var(--app-color-text)" }} />}
         value={cascaderValue ?? []}
         variant={variant}
+        {...(className === undefined ? {} : { className })}
         onChange={(nextValue, selectedOptions) => {
           if (!isModelSelection(nextValue)) {
             return;

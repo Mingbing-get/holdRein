@@ -85,6 +85,7 @@ export function ScheduledTaskEditModal({
           <WorkspaceSelector
             ariaLabel="Workspace Path"
             apiBaseUrl={apiBaseUrl}
+            className="scheduled-task-form-control"
             disabled={workspaceLocked}
             style={{ width: "100%" }}
             variant="outlined"
@@ -93,6 +94,7 @@ export function ScheduledTaskEditModal({
         <Form.Item label="模型" required>
           <ModelSelector
             apiBaseUrl={apiBaseUrl}
+            className="scheduled-task-form-control"
             onChange={(value) => {
               form.setFieldsValue({
                 modelId: value.modelId,

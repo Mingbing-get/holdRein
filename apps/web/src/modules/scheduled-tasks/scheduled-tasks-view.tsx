@@ -1,22 +1,23 @@
 import {
   App,
   Button,
+  ConfigProvider,
   Empty,
   Flex,
   Popconfirm,
+  Switch,
   Table,
-  Tag,
   Typography
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
   DeleteOutlined,
   EditOutlined,
-  PlusOutlined,
-  StopOutlined
+  PlusOutlined
 } from "@ant-design/icons";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import "./scheduled-tasks-view.css";
 import {
   createScheduledTask,
   deleteScheduledTask,
@@ -26,6 +27,22 @@ import {
 } from "./scheduled-tasks-api";
 import { ScheduledTaskEditModal } from "./scheduled-task-edit-modal";
 import type { ScheduledTask, ScheduledTaskInput } from "./scheduled-tasks-types";
+
+const scheduledTasksTableTheme = {
+  components: {
+    Table: {
+      borderColor: "var(--app-color-border-secondary)",
+      colorBgContainer: "var(--app-color-bg-container)",
+      colorFillAlter: "var(--app-color-scheduled-table-header-bg)",
+      colorSplit: "var(--app-color-border-secondary)",
+      fixedHeaderSortActiveBg: "var(--app-color-scheduled-table-header-bg)",
+      headerBg: "var(--app-color-scheduled-table-header-bg)",
+      headerColor: "var(--app-color-text)",
+      headerSplitColor: "var(--app-color-border-secondary)",
+      rowHoverBg: "var(--app-color-scheduled-table-row-hover-bg)"
+    }
+  }
+} as const;
 
 interface ScheduledTasksViewProps {
   apiBaseUrl: string;
@@ -115,16 +132,6 @@ export function ScheduledTasksView({
         width: 180
       },
       {
-        dataIndex: "enabled",
-        render: (enabled: boolean) => (
-          <Tag color={enabled ? "success" : "default"}>
-            {enabled ? "启用" : "禁用"}
-          </Tag>
-        ),
-        title: "状态",
-        width: 90
-      },
-      {
         dataIndex: "workspacePath",
         ellipsis: true,
         title: "Workspace",
@@ -166,6 +173,20 @@ export function ScheduledTasksView({
         width: 170
       },
       {
+        dataIndex: "enabled",
+        fixed: "right",
+        render: (_enabled: boolean, task) => (
+          <Switch
+            aria-label={`${task.enabled ? "禁用" : "启用"} ${task.name}`}
+            checked={task.enabled}
+            onChange={() => void toggleTask(task)}
+            size="small"
+          />
+        ),
+        title: "状态",
+        width: 90
+      },
+      {
         fixed: "right",
         render: (_value, task) => (
           <Flex gap={4}>
@@ -179,19 +200,6 @@ export function ScheduledTasksView({
               size="small"
               type="text"
             />
-            <Popconfirm
-              cancelText="取消"
-              okText={task.enabled ? "确认禁用" : "确认启用"}
-              onConfirm={() => void toggleTask(task)}
-              title={`确认${task.enabled ? "禁用" : "启用"} ${task.name}？`}
-            >
-              <Button
-                aria-label={`${task.enabled ? "禁用" : "启用"} ${task.name}`}
-                icon={<StopOutlined />}
-                size="small"
-                type="text"
-              />
-            </Popconfirm>
             <Popconfirm
               cancelText="取消"
               okButtonProps={{ danger: true }}
@@ -210,7 +218,7 @@ export function ScheduledTasksView({
           </Flex>
         ),
         title: "操作",
-        width: 130
+        width: 90
       }
     ],
     [removeTask, toggleTask]
@@ -219,14 +227,9 @@ export function ScheduledTasksView({
   return (
     <Flex gap={12} style={{ minHeight: 0 }} vertical>
       <Flex align="center" justify="space-between">
-        <Flex gap={4} vertical>
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            定时任务
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            {workspacePath ? `Workspace: ${workspacePath}` : "全部 workspace"}
-          </Typography.Text>
-        </Flex>
+        <Typography.Title level={4} style={{ margin: 0 }}>
+          定时任务
+        </Typography.Title>
         <Button
           aria-label="新增定时任务"
           icon={<PlusOutlined />}
@@ -239,21 +242,20 @@ export function ScheduledTasksView({
           新增定时任务
         </Button>
       </Flex>
-      <Table<ScheduledTask>
-        bordered
-        columns={columns}
-        dataSource={tasks}
-        loading={isLoading}
-        locale={{ emptyText: <Empty description="还没有定时任务。" /> }}
-        pagination={false}
-        rowKey="id"
-        scroll={{ x: 1500 }}
-        size="small"
-        style={{
-          background: "var(--app-color-bg-container)",
-          borderColor: "var(--app-color-border-secondary)"
-        }}
-      />
+      <ConfigProvider theme={scheduledTasksTableTheme}>
+        <Table<ScheduledTask>
+          bordered
+          className="scheduled-tasks-table"
+          columns={columns}
+          dataSource={tasks}
+          loading={isLoading}
+          locale={{ emptyText: <Empty description="还没有定时任务。" /> }}
+          pagination={false}
+          rowKey="id"
+          scroll={{ x: 1500 }}
+          size="small"
+        />
+      </ConfigProvider>
       <ScheduledTaskEditModal
         apiBaseUrl={apiBaseUrl}
         isSubmitting={isSubmitting}

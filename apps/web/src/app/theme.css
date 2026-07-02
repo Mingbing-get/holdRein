@@ -17,6 +17,8 @@
   --app-color-danger: #c93c46;
   --app-color-danger-hover: #b4232d;
   --app-color-success: #2e9b55;
+  --app-color-scheduled-table-header-bg: #eef2f8;
+  --app-color-scheduled-table-row-hover-bg: #edf5ff;
   --app-color-chart-input: #1f6feb;
   --app-color-chart-output: #2e9b55;
   --app-color-chart-accent: #7a5af8;
@@ -51,6 +53,8 @@
   --app-color-danger: #ff9ca2;
   --app-color-danger-hover: #ffb4b9;
   --app-color-success: #65d98b;
+  --app-color-scheduled-table-header-bg: #1a2a3e;
+  --app-color-scheduled-table-row-hover-bg: #20334a;
   --app-color-chart-input: #7cc7ff;
   --app-color-chart-output: #65d98b;
   --app-color-chart-accent: #b8a6ff;

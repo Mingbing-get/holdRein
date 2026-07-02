@@ -1,0 +1,50 @@
+.scheduled-tasks-table {
+  background-color: var(--app-color-bg-container);
+  border-color: var(--app-color-border-secondary);
+}
+
+.scheduled-tasks-table .ant-table,
+.scheduled-tasks-table .ant-table-container,
+.scheduled-tasks-table .ant-table-cell {
+  background-color: var(--app-color-bg-container);
+  border-color: var(--app-color-border-secondary);
+  color: var(--app-color-text);
+}
+
+.scheduled-tasks-table .ant-table-thead > tr > th {
+  background-color: var(--app-color-scheduled-table-header-bg);
+  border-color: var(--app-color-border-secondary);
+  color: var(--app-color-text);
+}
+
+.scheduled-tasks-table .ant-table-tbody > tr.ant-table-row:hover > td,
+.scheduled-tasks-table .ant-table-cell-row-hover {
+  background-color: var(--app-color-scheduled-table-row-hover-bg);
+}
+
+.scheduled-tasks-table .ant-table-cell-fix-left,
+.scheduled-tasks-table .ant-table-cell-fix-right {
+  background-color: var(--app-color-bg-container);
+}
+
+.scheduled-tasks-table .ant-table-tbody > tr.ant-table-row:hover > td.ant-table-cell-fix-left,
+.scheduled-tasks-table .ant-table-tbody > tr.ant-table-row:hover > td.ant-table-cell-fix-right,
+.scheduled-tasks-table .ant-table-cell-fix-left.ant-table-cell-row-hover,
+.scheduled-tasks-table .ant-table-cell-fix-right.ant-table-cell-row-hover {
+  background-color: var(--app-color-scheduled-table-row-hover-bg);
+}
+
+.scheduled-tasks-table .ant-table-thead .ant-table-cell-fix-left,
+.scheduled-tasks-table .ant-table-thead .ant-table-cell-fix-right {
+  background-color: var(--app-color-scheduled-table-header-bg);
+}
+
+.scheduled-task-form-control.ant-select,
+.scheduled-task-form-control.ant-cascader {
+  min-height: 32px;
+}
+
+.scheduled-task-form-control .ant-select-selector {
+  align-items: center;
+  min-height: 32px;
+}

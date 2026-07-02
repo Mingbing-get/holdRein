@@ -15,6 +15,7 @@ interface WorkspaceOption {
 interface WorkspaceSelectorProps {
   ariaLabel?: string;
   apiBaseUrl: string;
+  className?: string;
   disabled?: boolean;
   onChange?: (path: string) => void;
   style?: CSSProperties;
@@ -45,6 +46,7 @@ export function getWorkspaceLabelFromPath(path: string): string {
 export function WorkspaceSelector({
   ariaLabel = "工作空间",
   apiBaseUrl,
+  className,
   disabled = false,
   onChange,
   style,
@@ -163,6 +165,7 @@ export function WorkspaceSelector({
           suffixIcon={<DownOutlined style={{ color: "var(--app-color-text)" }} />}
           value={selectedWorkspacePath ?? null}
           variant={variant}
+          {...(className === undefined ? {} : { className })}
           onChange={handleChangeWorkspace}
           onOpenChange={setSelectOpen}
         />
