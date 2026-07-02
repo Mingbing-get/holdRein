@@ -179,7 +179,6 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
         extra={
           <Space size={12} wrap>
             <Segmented<ModelUsageRange>
-              className="usage-stats-segmented"
               onChange={setModelRange}
               options={[
                 { label: "近 24 小时", value: "24h" },
@@ -188,7 +187,6 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
               value={modelRange}
             />
             <Segmented<TokenTypeDisplayMode>
-              className="usage-stats-segmented"
               onChange={(value) => {
                 setMergeTokenTypes(value === "merged");
               }}
@@ -199,7 +197,6 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
               value={mergeTokenTypes ? "merged" : "split"}
             />
             <Segmented<ModelDisplayMode>
-              className="usage-stats-segmented"
               onChange={(value) => {
                 setMergeModels(value === "total");
               }}
@@ -229,7 +226,6 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
         extra={
           <Space size={12} wrap>
             <Segmented<TaskUsageRange>
-              className="usage-stats-segmented"
               onChange={setTaskRange}
               options={[
                 { label: "近一周", value: "7d" },
@@ -238,7 +234,6 @@ export function UsageStatsView({ apiBaseUrl }: UsageStatsViewProps) {
               value={taskRange}
             />
             <Segmented<TaskUsageGroupBy>
-              className="usage-stats-segmented"
               onChange={setTaskGroupBy}
               options={[
                 { label: "按任务", value: "task" },

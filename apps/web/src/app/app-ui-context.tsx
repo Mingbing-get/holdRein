@@ -177,9 +177,30 @@ const ANTD_COMPONENT_TOKENS = {
     textTextColor: "var(--app-color-text)",
     textTextHoverColor: "var(--app-color-text)"
   },
+  Segmented: {
+    borderRadius: 4,
+    borderRadiusSM: 4,
+    boxShadowTertiary:
+      "0 1px 4px color-mix(in srgb, var(--app-color-shadow) 55%, transparent)",
+    itemActiveBg: "var(--app-color-fill-tertiary)",
+    itemColor: "var(--app-color-text-secondary)",
+    itemHoverBg: "transparent",
+    itemHoverColor: "var(--app-color-text)",
+    itemSelectedBg: "var(--app-color-bg-elevated)",
+    itemSelectedColor: "var(--app-color-text)",
+    trackBg: "var(--app-color-fill-secondary)",
+    trackPadding: 1
+  },
   Tag: {
     defaultBg: "var(--app-color-fill-secondary)",
     defaultColor: "var(--app-color-text-secondary)"
+  }
+} as const;
+
+const ANTD_SEGMENTED_CONFIG = {
+  style: {
+    border: "1px solid var(--app-color-border-secondary)",
+    borderRadius: 4
   }
 } as const;
 
@@ -344,6 +365,7 @@ export function AppUiProvider({ children }: PropsWithChildren) {
 
   return (
     <ConfigProvider
+      segmented={ANTD_SEGMENTED_CONFIG}
       theme={{
         algorithm: THEME_ALGORITHMS[state.themeMode],
         cssVar: {

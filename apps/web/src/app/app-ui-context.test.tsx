@@ -22,18 +22,41 @@ interface CapturedTheme {
       textTextHoverColor?: string;
       textHoverBg?: string;
     };
+    Segmented?: {
+      itemActiveBg?: string;
+      itemColor?: string;
+      itemHoverBg?: string;
+      itemHoverColor?: string;
+      itemSelectedBg?: string;
+      itemSelectedColor?: string;
+      trackBg?: string;
+      trackPadding?: string | number;
+    };
+  };
+}
+
+interface CapturedSegmentedConfig {
+  style?: {
+    border?: string;
+    borderRadius?: number;
   };
 }
 
 let capturedTheme: CapturedTheme | null = null;
+let capturedSegmentedConfig: CapturedSegmentedConfig | null = null;
 
 vi.mock("antd", () => ({
   App: ({ children }: PropsWithChildren) => <>{children}</>,
   ConfigProvider: ({
     children,
+    segmented,
     theme
-  }: PropsWithChildren<{ theme: CapturedTheme }>) => {
+  }: PropsWithChildren<{
+    segmented?: CapturedSegmentedConfig;
+    theme: CapturedTheme;
+  }>) => {
     capturedTheme = theme;
+    capturedSegmentedConfig = segmented ?? null;
 
     return <>{children}</>;
   },
@@ -47,6 +70,7 @@ import { AppUiProvider, useAppUi } from "./app-ui-context";
 
 describe("AppUiProvider", () => {
   beforeEach(() => {
+    capturedSegmentedConfig = null;
     capturedTheme = null;
     window.localStorage.clear();
   });
@@ -151,6 +175,29 @@ describe("AppUiProvider", () => {
       defaultHoverBg: "var(--app-color-fill-tertiary)",
       defaultHoverBorderColor: "var(--app-color-border-secondary)",
       defaultHoverColor: "var(--app-color-text)"
+    });
+  });
+
+  it("configures segmented controls globally with app theme variables", () => {
+    render(
+      <AppUiProvider>
+        <ThemeModeToggle />
+      </AppUiProvider>
+    );
+
+    expect(capturedTheme?.components?.Segmented).toMatchObject({
+      itemActiveBg: "var(--app-color-fill-tertiary)",
+      itemColor: "var(--app-color-text-secondary)",
+      itemHoverBg: "transparent",
+      itemHoverColor: "var(--app-color-text)",
+      itemSelectedBg: "var(--app-color-bg-elevated)",
+      itemSelectedColor: "var(--app-color-text)",
+      trackBg: "var(--app-color-fill-secondary)",
+      trackPadding: 1
+    });
+    expect(capturedSegmentedConfig?.style).toMatchObject({
+      border: "1px solid var(--app-color-border-secondary)",
+      borderRadius: 4
     });
   });
 });
