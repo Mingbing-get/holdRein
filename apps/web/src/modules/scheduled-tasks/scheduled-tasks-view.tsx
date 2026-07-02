@@ -15,10 +15,9 @@ import {
   EditOutlined,
   PlusOutlined
 } from "@ant-design/icons";
-import cronstrue from "cronstrue/i18n";
-import "cronstrue/locales/zh_CN";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { describeCronExpression } from "../../components/cronExpressionInput";
 import "./scheduled-tasks-view.css";
 import { THINKING_LEVEL_OPTIONS } from "../chat/sender/task-options";
 import {
@@ -295,7 +294,7 @@ function formatThinkingLevel(value: ScheduledTask["thinkingLevel"]): string {
 
 function formatCronExpression(value: string): string {
   try {
-    return cronstrue.toString(value, { locale: "zh_CN" });
+    return describeCronExpression(value);
   } catch {
     return value;
   }

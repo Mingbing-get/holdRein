@@ -28,6 +28,9 @@ describe("CronExpressionInput", () => {
     expect(input).toHaveValue("每隔 15 分钟");
     expect(input).toHaveAttribute("readonly");
 
+    rerender(<CronExpressionInput value="19 0 * * *" />);
+    expect(input).toHaveValue("在午夜 0:19");
+
     rerender(<CronExpressionInput value="" />);
     expect(input).toHaveAttribute("placeholder", "请选择执行周期");
   });

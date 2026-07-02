@@ -1,7 +1,5 @@
 import { Alert, Button, Segmented } from "antd";
 import { useMemo, useState } from "react";
-import cronstrue from "cronstrue/i18n";
-import "cronstrue/locales/zh_CN";
 
 import {
   CRON_FIELD_DEFINITIONS,
@@ -13,6 +11,7 @@ import type {
   CronFrequency,
   CronSelection
 } from "./cron-expression-types";
+import { describeCronExpression } from "./cron-description";
 import { CronFieldSelector } from "./cron-field-selector";
 
 interface CronExpressionEditorProps {
@@ -131,7 +130,7 @@ function createLabels(field: CronField, minimum: number, maximum: number): strin
 
 function translate(expression: string): string {
   try {
-    return cronstrue.toString(expression, { locale: "zh_CN" });
+    return describeCronExpression(expression);
   } catch {
     return "无法识别的执行周期";
   }

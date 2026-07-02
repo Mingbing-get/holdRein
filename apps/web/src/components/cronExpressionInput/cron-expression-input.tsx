@@ -1,10 +1,9 @@
 import { DownOutlined } from "@ant-design/icons";
 import { Input, Popover } from "antd";
 import { useEffect, useMemo, useState } from "react";
-import cronstrue from "cronstrue/i18n";
-import "cronstrue/locales/zh_CN";
 
 import { createEmptyCronSelection, parseCronExpression } from "./cron-expression";
+import { describeCronExpression } from "./cron-description";
 import { CronExpressionEditor } from "./cron-expression-editor";
 import "./cron-expression-input.css";
 
@@ -90,7 +89,7 @@ function describeValue(value: string): string {
   const parsed = parseCronExpression(value);
   if (!parsed.ok) return "无法识别的执行周期";
   try {
-    return cronstrue.toString(value, { locale: "zh_CN" });
+    return describeCronExpression(value);
   } catch {
     return "无法识别的执行周期";
   }

@@ -174,7 +174,11 @@ describe("ScheduledTasksView", () => {
 
   it("renders task model, thinking level, and cron expression as readable labels", async () => {
     fetchMock.mockResolvedValueOnce({
-      json: async () => ({ code: 0, data: [createTaskFixture()], msg: "ok" }),
+      json: async () => ({
+        code: 0,
+        data: [createTaskFixture({ cronExpression: "19 20 * * *" })],
+        msg: "ok"
+      }),
       ok: true
     } as Response);
 
@@ -183,7 +187,7 @@ describe("ScheduledTasksView", () => {
     expect(await screen.findByText("Every five minutes")).toBeVisible();
     expect(screen.getByText("openai/gpt-4.1")).toBeVisible();
     expect(screen.getByText("中")).toBeVisible();
-    expect(screen.getByText("每隔 5 分钟")).toBeVisible();
+    expect(screen.getByText("在晚上 08:19")).toBeVisible();
     expect(screen.queryByText("medium")).not.toBeInTheDocument();
     expect(screen.queryByText("*/5 * * * *")).not.toBeInTheDocument();
   });
