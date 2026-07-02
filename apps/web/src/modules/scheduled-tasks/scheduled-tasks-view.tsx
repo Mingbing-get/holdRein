@@ -15,9 +15,12 @@ import {
   EditOutlined,
   PlusOutlined
 } from "@ant-design/icons";
+import cronstrue from "cronstrue/i18n";
+import "cronstrue/locales/zh_CN";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import "./scheduled-tasks-view.css";
+import { THINKING_LEVEL_OPTIONS } from "../chat/sender/task-options";
 import {
   createScheduledTask,
   deleteScheduledTask,
@@ -139,19 +142,22 @@ export function ScheduledTasksView({
       },
       {
         dataIndex: "modelId",
-        render: (_value, task) => `${task.provider}/${task.modelId}`,
+        render: (_value, task) => formatModelName(task),
         title: "模型",
         width: 180
       },
       {
         dataIndex: "thinkingLevel",
+        render: (value: ScheduledTask["thinkingLevel"]) =>
+          formatThinkingLevel(value),
         title: "思考",
         width: 90
       },
       {
         dataIndex: "cronExpression",
+        render: (value: string) => formatCronExpression(value),
         title: "Cron",
-        width: 140
+        width: 220
       },
       {
         dataIndex: "allowConcurrentRuns",
@@ -275,4 +281,22 @@ function formatDateTime(value: string | null): string {
     dateStyle: "short",
     timeStyle: "short"
   }).format(new Date(value));
+}
+
+function formatModelName(task: Pick<ScheduledTask, "modelId" | "provider">): string {
+  return `${task.provider}/${task.modelId}`;
+}
+
+function formatThinkingLevel(value: ScheduledTask["thinkingLevel"]): string {
+  return (
+    THINKING_LEVEL_OPTIONS.find((option) => option.value === value)?.label ?? value
+  );
+}
+
+function formatCronExpression(value: string): string {
+  try {
+    return cronstrue.toString(value, { locale: "zh_CN" });
+  } catch {
+    return value;
+  }
 }

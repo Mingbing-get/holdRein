@@ -139,6 +139,9 @@ importers:
       antd:
         specifier: 6.4.3
         version: 6.4.3(luxon@3.7.2)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      cronstrue:
+        specifier: ^3.24.0
+        version: 3.24.0
       echarts:
         specifier: ^6.1.0
         version: 6.1.0
@@ -2283,6 +2286,10 @@ packages:
   cron-parser@5.6.1:
     resolution: {integrity: sha512-QBm4o1PwZiuY7KFbVvW7FLC8bozy7YWzv+Fz6KRS7sQghzcbDZCGxr/Bc5b6TQreAoSwuWVP491dIcK0THCX6A==}
     engines: {node: '>=18'}
+
+  cronstrue@3.24.0:
+    resolution: {integrity: sha512-t/Ji3Ur2c/pzhIAWNwC0ftl3JAE4dLfCjAdZoTZXmPDZwcispnS1PaMcMS4OmIIXyIVouAz+yw+mfQiE3hz5OQ==}
+    hasBin: true
 
   cross-spawn@7.0.6:
     resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
@@ -6413,6 +6420,8 @@ snapshots:
   cron-parser@5.6.1:
     dependencies:
       luxon: 3.7.2
+
+  cronstrue@3.24.0: {}
 
   cross-spawn@7.0.6:
     dependencies:
