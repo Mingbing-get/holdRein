@@ -30,6 +30,8 @@ async function createTestApp() {
         createdAt: "2026-06-02T00:00:00.000Z",
         id: "task-recent-2",
         lastContinuedAt: "2026-06-07T08:00:00.000Z",
+        sourceMark: "scheduled-task-one",
+        sourceType: "scheduled",
         title: "昨天继续的任务",
         workspaceId: "workspace-alpha"
       }),
@@ -189,6 +191,8 @@ describe("workspace routes", () => {
               expect.objectContaining({
                 id: "task-recent-2",
                 lastContinuedAt: "2026-06-07T08:00:00.000Z",
+                sourceMark: "scheduled-task-one",
+                sourceType: "scheduled",
                 status: "completed",
                 title: "昨天继续的任务"
               }),
@@ -221,6 +225,8 @@ describe("workspace routes", () => {
           expect.objectContaining({
             id: "task-recent-2",
             lastContinuedAt: "2026-06-07T08:00:00.000Z",
+            sourceMark: "scheduled-task-one",
+            sourceType: "scheduled",
             status: "completed"
           })
         ],
@@ -323,6 +329,8 @@ function createTask(input: {
   createdAt?: string;
   id: string;
   lastContinuedAt: string | null;
+  sourceMark?: string | null;
+  sourceType?: "manual" | "scheduled";
   status?: "running" | "completed" | "error";
   title: string;
   workspaceId: string;
@@ -339,6 +347,8 @@ function createTask(input: {
     sessionCreatedAt: null,
     sessionId: null,
     sessionPath: null,
+    sourceMark: input.sourceMark ?? null,
+    sourceType: input.sourceType ?? "manual",
     status: input.status ?? "completed",
     title: input.title,
     updatedAt: "2026-06-08T00:00:00.000Z",

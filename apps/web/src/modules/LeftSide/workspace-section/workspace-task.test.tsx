@@ -56,20 +56,39 @@ describe("WorkspaceTask", () => {
       tag.compareDocumentPosition(spinner) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
   });
+
+  it.each([false, true])(
+    "shows a clock for a scheduled task when collapsed is %s",
+    (collapsed) => {
+      renderTask({ collapsed, sourceType: "scheduled", status: "completed" });
+
+      expect(screen.getByTestId("task-scheduled-task-one")).toBeInTheDocument();
+    }
+  );
+
+  it("does not show a clock for a manual task", () => {
+    renderTask({ sourceType: "manual", status: "completed" });
+
+    expect(screen.queryByTestId("task-scheduled-task-one")).toBeNull();
+  });
 });
 
 function renderTask({
+  collapsed = false,
   hasPendingApproval = false,
   hasUnreadCompletion = false,
+  sourceType = "manual",
   status
 }: {
+  collapsed?: boolean;
   hasPendingApproval?: boolean;
   hasUnreadCompletion?: boolean;
+  sourceType?: WorkspaceTaskSummary["sourceType"];
   status: WorkspaceTaskSummary["status"];
 }) {
   render(
     <WorkspaceTask
-      collapsed={false}
+      collapsed={collapsed}
       hasPendingApproval={hasPendingApproval}
       hasUnreadCompletion={hasUnreadCompletion}
       isActive={false}
@@ -83,6 +102,8 @@ function renderTask({
         lastModelName: "gpt-4.1",
         lastModelProvider: "openai",
         lastModelProviderSource: "built_in",
+        sourceMark: sourceType === "scheduled" ? "scheduled-task-one" : null,
+        sourceType,
         status,
         title: "Inspect project"
       }}

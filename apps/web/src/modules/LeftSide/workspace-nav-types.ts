@@ -13,6 +13,8 @@ export interface WorkspaceTaskSummary {
   lastModelName: string;
   lastModelProvider: string;
   lastModelProviderSource: "built_in" | "custom";
+  sourceMark?: string | null;
+  sourceType?: "manual" | "scheduled";
   status: "running" | "completed" | "error";
   thinkingLevel?: ThinkingLevel;
   title: string;

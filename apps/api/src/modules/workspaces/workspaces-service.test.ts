@@ -152,6 +152,39 @@ describe("workspaces service navigation", () => {
     });
   });
 
+  it("includes task source metadata in recent and paginated summaries", () => {
+    const repository = createRepository({
+      projectPath: "/project",
+      tasks: [
+        createTask({
+          sourceMark: "scheduled-task-one",
+          sourceType: "scheduled"
+        })
+      ]
+    });
+    const service = createWorkspacesService({
+      now: () => new Date("2026-06-12T00:00:00.000Z"),
+      repository
+    });
+
+    expect(
+      service.listRecentWorkspaceTasks().workspaces[0]?.tasks[0]
+    ).toMatchObject({
+      sourceMark: "scheduled-task-one",
+      sourceType: "scheduled"
+    });
+    expect(
+      service.listWorkspaceTasksAfter({
+        afterLastContinuedAt: "2026-06-12T00:00:00.000Z",
+        limit: 20,
+        workspaceId: "workspace-one"
+      })?.tasks[0]
+    ).toMatchObject({
+      sourceMark: "scheduled-task-one",
+      sourceType: "scheduled"
+    });
+  });
+
   it("marks a stale running task as error when no active agent exists", () => {
     const repository = createRepository({
       projectPath: "/project",
@@ -226,6 +259,8 @@ function createTask(
     lastModelId?: string | null;
     lastModelName?: string;
     sessionPath?: string;
+    sourceMark?: string | null;
+    sourceType?: TaskRow["sourceType"];
     status?: TaskRow["status"];
   } = {}
 ): TaskRow {
@@ -244,8 +279,8 @@ function createTask(
     sessionCreatedAt: input.sessionPath ? "2026-06-11T00:00:00.000Z" : null,
     sessionId: input.sessionPath ? "session-one" : null,
     sessionPath: input.sessionPath ?? null,
-    sourceMark: null,
-    sourceType: "manual",
+    sourceMark: input.sourceMark ?? null,
+    sourceType: input.sourceType ?? "manual",
     status: input.status ?? "completed",
     thinkingLevel: "medium",
     title: "Hello",

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  ClockCircleOutlined,
   DeleteOutlined,
   EditOutlined,
   EllipsisOutlined,
@@ -63,6 +64,13 @@ export function WorkspaceTask({
         transition: "background-color 0.16s ease"
       }}
     >
+      {task.sourceType === "scheduled" ? (
+        <ClockCircleOutlined
+          aria-label="定时任务"
+          data-testid={`task-scheduled-${task.id}`}
+          style={{ flexShrink: 0 }}
+        />
+      ) : null}
       <Typography.Text
         data-testid={`task-title-${task.id}`}
         ellipsis

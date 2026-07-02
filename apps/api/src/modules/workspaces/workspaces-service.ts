@@ -215,6 +215,8 @@ function toTaskSummary(
     lastModelName: task.lastModelName,
     lastModelProvider: task.lastModelProvider,
     lastModelProviderSource: task.lastModelProviderSource,
+    sourceMark: task.sourceMark,
+    sourceType: task.sourceType,
     status: task.status,
     thinkingLevel: task.thinkingLevel,
     title: task.title
