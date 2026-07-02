@@ -26,7 +26,7 @@ export interface WorkspaceSettingsModalProps {
 }
 
 const MODE_OPTIONS: { label: string; value: CapabilityMode }[] = [
-  { label: "全局", value: "global" },
+  { label: "所有", value: "global" },
   { label: "指定", value: "specified" }
 ];
 
@@ -117,34 +117,36 @@ export function WorkspaceSettingsModal({
           <Form.Item label="插件策略" name="pluginMode">
             <Segmented block options={MODE_OPTIONS} />
           </Form.Item>
-          <Form.Item label="可用插件" name="plugins">
-            <Select
-              aria-label="可用插件"
-              disabled={pluginMode !== "specified"}
-              mode="multiple"
-              options={pluginOptions}
-              placeholder="选择插件"
-            />
-          </Form.Item>
+          {pluginMode === "specified" ? (
+            <Form.Item label="可用插件" name="plugins">
+              <Select
+                aria-label="可用插件"
+                mode="multiple"
+                options={pluginOptions}
+                placeholder="选择插件"
+              />
+            </Form.Item>
+          ) : null}
           <Form.Item label="技能策略" name="skillMode">
             <Segmented
               block
               options={[
-                { label: "全局技能", value: "global" },
-                { label: "指定技能", value: "specified" }
+                { label: "所有", value: "global" },
+                { label: "指定", value: "specified" }
               ]}
             />
           </Form.Item>
-          <Form.Item label="可用技能" name="skills">
-            <Select
-              aria-label="可用技能"
-              disabled={skillMode !== "specified"}
-              mode="multiple"
-              optionLabelProp="title"
-              options={skillOptions}
-              placeholder="选择技能"
-            />
-          </Form.Item>
+          {skillMode === "specified" ? (
+            <Form.Item label="可用技能" name="skills">
+              <Select
+                aria-label="可用技能"
+                mode="multiple"
+                optionLabelProp="title"
+                options={skillOptions}
+                placeholder="选择技能"
+              />
+            </Form.Item>
+          ) : null}
         </Form>
       )}
     </Modal>

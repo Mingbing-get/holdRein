@@ -234,9 +234,9 @@ describe("WorkspaceSection", () => {
     });
 
     fireEvent.click(screen.getByRole("radio", { name: "指定技能" }));
-    fireEvent.mouseDown(screen.getByLabelText("可用插件"));
+    fireEvent.mouseDown(await screen.findByLabelText("可用插件"));
     fireEvent.click(await screen.findByTitle("Code"));
-    fireEvent.mouseDown(screen.getByLabelText("可用技能"));
+    fireEvent.mouseDown(await screen.findByLabelText("可用技能"));
     fireEvent.click(await screen.findByTitle("planner"));
     fireEvent.click(await screen.findByTitle("reviewer"));
     fireEvent.click(screen.getByRole("button", { name: /提\s*交/ }));
