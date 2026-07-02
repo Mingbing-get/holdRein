@@ -132,6 +132,22 @@ describe("AppWorkspaceProvider", () => {
       "Project inspection"
     );
   });
+
+  it("stores workspace settings globally and drops them with their workspace", () => {
+    render(
+      <AppWorkspaceProvider>
+        <WorkspaceSettingStateProbe />
+      </AppWorkspaceProvider>
+    );
+
+    expect(screen.getByTestId("workspace-setting-plugins")).toHaveTextContent(
+      "base"
+    );
+    expect(screen.getByTestId("workspace-setting-skills")).toHaveTextContent(
+      "planner"
+    );
+    expect(screen.getByTestId("removed-workspace-setting")).toBeEmptyDOMElement();
+  });
 });
 
 function WorkspaceStateProbe() {
@@ -295,6 +311,71 @@ function StartedTaskStateProbe() {
       <span data-testid="generated-task-title">{startedTask?.title}</span>
       <span data-testid="started-active-workspace">{activeWorkspaceId}</span>
       <span data-testid="started-active-task">{activeTaskId}</span>
+    </>
+  );
+}
+
+function WorkspaceSettingStateProbe() {
+  const {
+    removeWorkspace,
+    setWorkspaceSetting,
+    setWorkspaces,
+    state: { workspaceSettings }
+  } = useAppWorkspace();
+
+  useEffect(() => {
+    setWorkspaces([
+      {
+        hasMore: false,
+        id: "workspace-one",
+        name: "Workspace One",
+        path: "/workspace-one",
+        tasks: []
+      },
+      {
+        hasMore: false,
+        id: "workspace-two",
+        name: "Workspace Two",
+        path: "/workspace-two",
+        tasks: []
+      }
+    ]);
+    setWorkspaceSetting({
+      pluginOptions: [{ id: "base", name: "Base" }],
+      setting: {
+        activePlugins: ["base"],
+        activeSkills: ["planner"]
+      },
+      skillOptions: [
+        {
+          id: "planner",
+          name: "planner",
+          path: "/workspace-one/.hold-rein/skills/planner",
+          source: "workspace"
+        }
+      ],
+      workspaceId: "workspace-one"
+    });
+    setWorkspaceSetting({
+      pluginOptions: [],
+      setting: {},
+      skillOptions: [],
+      workspaceId: "workspace-two"
+    });
+    removeWorkspace("workspace-two");
+  }, [removeWorkspace, setWorkspaceSetting, setWorkspaces]);
+
+  return (
+    <>
+      <span data-testid="workspace-setting-plugins">
+        {workspaceSettings["workspace-one"]?.setting.activePlugins?.join(",")}
+      </span>
+      <span data-testid="workspace-setting-skills">
+        {workspaceSettings["workspace-one"]?.setting.activeSkills?.join(",")}
+      </span>
+      <span data-testid="removed-workspace-setting">
+        {workspaceSettings["workspace-two"]?.workspaceId}
+      </span>
     </>
   );
 }

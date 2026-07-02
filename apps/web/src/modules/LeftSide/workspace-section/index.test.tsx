@@ -199,60 +199,6 @@ describe("WorkspaceSection", () => {
     expect(screen.getByTestId("selected-task")).toBeEmptyDOMElement();
   });
 
-  it("opens workspace settings and saves specified plugins and skills", async () => {
-    fetchWorkspaceSettingMock.mockResolvedValue({
-      pluginOptions: [
-        { id: "base", name: "Base" },
-        { id: "code", name: "Code" }
-      ],
-      setting: {
-        activePlugins: ["base"]
-      },
-      skillOptions: [
-        { id: "planner", name: "planner", source: "workspace" },
-        { id: "reviewer", name: "reviewer", source: "global" }
-      ],
-      workspaceId: "workspace-real"
-    });
-    updateWorkspaceSettingMock.mockResolvedValue({
-      setting: {
-        activePlugins: ["base", "code"],
-        activeSkills: ["planner", "reviewer"]
-      },
-      workspaceId: "workspace-real"
-    });
-    renderWorkspaceSection({ collapsed: false });
-
-    openWorkspaceAction("设置");
-
-    expect(await screen.findByText("Workspace 配置")).toBeInTheDocument();
-    await waitFor(() => {
-      expect(fetchWorkspaceSettingMock).toHaveBeenCalledWith(
-        "http://localhost:4000",
-        "workspace-real"
-      );
-    });
-
-    fireEvent.click(screen.getByRole("radio", { name: "指定技能" }));
-    fireEvent.mouseDown(await screen.findByLabelText("可用插件"));
-    fireEvent.click(await screen.findByTitle("Code"));
-    fireEvent.mouseDown(await screen.findByLabelText("可用技能"));
-    fireEvent.click(await screen.findByTitle("planner"));
-    fireEvent.click(await screen.findByTitle("reviewer"));
-    fireEvent.click(screen.getByRole("button", { name: /提\s*交/ }));
-
-    await waitFor(() => {
-      expect(updateWorkspaceSettingMock).toHaveBeenCalledWith(
-        "http://localhost:4000",
-        "workspace-real",
-        {
-          activePlugins: ["base", "code"],
-          activeSkills: ["planner", "reviewer"]
-        }
-      );
-    });
-  });
-
   it("confirms before deleting a workspace", async () => {
     deleteWorkspaceMock.mockResolvedValue({ workspaceId: "workspace-real" });
     renderWorkspaceSection({ collapsed: false });

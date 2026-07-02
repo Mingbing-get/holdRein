@@ -51,12 +51,19 @@ describe("useWorkspaceFileSuggestions", () => {
       )
       .mockResolvedValueOnce(
         jsonResponse({
-          skills: [
+          pluginOptions: [],
+          setting: {
+            activeSkills: ["code-reviewer"]
+          },
+          skillOptions: [
             {
+              id: "code-reviewer",
               name: "code-reviewer",
-              path: "/Users/mingbing/apps/workspace-one/.agents/skills/reviewer"
+              path: "/Users/mingbing/apps/workspace-one/.agents/skills/reviewer",
+              source: "workspace"
             }
-          ]
+          ],
+          workspaceId: "workspace-one"
         })
       )
       .mockResolvedValueOnce(
@@ -74,12 +81,17 @@ describe("useWorkspaceFileSuggestions", () => {
       )
       .mockResolvedValueOnce(
         jsonResponse({
-          skills: [
+          pluginOptions: [],
+          setting: {},
+          skillOptions: [
             {
+              id: "planner",
               name: "planner",
-              path: "/Users/mingbing/apps/workspace-one/.hold-rein/skills/planner"
+              path: "/Users/mingbing/apps/workspace-one/.hold-rein/skills/planner",
+              source: "workspace"
             }
-          ]
+          ],
+          workspaceId: "workspace-one"
         })
       );
     const view = renderHookProbe("running");
@@ -118,7 +130,7 @@ describe("useWorkspaceFileSuggestions", () => {
       "http://localhost:4000/api/v1/file-system/entries/recursive?parentPath=%2FUsers%2Fmingbing%2Fapps%2Fworkspace-one&ignores=node_modules&useGitIgnore=true"
     );
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:4000/api/v1/agents/skills?workspacePath=%2FUsers%2Fmingbing%2Fapps%2Fworkspace-one"
+      "http://localhost:4000/api/v1/workspaces/workspace-one/setting"
     );
 
     view.rerender(getHookProbe("completed"));

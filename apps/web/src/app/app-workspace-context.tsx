@@ -7,8 +7,11 @@ import {
 } from "react";
 import type { Dispatch, PropsWithChildren, SetStateAction } from "react";
 
-import type { WorkspaceSummary } from "../modules/leftSide/workspace-nav-types";
-import type { WorkspaceTaskSummary } from "../modules/leftSide/workspace-nav-types";
+import type {
+  WorkspaceSettingResponse,
+  WorkspaceSummary,
+  WorkspaceTaskSummary
+} from "../modules/leftSide/workspace-nav-types";
 
 const ACTIVE_AGENT_STORAGE_KEY = "hold-rein.active-agent";
 const ACTIVE_WORKSPACE_ID_STORAGE_KEY = "hold-rein.active-workspace-id";
@@ -24,6 +27,7 @@ export interface AppWorkspaceState {
   activeTaskId: string;
   activeWorkspaceId: string;
   newConversationWorkspaceId: string;
+  workspaceSettings: Record<string, WorkspaceSettingResponse>;
   workspaces: WorkspaceSummary[];
 }
 
@@ -35,6 +39,7 @@ export interface AppWorkspaceContextValue {
   setActiveAgent: (activeAgent: ActiveAgentSelection | null) => void;
   setActiveTaskId: (taskId: string) => void;
   setActiveWorkspaceId: (workspaceId: string) => void;
+  setWorkspaceSetting: (setting: WorkspaceSettingResponse) => void;
   setWorkspaces: Dispatch<SetStateAction<WorkspaceSummary[]>>;
   updateTaskTitle: (taskId: string, title: string) => void;
   updateTaskStatus: (
@@ -64,6 +69,7 @@ const DEFAULT_APP_WORKSPACE_STATE: AppWorkspaceState = {
   activeTaskId: "",
   activeWorkspaceId: "",
   newConversationWorkspaceId: "",
+  workspaceSettings: {},
   workspaces: []
 };
 
@@ -209,7 +215,14 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
       );
 
       if (currentState.activeWorkspaceId !== workspaceId) {
-        return { ...currentState, workspaces: nextWorkspaces };
+        return {
+          ...currentState,
+          workspaceSettings: removeWorkspaceSetting(
+            currentState.workspaceSettings,
+            workspaceId
+          ),
+          workspaces: nextWorkspaces
+        };
       }
 
       const nextWorkspace = nextWorkspaces[0];
@@ -221,6 +234,10 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
         activeTaskId: nextWorkspace?.tasks[0]?.id ?? "",
         activeWorkspaceId,
         newConversationWorkspaceId: "",
+        workspaceSettings: removeWorkspaceSetting(
+          currentState.workspaceSettings,
+          workspaceId
+        ),
         workspaces: nextWorkspaces
       };
     });
@@ -246,6 +263,19 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
           typeof workspaces === "function"
             ? workspaces(currentState.workspaces)
             : workspaces
+      }));
+    },
+    []
+  );
+
+  const setWorkspaceSetting = useCallback(
+    (workspaceSetting: WorkspaceSettingResponse) => {
+      setState((currentState) => ({
+        ...currentState,
+        workspaceSettings: {
+          ...currentState.workspaceSettings,
+          [workspaceSetting.workspaceId]: workspaceSetting
+        }
       }));
     },
     []
@@ -346,6 +376,7 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
       setActiveAgent,
       setActiveTaskId,
       setActiveWorkspaceId,
+      setWorkspaceSetting,
       setWorkspaces,
       updateTaskTitle,
       updateTaskStatus,
@@ -357,6 +388,7 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
       setActiveAgent,
       setActiveTaskId,
       setActiveWorkspaceId,
+      setWorkspaceSetting,
       setWorkspaces,
       startNewConversation,
       state,
@@ -371,6 +403,20 @@ export function AppWorkspaceProvider({ children }: PropsWithChildren) {
       {children}
     </AppWorkspaceContext.Provider>
   );
+}
+
+function removeWorkspaceSetting(
+  workspaceSettings: Record<string, WorkspaceSettingResponse>,
+  workspaceId: string
+): Record<string, WorkspaceSettingResponse> {
+  if (!(workspaceId in workspaceSettings)) {
+    return workspaceSettings;
+  }
+
+  const nextWorkspaceSettings = { ...workspaceSettings };
+  delete nextWorkspaceSettings[workspaceId];
+
+  return nextWorkspaceSettings;
 }
 
 export function useAppWorkspace() {

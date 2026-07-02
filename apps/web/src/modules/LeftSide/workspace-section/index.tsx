@@ -14,7 +14,6 @@ import {
 } from "../workspace-nav-api";
 import type {
   UpdateWorkspaceSettingRequest,
-  WorkspaceSettingResponse,
   WorkspaceSummary,
   WorkspaceTaskSummary
 } from "../workspace-nav-types";
@@ -41,11 +40,12 @@ export function WorkspaceSection({
     openWorkspaceNavigation
   } = useAppUi();
   const {
-    state: { activeTaskId, activeWorkspaceId },
+    state: { activeTaskId, activeWorkspaceId, workspaceSettings },
     removeTask,
     removeWorkspace,
     setActiveTaskId,
     setActiveWorkspaceId,
+    setWorkspaceSetting,
     setWorkspaces,
     startNewConversation,
     updateTaskTitle
@@ -60,9 +60,8 @@ export function WorkspaceSection({
   const [isSubmittingWorkspaceSetting, setIsSubmittingWorkspaceSetting] =
     useState(false);
   const [workspaceCollapsed, setWorkspaceCollapsed] = useState(false);
-  const [workspaceSetting, setWorkspaceSetting] =
-    useState<WorkspaceSettingResponse | null>(null);
   const [workspaceSettingOpen, setWorkspaceSettingOpen] = useState(false);
+  const workspaceSetting = workspaceSettings[workspace.id] ?? null;
   const isActiveWorkspace = workspace.id === activeWorkspaceId;
   const lastTask = workspace.tasks.at(-1);
   const canLoadMoreTasks =
@@ -167,12 +166,14 @@ export function WorkspaceSection({
 
   const openWorkspaceSettings = async () => {
     setWorkspaceSettingOpen(true);
-    setIsLoadingWorkspaceSetting(true);
+
+    if (workspaceSetting) {
+      return;
+    }
 
     try {
-      setWorkspaceSetting(
-        await fetchWorkspaceSetting(apiBaseUrl, workspace.id)
-      );
+      setIsLoadingWorkspaceSetting(true);
+      setWorkspaceSetting(await fetchWorkspaceSetting(apiBaseUrl, workspace.id));
     } catch (error) {
       void message.error(
         error instanceof Error ? error.message : "加载工作空间配置失败"
@@ -193,10 +194,8 @@ export function WorkspaceSection({
         workspace.id,
         request
       );
-      setWorkspaceSetting((currentSetting) =>
-        currentSetting
-          ? { ...currentSetting, setting: result.setting }
-          : currentSetting
+      setWorkspaceSetting(
+        await fetchWorkspaceSetting(apiBaseUrl, result.workspaceId)
       );
       setWorkspaceSettingOpen(false);
       void message.success("Workspace 配置已保存");
