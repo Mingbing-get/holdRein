@@ -2,6 +2,7 @@ import { DownOutlined } from "@ant-design/icons";
 import { Cascader, ConfigProvider } from "antd";
 import type { CascaderProps } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 
 import {
   fetchCachedProviderModels,
@@ -35,7 +36,9 @@ export interface SelectedModel {
 interface ModelSelectorProps {
   apiBaseUrl: string;
   onChange?: (value: SelectedModel) => void;
+  style?: CSSProperties;
   value?: SelectedModel | undefined;
+  variant?: "borderless" | "outlined";
 }
 
 const modelCascaderTheme = {
@@ -105,6 +108,8 @@ function setProviderModels(
 export function ModelSelector({
   apiBaseUrl,
   onChange,
+  style,
+  variant = "borderless",
   value
 }: ModelSelectorProps) {
   const [options, setOptions] = useState<ProviderOption[]>([]);
@@ -183,10 +188,10 @@ export function ModelSelector({
         placeholder="选择模型"
         popupMatchSelectWidth={false}
         size="small"
-        style={{ width: "fit-content" }}
+        style={style ?? { width: "fit-content" }}
         suffixIcon={<DownOutlined style={{ color: "var(--app-color-text)" }} />}
         value={cascaderValue ?? []}
-        variant="borderless"
+        variant={variant}
         onChange={(nextValue, selectedOptions) => {
           if (!isModelSelection(nextValue)) {
             return;

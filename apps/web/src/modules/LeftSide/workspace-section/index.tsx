@@ -4,6 +4,7 @@ import { App, Button, Input, Modal } from "antd";
 import { useAppUi } from "../../../app/app-ui-context";
 import { useAppWorkspace } from "../../../app/app-workspace-context";
 import { useAgentTasks } from "../../agent-messages";
+import { ScheduledTasksView } from "../../scheduled-tasks";
 import {
   deleteTask,
   deleteWorkspace,
@@ -61,6 +62,8 @@ export function WorkspaceSection({
     useState(false);
   const [workspaceCollapsed, setWorkspaceCollapsed] = useState(false);
   const [workspaceSettingOpen, setWorkspaceSettingOpen] = useState(false);
+  const [workspaceScheduledTasksOpen, setWorkspaceScheduledTasksOpen] =
+    useState(false);
   const workspaceSetting = workspaceSettings[workspace.id] ?? null;
   const isActiveWorkspace = workspace.id === activeWorkspaceId;
   const lastTask = workspace.tasks.at(-1);
@@ -215,6 +218,9 @@ export function WorkspaceSection({
           collapsed={workspaceCollapsed}
           onDelete={confirmDeleteWorkspace}
           onOpenSettings={() => void openWorkspaceSettings()}
+          onOpenScheduledTasks={() => {
+            setWorkspaceScheduledTasksOpen(true);
+          }}
           onStartNewConversation={() => {
             startNewConversation(workspace.id);
             openWorkspaceNavigation();
@@ -296,6 +302,20 @@ export function WorkspaceSection({
         setting={workspaceSetting}
         workspaceName={workspace.name}
       />
+      <Modal
+        footer={null}
+        onCancel={() => {
+          setWorkspaceScheduledTasksOpen(false);
+        }}
+        open={workspaceScheduledTasksOpen}
+        title={`${workspace.name} 的定时任务`}
+        width={1040}
+      >
+        <ScheduledTasksView
+          apiBaseUrl={apiBaseUrl}
+          workspacePath={workspace.path}
+        />
+      </Modal>
     </div>
   );
 }

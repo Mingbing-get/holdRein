@@ -1,6 +1,7 @@
 import { DownOutlined, FolderOpenOutlined } from "@ant-design/icons";
 import { Button, ConfigProvider, Divider, Select } from "antd";
 import { useCallback, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 
 import { useAppWorkspace } from "../../../app/app-workspace-context";
 import { FileSelector } from "../../../components/fileSelector";
@@ -12,7 +13,13 @@ interface WorkspaceOption {
 }
 
 interface WorkspaceSelectorProps {
+  ariaLabel?: string;
   apiBaseUrl: string;
+  disabled?: boolean;
+  onChange?: (path: string) => void;
+  style?: CSSProperties;
+  value?: string | undefined;
+  variant?: "borderless" | "outlined";
 }
 
 const workspaceSelectTheme = {
@@ -35,7 +42,15 @@ export function getWorkspaceLabelFromPath(path: string): string {
   return parts[parts.length - 1] ?? path;
 }
 
-export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
+export function WorkspaceSelector({
+  ariaLabel = "工作空间",
+  apiBaseUrl,
+  disabled = false,
+  onChange,
+  style,
+  value,
+  variant = "borderless"
+}: WorkspaceSelectorProps) {
   const {
     state: { activeWorkspaceId, workspaces },
     setActiveTaskId,
@@ -52,9 +67,9 @@ export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
       })),
     [workspaces]
   );
-  const selectedWorkspacePath = workspaces.find(
-    (workspace) => workspace.id === activeWorkspaceId
-  )?.path;
+  const selectedWorkspacePath =
+    value ??
+    workspaces.find((workspace) => workspace.id === activeWorkspaceId)?.path;
 
   const selectWorkspace = useCallback(
     (workspace: WorkspaceSummary) => {
@@ -71,10 +86,14 @@ export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
       );
 
       if (workspace) {
-        selectWorkspace(workspace);
+        if (onChange) {
+          onChange(workspace.path);
+        } else {
+          selectWorkspace(workspace);
+        }
       }
     },
-    [selectWorkspace, workspaces]
+    [onChange, selectWorkspace, workspaces]
   );
 
   const handleConfirmWorkspace = useCallback(
@@ -97,17 +116,22 @@ export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
         });
       }
 
-      selectWorkspace(nextWorkspace);
+      if (onChange) {
+        onChange(nextWorkspace.path);
+      } else {
+        selectWorkspace(nextWorkspace);
+      }
       setSelectorOpen(false);
     },
-    [selectWorkspace, setWorkspaces, workspaces]
+    [onChange, selectWorkspace, setWorkspaces, workspaces]
   );
 
   return (
     <>
       <ConfigProvider theme={workspaceSelectTheme}>
         <Select
-          aria-label="工作空间"
+          aria-label={ariaLabel}
+          disabled={disabled}
           options={options}
           optionLabelProp="label"
           placeholder="选择工作空间"
@@ -135,10 +159,10 @@ export function WorkspaceSelector({ apiBaseUrl }: WorkspaceSelectorProps) {
           )}
           open={selectOpen}
           size="small"
-          style={{ width: "fit-content" }}
+          style={style ?? { width: "fit-content" }}
           suffixIcon={<DownOutlined style={{ color: "var(--app-color-text)" }} />}
           value={selectedWorkspacePath ?? null}
-          variant="borderless"
+          variant={variant}
           onChange={handleChangeWorkspace}
           onOpenChange={setSelectOpen}
         />

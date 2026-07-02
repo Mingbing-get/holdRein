@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  ClockCircleOutlined,
   DeleteOutlined,
   EllipsisOutlined,
   FolderOpenOutlined,
@@ -15,6 +16,7 @@ export interface WorkspaceHeadingProps {
   collapsed: boolean;
   onDelete: () => void;
   onOpenSettings: () => void;
+  onOpenScheduledTasks: () => void;
   onStartNewConversation: () => void;
   onToggleCollapsed: () => void;
   workspace: WorkspaceSummary;
@@ -24,6 +26,7 @@ export function WorkspaceHeading({
   collapsed,
   onDelete,
   onOpenSettings,
+  onOpenScheduledTasks,
   onStartNewConversation,
   onToggleCollapsed,
   workspace
@@ -99,6 +102,14 @@ export function WorkspaceHeading({
                 key: "new-conversation",
                 label: "新对话",
                 onClick: onStartNewConversation
+              },
+              {
+                icon: (
+                  <ClockCircleOutlined data-testid="workspace-scheduled-tasks-icon" />
+                ),
+                key: "scheduled-tasks",
+                label: "定时任务",
+                onClick: onOpenScheduledTasks
               },
               {
                 icon: <SettingOutlined data-testid="workspace-settings-icon" />,

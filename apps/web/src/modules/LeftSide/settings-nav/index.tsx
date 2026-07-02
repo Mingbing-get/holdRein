@@ -1,6 +1,7 @@
 import {
   ArrowLeftOutlined,
   BarChartOutlined,
+  ClockCircleOutlined,
   ExperimentOutlined,
   ProductOutlined,
   ToolOutlined
@@ -127,6 +128,25 @@ export function SettingsNav() {
           type="text"
         >
           {sidebarCollapsed ? null : "插件管理"}
+        </Button>
+        <Button
+          aria-label="定时任务"
+          block
+          icon={<ClockCircleOutlined />}
+          onClick={() => setActiveMainView("scheduledTasks")}
+          style={{
+            background:
+              activeMainView === "scheduledTasks"
+                ? "var(--app-color-fill-secondary)"
+                : undefined,
+            borderRadius: 6,
+            color: "var(--app-color-text)",
+            fontSize: 12,
+            justifyContent: sidebarCollapsed ? "center" : "flex-start"
+          }}
+          type="text"
+        >
+          {sidebarCollapsed ? null : "定时任务"}
         </Button>
         <Button
           aria-label="用量统计"

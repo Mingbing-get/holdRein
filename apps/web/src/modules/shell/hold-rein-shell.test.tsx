@@ -47,6 +47,14 @@ function createMatchMediaMock(): typeof window.matchMedia {
 }
 
 const fetchMock = vi.fn<typeof fetch>();
+const scheduledTasksViewMock = vi.hoisted(() => vi.fn());
+
+vi.mock("../scheduled-tasks", () => ({
+  ScheduledTasksView: (props: { workspacePath?: string }) => {
+    scheduledTasksViewMock(props);
+    return <section data-testid="scheduled-tasks-view">Scheduled Tasks</section>;
+  }
+}));
 
 describe("HoldReinShell plugin settings", () => {
   beforeAll(() => {
@@ -114,16 +122,29 @@ describe("HoldReinShell plugin settings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open settings" }));
 
     const settingsNav = screen.getByLabelText("Settings navigation");
-    const settingsButtons = await within(settingsNav).findAllByRole("button");
+    await within(settingsNav).findByRole("button", { name: "插件设置" });
+    const settingsButtons = within(settingsNav).getAllByRole("button");
 
     expect(settingsButtons.map((button) => button.textContent)).toEqual([
       "返回",
       "模型配置",
       "技能管理",
       "插件管理",
+      "定时任务",
       "用量统计",
       "插件设置"
     ]);
+
+    fireEvent.click(within(settingsNav).getByRole("button", { name: "定时任务" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("scheduled-tasks-view")).toHaveTextContent(
+        "Scheduled Tasks"
+      );
+    });
+    expect(scheduledTasksViewMock).toHaveBeenCalledWith(
+      expect.not.objectContaining({ workspacePath: expect.any(String) })
+    );
 
     fireEvent.click(within(settingsNav).getByRole("button", { name: "插件设置" }));
 

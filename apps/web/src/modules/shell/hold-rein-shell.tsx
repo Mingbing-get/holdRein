@@ -13,6 +13,7 @@ import { ModelProvidersView } from "../model-providers";
 import { PluginManagementView } from "../plugins";
 import { RightSideAside } from "../rightSide/aside";
 import { SkillManagementView } from "../skills";
+import { ScheduledTasksView } from "../scheduled-tasks";
 import { WorkspaceTopBar } from "../top-bar/workspace-top-bar";
 import { UsageStatsView } from "../usage-stats";
 
@@ -141,6 +142,8 @@ export function HoldReinShell({ apiBaseUrl }: HoldReinShellProps) {
             <SkillManagementView apiBaseUrl={apiBaseUrl} />
           ) : activeMainView === "plugins" ? (
             <PluginManagementView apiBaseUrl={apiBaseUrl} />
+          ) : activeMainView === "scheduledTasks" ? (
+            <ScheduledTasksView apiBaseUrl={apiBaseUrl} />
           ) : activeMainView === "usageStats" ? (
             <UsageStatsView apiBaseUrl={apiBaseUrl} />
           ) : (

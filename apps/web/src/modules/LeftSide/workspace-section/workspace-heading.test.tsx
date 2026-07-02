@@ -33,6 +33,7 @@ describe("WorkspaceHeading", () => {
         collapsed={false}
         onDelete={vi.fn()}
         onOpenSettings={vi.fn()}
+        onOpenScheduledTasks={vi.fn()}
         onStartNewConversation={vi.fn()}
         onToggleCollapsed={vi.fn()}
         workspace={{
@@ -55,9 +56,11 @@ describe("WorkspaceHeading", () => {
     );
 
     expect(await screen.findByText("新对话")).toBeInTheDocument();
+    expect(screen.getByText("定时任务")).toBeInTheDocument();
     expect(screen.getByText("设置")).toBeInTheDocument();
     expect(screen.getByText("删除")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-new-conversation-icon")).toBeInTheDocument();
+    expect(screen.getByTestId("workspace-scheduled-tasks-icon")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-settings-icon")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-delete-icon")).toBeInTheDocument();
   });

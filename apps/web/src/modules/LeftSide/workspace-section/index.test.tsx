@@ -22,6 +22,7 @@ const fetchWorkspaceSettingMock = vi.fn();
 const fetchWorkspaceTaskPageMock = vi.fn();
 const renameTaskMock = vi.fn();
 const updateWorkspaceSettingMock = vi.fn();
+const scheduledTasksViewMock = vi.hoisted(() => vi.fn());
 
 vi.mock("../../agent-messages", () => ({
   useAgentTasks: () => ({
@@ -40,6 +41,17 @@ vi.mock("../workspace-nav-api", () => ({
   renameTask: (...args: unknown[]) => renameTaskMock(...args),
   updateWorkspaceSetting: (...args: unknown[]) =>
     updateWorkspaceSettingMock(...args)
+}));
+
+vi.mock("../../scheduled-tasks", () => ({
+  ScheduledTasksView: (props: { workspacePath?: string }) => {
+    scheduledTasksViewMock(props);
+    return (
+      <section data-testid="workspace-scheduled-tasks-view">
+        {props.workspacePath}
+      </section>
+    );
+  }
 }));
 
 class ResizeObserverMock {
@@ -197,6 +209,25 @@ describe("WorkspaceSection", () => {
       "workspace-real"
     );
     expect(screen.getByTestId("selected-task")).toBeEmptyDOMElement();
+  });
+
+  it("opens workspace scheduled tasks with the workspace path filter", async () => {
+    renderWorkspaceSection({ collapsed: false });
+
+    fireEvent.mouseEnter(screen.getByTestId("workspace-heading-workspace-real"));
+    fireEvent.click(
+      screen.getByRole("button", { name: "工作空间操作 Real Workspace" })
+    );
+    fireEvent.click(await screen.findByText("定时任务"));
+
+    expect(await screen.findByTestId("workspace-scheduled-tasks-view")).toHaveTextContent(
+      "/Users/mingbing/apps/real-workspace"
+    );
+    expect(scheduledTasksViewMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspacePath: "/Users/mingbing/apps/real-workspace"
+      })
+    );
   });
 
   it("confirms before deleting a workspace", async () => {
