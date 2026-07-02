@@ -303,9 +303,9 @@ describe("ScheduledTasksView", () => {
     fireEvent.change(screen.getByLabelText("任务提示词"), {
       target: { value: "Run scheduled check" }
     });
-    fireEvent.change(screen.getByLabelText("Cron 表达式"), {
-      target: { value: "*/5 * * * *" }
-    });
+    fireEvent.click(screen.getByLabelText("执行周期"));
+    fireEvent.click(await screen.findByRole("button", { name: "05" }));
+    fireEvent.click(screen.getByRole("button", { name: /确\s*定/ }));
     fireEvent.click(screen.getByRole("button", { name: "选择模型" }));
     expect(screen.getByLabelText("Workspace Path")).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "保存定时任务" }));
@@ -325,8 +325,10 @@ describe("ScheduledTasksView", () => {
         init?.method === "POST"
     );
     const body = JSON.parse(String(createCall?.[1]?.body)) as {
+      cronExpression?: string;
       timezone?: string;
     };
+    expect(body.cronExpression).toBe("5 * * * *");
     expect(body.timezone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
   });
 });

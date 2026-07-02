@@ -1,6 +1,7 @@
 import { Form, Input, Modal, Select, Switch } from "antd";
 import { useEffect } from "react";
 
+import { CronExpressionInput } from "../../components/cronExpressionInput";
 import { ModelSelector, type SelectedModel } from "../chat/model-selector";
 import { THINKING_LEVEL_OPTIONS } from "../chat/sender/task-options";
 import { WorkspaceSelector } from "../chat/workspace-selector";
@@ -127,11 +128,11 @@ export function ScheduledTaskEditModal({
           <Input.TextArea autoSize={{ minRows: 4, maxRows: 8 }} />
         </Form.Item>
         <Form.Item
-          label="Cron 表达式"
+          label="执行周期"
           name="cronExpression"
-          rules={[{ message: "请输入 Cron 表达式", required: true }]}
+          rules={[{ message: "请选择执行周期", required: true }]}
         >
-          <Input autoComplete="off" placeholder="*/5 * * * *" />
+          <CronExpressionInput />
         </Form.Item>
         <Form.Item label="思考级别" name="thinkingLevel">
           <Select options={THINKING_LEVEL_OPTIONS} />

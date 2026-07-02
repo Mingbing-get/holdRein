@@ -1,0 +1,91 @@
+.cron-expression-input {
+  cursor: pointer;
+}
+
+.cron-editor {
+  display: grid;
+  gap: 16px;
+  width: min(680px, calc(100vw - 48px));
+}
+
+.cron-editor__fields {
+  display: grid;
+  gap: 16px;
+  max-height: min(56vh, 520px);
+  overflow-y: auto;
+  padding-inline-end: 4px;
+}
+
+.cron-field {
+  display: grid;
+  gap: 8px;
+}
+
+.cron-field__header {
+  align-items: baseline;
+  display: flex;
+  font-weight: 600;
+  justify-content: space-between;
+}
+
+.cron-field__summary {
+  color: var(--app-color-text-tertiary);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.cron-field__grid {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
+}
+
+.cron-field__grid--month,
+.cron-field__grid--dayOfWeek {
+  grid-template-columns: repeat(auto-fill, minmax(58px, 1fr));
+}
+
+.cron-field__value {
+  min-width: 0;
+  padding-inline: 4px;
+  width: 100%;
+}
+
+.cron-editor__footer {
+  align-items: end;
+  border-top: 1px solid var(--app-color-border-secondary);
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  padding-top: 12px;
+}
+
+.cron-editor__preview {
+  color: var(--app-color-text-secondary);
+  display: grid;
+  font-size: 12px;
+  gap: 3px;
+  min-width: 0;
+}
+
+.cron-editor__preview code {
+  color: var(--app-color-text);
+  overflow-wrap: anywhere;
+}
+
+.cron-editor__actions {
+  display: flex;
+  flex: none;
+  gap: 8px;
+}
+
+@media (max-width: 560px) {
+  .cron-editor__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cron-editor__actions {
+    justify-content: flex-end;
+  }
+}
