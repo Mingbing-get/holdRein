@@ -34,6 +34,11 @@ interface ScheduledTaskBody {
   workspacePath?: unknown;
 }
 
+interface ScheduledTasksQuery {
+  workspace?: unknown;
+  workspacePath?: unknown;
+}
+
 export function createScheduledTasksRouter(
   options: CreateScheduledTasksRouterOptions = {}
 ): Router {
@@ -44,9 +49,35 @@ export function createScheduledTasksRouter(
       agentsService: getDefaultAgentsService()
     });
 
-  router.get("/scheduled-tasks", (_request, response) => {
-    sendSuccess(response, getService().listScheduledTasks());
-  });
+  router.get(
+    "/scheduled-tasks",
+    (
+      request: Request<
+        Record<string, never>,
+        unknown,
+        unknown,
+        ScheduledTasksQuery
+      >,
+      response: Response
+    ) => {
+      const filter = parseListQuery(request.query);
+      if (filter === null) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "workspace must be a string"
+        );
+        return;
+      }
+
+      sendSuccess(
+        response,
+        filter === undefined
+          ? getService().listScheduledTasks()
+          : getService().listScheduledTasks(filter)
+      );
+    }
+  );
 
   router.post(
     "/scheduled-tasks",
@@ -174,6 +205,15 @@ function parseCreateBody(body: ScheduledTaskBody): ScheduledAgentTaskInput | nul
     timezone: update.timezone,
     workspacePath: update.workspacePath
   };
+}
+
+function parseListQuery(
+  query: ScheduledTasksQuery
+): { workspacePath: string } | undefined | null {
+  const workspace = query.workspace ?? query.workspacePath;
+  if (workspace === undefined) return undefined;
+  if (typeof workspace !== "string") return null;
+  return { workspacePath: workspace };
 }
 
 function parseUpdateBody(

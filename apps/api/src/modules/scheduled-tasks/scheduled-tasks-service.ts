@@ -13,6 +13,7 @@ import {
 } from "./scheduled-task-scheduler";
 import {
   createSqliteScheduledTasksRepository,
+  type ListScheduledTasksFilter,
   type ScheduledTasksRepository
 } from "./scheduled-tasks-repository";
 import type {
@@ -28,7 +29,9 @@ export interface ScheduledTasksService {
   disableScheduledTask: (id: string) => ScheduledAgentTaskRow | undefined;
   enableScheduledTask: (id: string) => ScheduledAgentTaskRow | undefined;
   findScheduledTask: (id: string) => ScheduledAgentTaskRow | undefined;
-  listScheduledTasks: () => ScheduledAgentTaskRow[];
+  listScheduledTasks: (
+    filter?: ListScheduledTasksFilter
+  ) => ScheduledAgentTaskRow[];
   updateScheduledTask: (
     id: string,
     input: Partial<ScheduledAgentTaskInput>
@@ -89,7 +92,7 @@ export function createScheduledTasksService(
     disableScheduledTask: (id) => updateEnabled(options, id, false),
     enableScheduledTask: (id) => updateEnabled(options, id, true),
     findScheduledTask: (id) => options.repository.findScheduledTaskById(id),
-    listScheduledTasks: () => options.repository.listScheduledTasks(),
+    listScheduledTasks: (filter) => options.repository.listScheduledTasks(filter),
     updateScheduledTask: (id, input) => {
       const existing = options.repository.findScheduledTaskById(id);
       if (!existing) return undefined;

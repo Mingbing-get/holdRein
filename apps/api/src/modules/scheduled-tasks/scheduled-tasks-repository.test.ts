@@ -36,6 +36,23 @@ describe.each([
       expect(repository.listEnabledScheduledTasks()).toEqual([enabled]);
     });
 
+    it("lists scheduled tasks by workspace path", () => {
+      const repository = createRepository();
+      const workspaceTask = repository.createScheduledTask(
+        createScheduledTask({ workspacePath: "/tmp/workspace-a" })
+      );
+      repository.createScheduledTask(
+        createScheduledTask({
+          id: "scheduled-2",
+          workspacePath: "/tmp/workspace-b"
+        })
+      );
+
+      expect(
+        repository.listScheduledTasks({ workspacePath: "/tmp/workspace-a" })
+      ).toEqual([workspaceTask]);
+    });
+
     it("updates scheduled task fields", () => {
       const repository = createRepository();
       repository.createScheduledTask(createScheduledTask());

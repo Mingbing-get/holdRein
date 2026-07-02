@@ -48,6 +48,23 @@ describe("scheduled task routes", () => {
     ).toEqual({ id: "scheduled-1" });
   });
 
+  it("passes workspace query filters when listing scheduled tasks", async () => {
+    const task = createScheduledTask({ workspacePath: "/tmp/workspace-a" });
+    const service = createService({
+      listScheduledTasks: vi.fn().mockReturnValue([task])
+    });
+    const app = await createApp({ scheduledTasksService: service });
+
+    const response = await request(app)
+      .get("/api/v1/scheduled-tasks")
+      .query({ workspace: "/tmp/workspace-a" });
+
+    expect(response.body.data).toEqual([task]);
+    expect(service.listScheduledTasks).toHaveBeenCalledWith({
+      workspacePath: "/tmp/workspace-a"
+    });
+  });
+
   it("rejects bad create requests", async () => {
     const app = await createApp({ scheduledTasksService: createService() });
     const response = await request(app).post("/api/v1/scheduled-tasks").send({
@@ -117,7 +134,9 @@ function createBody() {
   };
 }
 
-function createScheduledTask(): ScheduledAgentTaskRow {
+function createScheduledTask(
+  input: Partial<ScheduledAgentTaskRow> = {}
+): ScheduledAgentTaskRow {
   return {
     ...createBody(),
     createdAt: "2026-07-02T00:00:00.000Z",
@@ -125,6 +144,7 @@ function createScheduledTask(): ScheduledAgentTaskRow {
     id: "scheduled-1",
     lastRunAt: null,
     nextRunAt: "2026-07-02T00:05:00.000Z",
-    updatedAt: "2026-07-02T00:00:00.000Z"
+    updatedAt: "2026-07-02T00:00:00.000Z",
+    ...input
   };
 }

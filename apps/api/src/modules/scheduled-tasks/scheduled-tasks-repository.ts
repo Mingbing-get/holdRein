@@ -7,6 +7,10 @@ import type {
 } from "../../db";
 import { scheduledAgentTasks } from "../../db";
 
+export interface ListScheduledTasksFilter {
+  workspacePath?: string;
+}
+
 export interface ScheduledTasksRepository {
   createScheduledTask: (
     task: NewScheduledAgentTaskRow
@@ -14,7 +18,9 @@ export interface ScheduledTasksRepository {
   deleteScheduledTaskById: (id: string) => void;
   findScheduledTaskById: (id: string) => ScheduledAgentTaskRow | undefined;
   listEnabledScheduledTasks: () => ScheduledAgentTaskRow[];
-  listScheduledTasks: () => ScheduledAgentTaskRow[];
+  listScheduledTasks: (
+    filter?: ListScheduledTasksFilter
+  ) => ScheduledAgentTaskRow[];
   updateScheduledTask: (
     id: string,
     patch: Partial<NewScheduledAgentTaskRow>
@@ -40,7 +46,10 @@ export function createInMemoryScheduledTasksRepository(): ScheduledTasksReposito
     },
     findScheduledTaskById: (id) => rows.find((row) => row.id === id),
     listEnabledScheduledTasks: () => rows.filter((row) => row.enabled),
-    listScheduledTasks: () => [...rows],
+    listScheduledTasks: (filter) =>
+      filter?.workspacePath
+        ? rows.filter((row) => row.workspacePath === filter.workspacePath)
+        : [...rows],
     updateScheduledTask: (id, patch) => {
       const index = rows.findIndex((row) => row.id === id);
       const existing = rows[index];
@@ -87,7 +96,13 @@ export function createSqliteScheduledTasksRepository(
         .from(scheduledAgentTasks)
         .where(eq(scheduledAgentTasks.enabled, true))
         .all(),
-    listScheduledTasks: () => database.db.select().from(scheduledAgentTasks).all(),
+    listScheduledTasks: (filter) => {
+      const query = database.db.select().from(scheduledAgentTasks);
+      if (!filter?.workspacePath) return query.all();
+      return query
+        .where(eq(scheduledAgentTasks.workspacePath, filter.workspacePath))
+        .all();
+    },
     updateScheduledTask: (id, patch) => {
       database.db
         .update(scheduledAgentTasks)

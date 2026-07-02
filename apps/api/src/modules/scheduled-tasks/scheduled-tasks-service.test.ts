@@ -58,6 +58,18 @@ describe("scheduled tasks service", () => {
     expect(scheduler.reloadTask).toHaveBeenLastCalledWith(task.id);
   });
 
+  it("lists scheduled tasks for a workspace", () => {
+    const { service } = createTestService();
+    const workspaceTask = service.createScheduledTask(
+      createInput({ workspacePath: "/tmp/workspace-a" })
+    );
+    service.createScheduledTask(createInput({ workspacePath: "/tmp/workspace-b" }));
+
+    expect(
+      service.listScheduledTasks({ workspacePath: "/tmp/workspace-a" })
+    ).toEqual([workspaceTask]);
+  });
+
   it("enables, disables, and deletes scheduled tasks", () => {
     const { scheduler, service } = createTestService();
     const task = service.createScheduledTask(createInput());
