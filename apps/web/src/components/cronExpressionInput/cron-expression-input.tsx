@@ -60,6 +60,7 @@ export function CronExpressionInput({
 
   return (
     <Popover
+      arrow={false}
       content={content}
       destroyOnHidden
       onOpenChange={changeOpen}

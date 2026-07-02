@@ -77,6 +77,50 @@ describe("CronExpressionInput", () => {
     expect(screen.queryByRole("group", { name: "日期选择" })).not.toBeInTheDocument();
   });
 
+  it("renders the popover without an arrow", async () => {
+    render(<CronExpressionInput value="* * * * *" />);
+    fireEvent.click(screen.getByRole("textbox", { name: "执行周期" }));
+    await screen.findByRole("group", { name: "分钟选择" });
+    expect(document.querySelector(".ant-popover-arrow")).not.toBeInTheDocument();
+  });
+
+  it("expands fields by default and toggles each field independently", async () => {
+    render(<CronExpressionInput value="* * * * *" />);
+    fireEvent.click(screen.getByRole("textbox", { name: "执行周期" }));
+    fireEvent.click(await screen.findByText("小时", { selector: ".ant-segmented-item-label" }));
+
+    const hourHeader = screen.getByRole("button", { name: "小时折叠开关" });
+    const minuteHeader = screen.getByRole("button", { name: "分钟折叠开关" });
+    expect(hourHeader).toHaveAttribute("aria-expanded", "true");
+    expect(minuteHeader).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("group", { name: "小时选择" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "分钟选择" })).toBeInTheDocument();
+
+    fireEvent.click(hourHeader);
+    expect(hourHeader).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("group", { name: "小时选择" })).not.toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "分钟选择" })).toBeInTheDocument();
+
+    fireEvent.click(hourHeader);
+    expect(hourHeader).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("group", { name: "小时选择" })).toBeInTheDocument();
+  });
+
+  it("preserves selected values while a field is collapsed", async () => {
+    render(<CronExpressionInput value="* * * * *" />);
+    fireEvent.click(screen.getByRole("textbox", { name: "执行周期" }));
+    const minute = await screen.findByRole("button", { name: "05" });
+    fireEvent.click(minute);
+    fireEvent.click(screen.getByRole("button", { name: "分钟折叠开关" }));
+    expect(screen.queryByRole("button", { name: "05" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "分钟折叠开关" }));
+    expect(screen.getByRole("button", { name: "05" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+  });
+
   it("exposes pressed state, disabled state, status, and blur", async () => {
     const onBlur = vi.fn();
     const { rerender } = render(

@@ -23,9 +23,23 @@
 
 .cron-field__header {
   align-items: baseline;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
   display: flex;
+  font: inherit;
   font-weight: 600;
   justify-content: space-between;
+  padding: 0;
+  text-align: start;
+  width: 100%;
+}
+
+.cron-field__title {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
 }
 
 .cron-field__summary {
