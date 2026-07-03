@@ -128,7 +128,11 @@ describe("file tools", () => {
 
   it("edits a unique text block and returns only changed details", async () => {
     const cwd = await createWorkspace();
-    await writeFile(join(cwd, "example.ts"), "const name = 'old';\n", "utf8");
+    await writeFile(
+      join(cwd, "example.ts"),
+      "import 'setup';\n\nconst name = 'old';\n",
+      "utf8"
+    );
     const tool = createEditFileTool(createEnv(cwd));
 
     const result = await tool.execute("call-1", {
@@ -138,15 +142,17 @@ describe("file tools", () => {
     });
 
     await expect(readFile(join(cwd, "example.ts"), "utf8")).resolves.toBe(
-      "const name = 'new';\n"
+      "import 'setup';\n\nconst name = 'new';\n"
     );
     expect(result.content[0]?.text).toContain("Successfully replaced 1 block");
+    expect(result.content[0]?.text).toContain("@@ replacement 1, line 3 @@");
     expect(result.content[0]?.text).not.toContain("const name = 'new';\n");
     expect(result.details).toMatchObject({
       replacements: [
         {
           oldText: "const name = 'old';",
-          newText: "const name = 'new';"
+          newText: "const name = 'new';",
+          startLineNumber: 3
         }
       ]
     });

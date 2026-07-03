@@ -18,14 +18,19 @@ vi.mock("@monaco-editor/react", () => ({
     React.createElement("pre", { "data-testid": "code-preview" }, value),
   DiffEditor: ({
     modified,
-    original
+    original,
+    options
   }: {
     modified: string;
     original: string;
+    options: { lineNumbers?: (lineNumber: number) => string };
   }) =>
     React.createElement(
       "pre",
-      { "data-testid": "diff-preview" },
+      {
+        "data-start-line": options.lineNumbers?.(1),
+        "data-testid": "diff-preview"
+      },
       `${original}\n---\n${modified}`
     )
 }));
@@ -62,6 +67,23 @@ describe("file tool renders", () => {
     expect(screen.getAllByText("src/app.ts")).toHaveLength(4);
     expect(screen.queryByText(absolutePath)).not.toBeInTheDocument();
   });
+
+  it("starts edit diff line numbers at the matched source line", () => {
+    renderFileTool(
+      EditFileToolRender,
+      {
+        newText: "after",
+        oldText: "before",
+        path: "src/app.ts"
+      },
+      "Successfully replaced 1 block(s) in src/app.ts.\n\n@@ replacement 1, line 12 @@\n-before\n+after"
+    );
+
+    expect(screen.getByTestId("diff-preview")).toHaveAttribute(
+      "data-start-line",
+      "12"
+    );
+  });
 });
 
 function renderFileTool(
@@ -69,12 +91,24 @@ function renderFileTool(
   {
     workspacePath,
     ...args
-  }: Record<string, unknown> & { workspacePath?: string | undefined }
+  }: Record<string, unknown> & { workspacePath?: string | undefined },
+  resultText?: string
 ) {
   return render(
     React.createElement(Render, {
       DefaultToolRender,
       renderDefaultChildren: () => null,
+      result: resultText
+        ? {
+            content: [{ text: resultText, type: "text" }],
+            id: "tool-result",
+            isError: false,
+            role: "toolResult",
+            timestamp: 1,
+            toolCallId: "tool-call",
+            toolName: "edit_file"
+          }
+        : undefined,
       toolCall: {
         arguments: args,
         id: "tool-call",

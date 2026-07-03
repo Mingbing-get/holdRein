@@ -22,6 +22,7 @@ import "./file-tool-render.css";
 interface EditReplacement {
   oldText: string;
   newText: string;
+  startLineNumber?: number | undefined;
 }
 
 export function ReadFileToolRender(props: WebPlugin.ToolRenderProps) {
@@ -121,7 +122,10 @@ export function FindFilesToolRender(props: WebPlugin.ToolRenderProps) {
 export function EditFileToolRender(props: WebPlugin.ToolRenderProps) {
   const args = props.toolCall.arguments;
   const path = getStringArg(args, "path");
-  const replacements = getEditReplacements(args);
+  const replacements = getEditReplacements(
+    args,
+    props.result?.isError ? "" : getTextResult(props.result)
+  );
   const errorOutput = props.result?.isError ? getTextResult(props.result) : "";
 
   return (
@@ -135,6 +139,7 @@ export function EditFileToolRender(props: WebPlugin.ToolRenderProps) {
               modified={replacement.newText}
               original={replacement.oldText}
               path={path}
+              startLineNumber={replacement.startLineNumber}
             />
           ))
         ) : (
@@ -196,39 +201,48 @@ function ResultList({
 }
 
 function getEditReplacements(
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  resultText: string
 ): EditReplacement[] {
   const oldText = getStringArg(args, "oldText");
   const newText = getStringArg(args, "newText");
   const replacements: EditReplacement[] = [];
 
+  const edits = args.edits;
+  if (Array.isArray(edits)) {
+    for (const edit of edits) {
+      if (!edit || typeof edit !== "object") {
+        continue;
+      }
+
+      const candidate = edit as Record<string, unknown>;
+      if (
+        typeof candidate.oldText === "string" &&
+        typeof candidate.newText === "string"
+      ) {
+        replacements.push({
+          oldText: candidate.oldText,
+          newText: candidate.newText
+        });
+      }
+    }
+  }
+
   if (oldText !== undefined && newText !== undefined) {
     replacements.push({ oldText, newText });
   }
 
-  const edits = args.edits;
-  if (!Array.isArray(edits)) {
-    return replacements;
-  }
+  const startLineNumbers = getReplacementStartLineNumbers(resultText);
+  return replacements.map((replacement, index) => ({
+    ...replacement,
+    startLineNumber: startLineNumbers[index]
+  }));
+}
 
-  for (const edit of edits) {
-    if (!edit || typeof edit !== "object") {
-      continue;
-    }
-
-    const candidate = edit as Record<string, unknown>;
-    if (
-      typeof candidate.oldText === "string" &&
-      typeof candidate.newText === "string"
-    ) {
-      replacements.push({
-        oldText: candidate.oldText,
-        newText: candidate.newText
-      });
-    }
-  }
-
-  return replacements;
+function getReplacementStartLineNumbers(resultText: string): number[] {
+  return [...resultText.matchAll(/^@@ replacement \d+, line (\d+) @@$/gm)].map(
+    (match) => Number(match[1])
+  );
 }
 
 export const readFileTool: WebPlugin.ToolRender = {

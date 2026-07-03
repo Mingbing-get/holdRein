@@ -13,6 +13,7 @@ interface DiffPreviewProps {
   modified: string;
   original: string;
   path: string | undefined;
+  startLineNumber?: number | undefined;
 }
 
 export function CodePreview({ content, path }: CodePreviewProps) {
@@ -39,7 +40,12 @@ export function CodePreview({ content, path }: CodePreviewProps) {
   );
 }
 
-export function DiffPreview({ modified, original, path }: DiffPreviewProps) {
+export function DiffPreview({
+  modified,
+  original,
+  path,
+  startLineNumber = 1
+}: DiffPreviewProps) {
   const theme = useMonacoTheme();
   const height = Math.min(
     420,
@@ -57,6 +63,7 @@ export function DiffPreview({ modified, original, path }: DiffPreviewProps) {
           language={getLanguageFromPath(path)}
           modified={modified}
           options={{
+            lineNumbers: (lineNumber) => String(lineNumber + startLineNumber - 1),
             lineNumbersMinChars: 3,
             minimap: { enabled: false },
             readOnly: true,

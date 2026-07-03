@@ -40,6 +40,7 @@ interface EditReplacement {
 
 interface MatchedReplacement extends EditReplacement {
   index: number;
+  startLineNumber: number;
 }
 
 export function createEditFileTool(env: ExecutionEnv): ServerPlugin.PluginTool {
@@ -71,7 +72,14 @@ export function createEditFileTool(env: ExecutionEnv): ServerPlugin.PluginTool {
       await writeFile(absolutePath, restoreLineEndings(newContent, lineEnding), "utf8");
       throwIfAborted(signal);
 
-      const diff = formatReplacementDiff(replacements);
+      const replacementResults = matched.map(
+        ({ newText, oldText, startLineNumber }) => ({
+          newText,
+          oldText,
+          startLineNumber
+        })
+      );
+      const diff = formatReplacementDiff(replacementResults);
       return {
         content: [
           {
@@ -85,7 +93,7 @@ export function createEditFileTool(env: ExecutionEnv): ServerPlugin.PluginTool {
         ],
         details: {
           path: absolutePath,
-          replacements,
+          replacements: replacementResults,
           diff
         }
       };
@@ -135,7 +143,11 @@ function matchReplacements(
     if (occurrenceIndex === undefined) {
       throw new Error(`Could not find edits[${index}] in ${path}.`);
     }
-    return { ...replacement, index: occurrenceIndex };
+    return {
+      ...replacement,
+      index: occurrenceIndex,
+      startLineNumber: content.slice(0, occurrenceIndex).split("\n").length
+    };
   });
 
   matched.sort((a, b) => a.index - b.index);
@@ -180,11 +192,13 @@ function applyReplacements(
   return nextContent;
 }
 
-function formatReplacementDiff(replacements: EditReplacement[]): string {
+function formatReplacementDiff(
+  replacements: Array<EditReplacement & { startLineNumber: number }>
+): string {
   return replacements
     .map((replacement, index) =>
       [
-        `@@ replacement ${index + 1} @@`,
+        `@@ replacement ${index + 1}, line ${replacement.startLineNumber} @@`,
         ...replacement.oldText.split("\n").map((line) => `-${line}`),
         ...replacement.newText.split("\n").map((line) => `+${line}`)
       ].join("\n")
