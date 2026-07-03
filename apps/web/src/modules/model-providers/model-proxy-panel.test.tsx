@@ -290,6 +290,87 @@ describe("ModelProxyPanel", () => {
     expect(screen.queryByText("移除限制")).not.toBeInTheDocument();
   });
 
+  it("reorders candidates and submitted priorities by dragging their handles", async () => {
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (init?.method === "POST") {
+        return {
+          json: async () => ({ code: 0, data: {}, msg: "ok" }),
+          ok: true
+        } as Response;
+      }
+      if (url.endsWith("/api/v1/model-providers")) {
+        return openAiProviderResponse;
+      }
+      if (url.endsWith("/models")) return openAiModelsResponse;
+      return emptyProxyResponse;
+    });
+
+    render(
+      <ModelProxyPanel
+        apiBaseUrl="http://localhost:4000"
+        onChanged={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /新建代理/ }));
+    fireEvent.change(await screen.findByLabelText("代理名称"), {
+      target: { value: "Sorted Proxy" }
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "添加候选" }));
+
+    await waitFor(() => {
+      expect(screen.getAllByLabelText("最大 Tokens")).toHaveLength(2);
+    });
+    const maxTokenInputs = screen.getAllByLabelText("最大 Tokens");
+    const [firstInput, secondInput] = maxTokenInputs;
+    if (!firstInput || !secondInput) throw new Error("Expected two candidate inputs");
+    fireEvent.change(firstInput, { target: { value: "111" } });
+    fireEvent.change(secondInput, { target: { value: "222" } });
+
+    const handles = screen.getAllByRole("button", { name: /拖拽候选/ });
+    const cards = screen.getAllByTestId("model-proxy-candidate-card");
+    const [, secondHandle] = handles;
+    const [firstCard] = cards;
+    if (!secondHandle || !firstCard) throw new Error("Expected draggable candidates");
+    const dataTransfer = {
+      effectAllowed: "",
+      setData: vi.fn(),
+      setDragImage: vi.fn()
+    };
+    fireEvent.dragStart(secondHandle, { dataTransfer });
+    fireEvent.dragOver(firstCard, { dataTransfer });
+    fireEvent.drop(firstCard, { dataTransfer });
+
+    const reorderedInputs = screen.getAllByLabelText("最大 Tokens");
+    expect(reorderedInputs).toHaveLength(2);
+    expect(reorderedInputs[0]).toHaveValue("222");
+    expect(reorderedInputs[1]).toHaveValue("111");
+
+    fireEvent.click(screen.getByRole("button", { name: "创建代理" }));
+
+    await waitFor(() => {
+      const createCall = fetchMock.mock.calls.find(
+        ([url, init]) =>
+          String(url).endsWith("/api/v1/model-proxies") && init?.method === "POST"
+      );
+      expect(createCall).toBeDefined();
+      const body = JSON.parse(String(createCall?.[1]?.body)) as {
+        candidates: {
+          limits: { maxTokens: number }[];
+          priority: number;
+        }[];
+      };
+      expect(body.candidates.map((candidate) => ({
+        maxTokens: candidate.limits[0]?.maxTokens,
+        priority: candidate.priority
+      }))).toEqual([
+        { maxTokens: 222, priority: 1 },
+        { maxTokens: 111, priority: 2 }
+      ]);
+    });
+  });
+
   it("opens edit proxy in a modal and keeps the existing system model id", async () => {
     const onChanged = vi.fn();
     fetchMock

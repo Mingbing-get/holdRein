@@ -9,8 +9,6 @@ import {
   Input,
   Modal,
   Popconfirm,
-  Select,
-  Tag,
   Typography
 } from "antd";
 
@@ -22,13 +20,13 @@ import {
   fetchProviderModels,
   invalidateProviderModelsCache
 } from "./model-provider-api";
+import { DEFAULT_MODEL_PROXY_LIMIT } from "./model-proxy-limit-list";
 import {
-  DEFAULT_MODEL_PROXY_LIMIT,
-  ModelProxyLimitList
-} from "./model-proxy-limit-list";
+  ModelProxyCandidateList,
+  type ModelProxyCandidateFormValue
+} from "./model-proxy-candidate-list";
 import type {
   ModelProxySummary,
-  ModelProxyWindowType,
   ModelProviderSummary,
   ModelSummary
 } from "./model-provider-types";
@@ -39,15 +37,7 @@ interface ModelProxyPanelProps {
 }
 
 interface ProxyFormValues {
-  candidates: {
-    limits: {
-      maxTokens: number;
-      windowHours?: number;
-      windowType: ModelProxyWindowType;
-    }[];
-    modelId: string;
-    provider: string;
-  }[];
+  candidates: ModelProxyCandidateFormValue[];
   name: string;
 }
 
@@ -289,113 +279,27 @@ export function ModelProxyPanel({
         open={isModalOpen}
         title={editingModelId ? "编辑代理" : "新建代理"}
         width={820}
-        styles={{
-          body: {
-            maxHeight: "65vh",
-            overflowY: "auto"
-          }
-        }}
       >
-        <Form<ProxyFormValues> form={form} layout="vertical" onFinish={submit}>
-          <Form.Item
-            label="代理名称"
-            name="name"
-            rules={[{ required: true, message: "请输入代理名称" }]}
-          >
-            <Input aria-label="代理名称" placeholder="例如 Coding Agent" />
-          </Form.Item>
-          <Form.List name="candidates">
-            {(candidateFields, { add, remove }) => (
-              <Flex gap={12} vertical>
-                {candidateFields.map((candidateField, candidateIndex) => (
-                  <Card
-                    data-testid="model-proxy-candidate-card"
-                    key={candidateField.key}
-                    size="small"
-                    title={
-                      <Flex align="center" gap={8}>
-                        <span>{`候选 ${candidateIndex + 1}`}</span>
-                        <Tag>{`优先级 ${candidateIndex + 1}`}</Tag>
-                      </Flex>
-                    }
-                    extra={
-                      candidateFields.length > 1 ? (
-                        <Button
-                          aria-label={`移除候选 ${candidateIndex + 1}`}
-                          danger
-                          icon={<DeleteOutlined />}
-                          onClick={() => remove(candidateField.name)}
-                          shape="circle"
-                          size="small"
-                          type="text"
-                        />
-                      ) : null
-                    }
-                    style={{
-                      background: "var(--app-color-bg-container)",
-                      borderColor: "var(--app-color-border-secondary)"
-                    }}
-                  >
-                    <Flex gap={10} vertical>
-                      <Flex gap={10} wrap>
-                        <Form.Item
-                          label="提供商"
-                          name={[candidateField.name, "provider"]}
-                          rules={[{ required: true, message: "请选择提供商" }]}
-                        >
-                          <Select
-                            aria-label={`候选 ${candidateIndex + 1} 提供商`}
-                            onChange={(providerId) => void loadProviderModels(providerId)}
-                            options={candidateProviders.map((provider) => ({
-                              label: provider.id,
-                              value: provider.id
-                            }))}
-                            style={{ minWidth: 180 }}
-                          />
-                        </Form.Item>
-                        <Form.Item shouldUpdate noStyle>
-                          {({ getFieldValue }) => {
-                            const providerId = getFieldValue([
-                              "candidates",
-                              candidateField.name,
-                              "provider"
-                            ]) as string | undefined;
-                            return (
-                              <Form.Item
-                                label="模型"
-                                name={[candidateField.name, "modelId"]}
-                                rules={[{ required: true, message: "请选择模型" }]}
-                              >
-                                <Select
-                                  aria-label={`候选 ${candidateIndex + 1} 模型`}
-                                  options={(modelOptions[providerId ?? ""] ?? []).map(
-                                    (model) => ({
-                                      label: model.name,
-                                      value: model.id
-                                    })
-                                  )}
-                                  style={{ minWidth: 240 }}
-                                />
-                              </Form.Item>
-                            );
-                          }}
-                        </Form.Item>
-                      </Flex>
-                      <ModelProxyLimitList candidateFieldName={candidateField.name} />
-                    </Flex>
-                  </Card>
-                ))}
-                <Button
-                  onClick={() => {
-                    void buildInitialCandidate().then((candidate) => add(candidate));
-                  }}
-                >
-                  添加候选
-                </Button>
-              </Flex>
-            )}
-          </Form.List>
-        </Form>
+        <div
+          data-model-proxy-scroll-container
+          style={{ maxHeight: "65vh", overflowY: "auto" }}
+        >
+          <Form<ProxyFormValues> form={form} layout="vertical" onFinish={submit}>
+            <Form.Item
+              label="代理名称"
+              name="name"
+              rules={[{ required: true, message: "请输入代理名称" }]}
+            >
+              <Input aria-label="代理名称" placeholder="例如 Coding Agent" />
+            </Form.Item>
+            <ModelProxyCandidateList
+              candidateProviders={candidateProviders}
+              createCandidate={buildInitialCandidate}
+              loadProviderModels={loadProviderModels}
+              modelOptions={modelOptions}
+            />
+          </Form>
+        </div>
       </Modal>
     </Flex>
   );
