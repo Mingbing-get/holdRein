@@ -188,6 +188,7 @@ const CREATE_SUBAGENTS_TABLE_SQL = `
   CREATE TABLE IF NOT EXISTS subagents (
     agent_id TEXT PRIMARY KEY NOT NULL,
     agent_name TEXT NOT NULL DEFAULT 'subagent',
+    depth INTEGER NOT NULL DEFAULT 1,
     parent_agent_id TEXT NOT NULL,
     task_id TEXT NOT NULL,
     status TEXT NOT NULL CHECK(status IN ('running', 'completed', 'interrupted')),
@@ -272,6 +273,10 @@ const ADD_SUBAGENTS_AGENT_NAME_COLUMN_SQL = `
   ALTER TABLE subagents ADD COLUMN agent_name TEXT NOT NULL DEFAULT 'subagent'
 `;
 
+const ADD_SUBAGENTS_DEPTH_COLUMN_SQL = `
+  ALTER TABLE subagents ADD COLUMN depth INTEGER NOT NULL DEFAULT 1
+`;
+
 const ADD_SUBAGENTS_SESSION_PATH_COLUMN_SQL = `
   ALTER TABLE subagents ADD COLUMN session_path TEXT
 `;
@@ -327,6 +332,7 @@ export function migrateDatabase(sqlite: { exec: (sql: string) => void }): void {
   addColumnIfMissing(sqlite, ADD_TASKS_SOURCE_MARK_COLUMN_SQL);
   sqlite.exec(CREATE_TASKS_SOURCE_INDEX_SQL);
   addColumnIfMissing(sqlite, ADD_SUBAGENTS_AGENT_NAME_COLUMN_SQL);
+  addColumnIfMissing(sqlite, ADD_SUBAGENTS_DEPTH_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_SUBAGENTS_SESSION_ID_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_SUBAGENTS_SESSION_PATH_COLUMN_SQL);
   addColumnIfMissing(sqlite, ADD_SUBAGENTS_SESSION_CREATED_AT_COLUMN_SQL);
@@ -356,6 +362,7 @@ function relaxSubagentStatusConstraint(sqlite: {
     CREATE TABLE subagents_new (
       agent_id TEXT PRIMARY KEY NOT NULL,
       agent_name TEXT NOT NULL DEFAULT 'subagent',
+      depth INTEGER NOT NULL DEFAULT 1,
       parent_agent_id TEXT NOT NULL,
       task_id TEXT NOT NULL,
       status TEXT NOT NULL CHECK(status IN ('running', 'completed', 'interrupted')),
@@ -368,13 +375,13 @@ function relaxSubagentStatusConstraint(sqlite: {
     ) STRICT;
     INSERT INTO subagents_new (
       agent_id, parent_agent_id, task_id, status,
-      agent_name,
+      agent_name, depth,
       session_id, session_path, session_created_at,
       created_at, updated_at
     )
     SELECT
       agent_id, parent_agent_id, task_id, status,
-      agent_name,
+      agent_name, depth,
       session_id, session_path, session_created_at,
       created_at, updated_at
     FROM subagents;

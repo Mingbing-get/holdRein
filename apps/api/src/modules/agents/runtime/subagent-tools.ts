@@ -11,6 +11,7 @@ import { toAgentSessionMetadata } from "./support";
 import type { HarnessSession, PendingVisibleCustomMessage, StartHarnessOptions, StartHarnessResult } from "./type";
 
 const CALL_SUBAGENT_CUSTOM_TYPE = "callsubagent";
+const MAX_MODEL_SUBAGENT_DEPTH = 3;
 
 type StartHarness = (
   promptText: string,
@@ -19,6 +20,7 @@ type StartHarness = (
 
 interface CreateRuntimeSubagentToolsInput {
   contributionTools: ServerPlugin.PluginTool[];
+  depth: number;
   eventBus: AgentEventBus;
   parentAgentId: string;
   parentAgentName?: string;
@@ -63,9 +65,11 @@ export async function createRuntimeSubagentTools(
 
   return [
     ...input.contributionTools,
-    createCallSubagentTool({
-      startSubagent: (request) => startSubagent(input, request)
-    }),
+    ...(input.depth < MAX_MODEL_SUBAGENT_DEPTH
+      ? [createCallSubagentTool({
+          startSubagent: (request) => startSubagent(input, request)
+        })]
+      : []),
     ...(hasCalledSubagent ? [createRuntimeRevokeSubagentTool(input)] : [])
   ];
 }
@@ -98,6 +102,7 @@ export function createRuntimeRevokeSubagentTool(
         agentName,
         agentSession,
         consumed: false,
+        depth: subagentRow.depth,
         lastAssistantText: "",
         parentAgentId: input.parentAgentId,
         parentSession: input.parentSession,
@@ -118,6 +123,7 @@ export function createRuntimeRevokeSubagentTool(
       await input.startHarness(prompt, {
         agentId,
         agentName,
+        depth: subagentRow.depth,
         isContinue: true,
         parentAgentId: input.parentAgentId,
         pluginPrompt: prompt,
@@ -212,6 +218,7 @@ async function startSubagent(
     toolCallId: string;
   }
 ) {
+  const childDepth = input.depth + 1;
   const agentId = `agent_${randomUUID()}`;
   const createdAt = new Date().toISOString();
   const childSession = await input.sessionRepo.create({
@@ -224,6 +231,7 @@ async function startSubagent(
     agentId,
     agentName: request.agentName,
     createdAt,
+    depth: childDepth,
     parentAgentId: input.parentAgentId,
     sessionCreatedAt: childSessionMetadata.createdAt,
     sessionId: childSessionMetadata.id,
@@ -237,6 +245,7 @@ async function startSubagent(
     started = await input.startHarness(request.prompt, {
       agentId,
       agentName: request.agentName,
+      depth: childDepth,
       isContinue: false,
       parentAgentId: input.parentAgentId,
       pluginPrompt: request.prompt,
@@ -258,6 +267,7 @@ async function startSubagent(
     agentName: request.agentName,
     agentSession: started.harnessSession,
     consumed: false,
+    depth: childDepth,
     lastAssistantText: "",
     parentAgentId: input.parentAgentId,
     ...(input.parentAgentName === undefined

@@ -129,6 +129,53 @@ describe("agent runtime subagent calls", () => {
     ]);
   });
 
+  it("stops exposing call_subagent after three child levels", async () => {
+    const { repo } = createSessionRepo();
+    const subagentRepository = createInMemorySubagentRepository();
+    const runtime = createRuntime(repo, createAgentEventBus(), subagentRepository);
+    await runtime.start(createRunInput());
+
+    for (let depth = 1; depth <= 3; depth += 1) {
+      const callTool = getHarnessTool(harnessConstructor, "call_subagent");
+      expect(callTool).toBeDefined();
+      await callTool?.execute?.(`tool-call-${depth}`, {
+        agentName: `child-${depth}`,
+        prompt: `Start child level ${depth}`
+      });
+    }
+
+    expect(getHarnessTool(harnessConstructor, "call_subagent")).toBeUndefined();
+    expect(subagentRepository.findByTaskId("task-1").map((row) => row.depth))
+      .toEqual([1, 2, 3]);
+  });
+
+  it("allows onAgentEnd to create a subagent beyond the model tool limit", async () => {
+    const { repo } = createSessionRepo();
+    const subagentRepository = createInMemorySubagentRepository();
+    resolveContributions.mockResolvedValue(createContribution({
+      onAgentEnd: vi.fn().mockResolvedValue({
+        agentName: "continuation",
+        prompt: "Continue outside the model tool path",
+        useSubagent: true
+      })
+    }));
+    const runtime = createRuntime(repo, createAgentEventBus(), subagentRepository);
+    await runtime.start(createRunInput());
+
+    for (let depth = 1; depth <= 3; depth += 1) {
+      await getHarnessTool(harnessConstructor, "call_subagent")?.execute?.(
+        `tool-call-${depth}`,
+        { agentName: `child-${depth}`, prompt: `Start child level ${depth}` }
+      );
+    }
+    await harnessSubscribers[3]?.({ type: "agent_end" });
+
+    expect(subagentRepository.findByTaskId("task-1").map((row) => row.depth))
+      .toEqual([1, 2, 3, 4]);
+    expect(prompt).toHaveBeenLastCalledWith("Continue outside the model tool path");
+    expect(getHarnessTool(harnessConstructor, "call_subagent")).toBeUndefined();
+  });
+
   it("defers completed subagent results while the parent harness is running", async () => {
     const { appendCustomMessageEntry, repo } = createSessionRepo();
     const eventBus = createAgentEventBus();
@@ -440,6 +487,9 @@ describe("agent runtime subagent calls", () => {
       message: toolResultMessage("tool-call-1"),
       type: "message_end"
     });
+    database.sqlite.prepare(
+      "UPDATE subagents SET depth = 3 WHERE agent_id = ?"
+    ).run(childAgentId);
     const appendCountBeforeRevoke = appendCustomMessageEntry.mock.calls.length;
     const revokeTool = parentOptions.tools?.find(
       (tool) => tool.name === "revoke_subagent"
@@ -457,6 +507,7 @@ describe("agent runtime subagent calls", () => {
       path: "/sessions/session-2.jsonl"
     });
     expect(appendCustomMessageEntry).toHaveBeenCalledTimes(appendCountBeforeRevoke);
+    expect(getHarnessTool(harnessConstructor, "call_subagent")).toBeUndefined();
     expect(parentEvents).toContainEqual({
       type: "subagent_resumed",
       payload: expect.objectContaining({

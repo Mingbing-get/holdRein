@@ -8,6 +8,7 @@ export interface SubagentRun<ParentSession> {
   agentName: string;
   agentSession: ParentSession;
   consumed: boolean;
+  depth: number;
   lastAssistantText: string;
   parentAgentId: string;
   parentAgentName?: string;

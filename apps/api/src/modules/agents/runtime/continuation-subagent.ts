@@ -28,6 +28,7 @@ export async function startContinuationSubagent(input: {
   eventBus: AgentEventBus;
   parentAgentId: string;
   parentAgentName: string | undefined;
+  parentDepth: number;
   parentSession: HarnessSession;
   prompt: string;
   sessionRepo: SessionRepo;
@@ -37,6 +38,7 @@ export async function startContinuationSubagent(input: {
   taskId: string;
   workspacePath: string;
 }): Promise<void> {
+  const depth = input.parentDepth + 1;
   const agentName = input.agentName ?? DEFAULT_SUBAGENT_NAME;
   const agentId = `agent_${randomUUID()}`;
   const createdAt = new Date().toISOString();
@@ -48,6 +50,7 @@ export async function startContinuationSubagent(input: {
     agentId,
     agentName,
     createdAt,
+    depth,
     parentAgentId: input.parentAgentId,
     sessionCreatedAt: childSessionMetadata.createdAt,
     sessionId: childSessionMetadata.id,
@@ -62,6 +65,7 @@ export async function startContinuationSubagent(input: {
     started = await input.startHarness(input.prompt, {
       agentId,
       agentName,
+      depth,
       isContinue: false,
       parentAgentId: input.parentAgentId,
       pluginPrompt: input.prompt,
@@ -77,6 +81,7 @@ export async function startContinuationSubagent(input: {
     agentName,
     agentSession: started.harnessSession,
     consumed: false,
+    depth,
     lastAssistantText: "",
     parentAgentId: input.parentAgentId,
     ...(input.parentAgentName === undefined

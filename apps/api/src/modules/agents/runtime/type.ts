@@ -45,6 +45,7 @@ export type HarnessSession = Awaited<ReturnType<JsonlSessionRepoApi["create"]>>;
 export interface StartHarnessOptions {
   agentId?: string;
   agentName?: string;
+  depth: number;
   isContinue: boolean;
   parentAgentId?: string;
   pluginPrompt: string;

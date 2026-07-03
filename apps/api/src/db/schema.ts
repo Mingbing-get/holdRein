@@ -228,6 +228,7 @@ export const subagents = sqliteTable(
     agentId: text("agent_id").primaryKey(),
     agentName: text("agent_name").notNull().default("subagent"),
     createdAt: text("created_at").notNull(),
+    depth: integer("depth").notNull().default(1),
     parentAgentId: text("parent_agent_id").notNull(),
     sessionCreatedAt: text("session_created_at"),
     sessionId: text("session_id"),

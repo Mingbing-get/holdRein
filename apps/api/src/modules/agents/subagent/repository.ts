@@ -30,7 +30,7 @@ export function createInMemorySubagentRepository(
       if (rows.has(subagent.agentId)) {
         throw new Error(`Subagent already exists: ${subagent.agentId}`);
       }
-      const row = { ...subagent } as SubagentRow;
+      const row = { ...subagent, depth: subagent.depth ?? 1 } as SubagentRow;
       rows.set(row.agentId, row);
       return row;
     },

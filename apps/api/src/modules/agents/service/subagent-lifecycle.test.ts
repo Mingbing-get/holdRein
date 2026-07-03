@@ -186,6 +186,7 @@ function createSubagent(input: {
     agentId: input.agentId,
     agentName: "subagent",
     createdAt: "now",
+    depth: 1,
     parentAgentId: "agent-parent",
     sessionCreatedAt: input.sessionPath ? "now" : null,
     sessionId: input.sessionPath ? `session-${input.agentId}` : null,

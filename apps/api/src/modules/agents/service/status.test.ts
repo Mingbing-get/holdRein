@@ -342,6 +342,7 @@ function createSubagent(input: {
     agentId: input.agentId,
     agentName: "subagent",
     createdAt: "now",
+    depth: 1,
     parentAgentId: "agent-parent",
     sessionCreatedAt: null,
     sessionId: null,

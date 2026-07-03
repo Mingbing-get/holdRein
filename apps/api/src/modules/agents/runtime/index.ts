@@ -106,6 +106,7 @@ export function createAgentRuntime(
         });
         const tools = await createRuntimeSubagentTools({
           contributionTools: [...(contribution.tools || []), ...browserTools],
+          depth: harnessOptions.depth,
           eventBus: options.eventBus,
           parentAgentId: harnessOptions.agentId,
           ...(harnessOptions.agentName === undefined
@@ -367,6 +368,7 @@ export function createAgentRuntime(
           });
           await startHarness(AGENT_CONTINUE_PROMPT, {
             agentId: harnessAgentId,
+            depth: currentSubagent?.depth ?? 0,
             isContinue: true,
             pluginPrompt: prompt,
             session: harnessSession,
@@ -402,6 +404,7 @@ export function createAgentRuntime(
             eventBus: options.eventBus,
             parentAgentId: harnessAgentId,
             parentAgentName: harnessAgentName,
+            parentDepth: currentSubagent?.depth ?? 0,
             parentSession: harnessSession,
             prompt: continuation.prompt,
             sessionRepo,
@@ -423,6 +426,7 @@ export function createAgentRuntime(
         });
         await startHarness(AGENT_CONTINUE_PROMPT, {
           agentId: harnessAgentId,
+          depth: currentSubagent?.depth ?? 0,
           isContinue: true,
           pluginPrompt: continuation.prompt,
           session: harnessSession,
@@ -480,6 +484,7 @@ export function createAgentRuntime(
         ? await sessionRepo.open({ ...input.session, cwd: input.workspacePath })
         : undefined;
       const startedHarness = await startHarness(input.prompt, {
+        depth: 0,
         isContinue: false,
         pluginPrompt: input.prompt,
         ...(inputSession ? { session: inputSession } : {})

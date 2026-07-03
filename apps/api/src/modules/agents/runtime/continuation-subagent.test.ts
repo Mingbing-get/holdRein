@@ -25,6 +25,7 @@ describe("continuation subagent", () => {
       eventBus: createAgentEventBus(),
       parentAgentId: "agent-parent",
       parentAgentName: "main",
+      parentDepth: 3,
       parentSession,
       prompt: "Review the implementation",
       sessionRepo: { create },
@@ -36,10 +37,13 @@ describe("continuation subagent", () => {
     });
 
     const [startedAgentId] = subagentRepository.findByTaskId("task-1");
-    expect(startedAgentId).toEqual(expect.objectContaining({ agentName: "reviewer" }));
+    expect(startedAgentId).toEqual(expect.objectContaining({
+      agentName: "reviewer",
+      depth: 4
+    }));
     expect(startHarness).toHaveBeenCalledWith(
       "Review the implementation",
-      expect.objectContaining({ agentName: "reviewer" })
+      expect.objectContaining({ agentName: "reviewer", depth: 4 })
     );
     expect(appendCustomMessageEntry).toHaveBeenCalledWith(
       "callsubagent",

@@ -39,6 +39,7 @@ describe.each([
 
     expect(repository.findByAgentId("agent-child")).toEqual(
       expect.objectContaining({
+        depth: 1,
         sessionCreatedAt: "2026-06-18T00:00:00.000Z",
         sessionId: "session-child",
         sessionPath: "/sessions/session-child.jsonl",

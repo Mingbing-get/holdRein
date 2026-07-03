@@ -62,7 +62,10 @@ describe("database", () => {
     expect(exec).toHaveBeenCalledWith(
       expect.stringContaining("ALTER TABLE tasks ADD COLUMN source_mark")
     );
-    expect(exec).toHaveBeenCalledTimes(40);
+    expect(exec).toHaveBeenCalledWith(
+      expect.stringContaining("ALTER TABLE subagents ADD COLUMN depth")
+    );
+    expect(exec).toHaveBeenCalledTimes(41);
     expect(exec).toHaveBeenNthCalledWith(
       1,
       expect.stringContaining("CREATE TABLE IF NOT EXISTS custom_model_providers")
@@ -408,10 +411,11 @@ describe("database", () => {
       `).run();
       expect(
         sqlite.prepare(
-          "SELECT agent_name, session_id, session_path, session_created_at, status FROM subagents WHERE agent_id = 'agent-child'"
+          "SELECT agent_name, depth, session_id, session_path, session_created_at, status FROM subagents WHERE agent_id = 'agent-child'"
         ).get()
       ).toEqual({
         agent_name: "researcher",
+        depth: 1,
         session_created_at: "created",
         session_id: "session-child",
         session_path: "/sessions/session-child.jsonl",
@@ -591,11 +595,12 @@ describe("database", () => {
       expect(
         sqlite
           .prepare(
-            "SELECT agent_name, session_id, session_path, session_created_at FROM subagents WHERE agent_id = 'agent-child'"
+            "SELECT agent_name, depth, session_id, session_path, session_created_at FROM subagents WHERE agent_id = 'agent-child'"
           )
           .get()
       ).toEqual({
         agent_name: "subagent",
+        depth: 1,
         session_created_at: null,
         session_id: null,
         session_path: null
