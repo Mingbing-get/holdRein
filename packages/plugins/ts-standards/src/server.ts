@@ -7,6 +7,7 @@ import { PLUGIN_ID } from './plugin-id'
 
 const VALIDATOR_MARKER = "[ts-standards-validator]";
 const VALIDATOR_AGENT_NAME = "ts-standards-validator";
+const MEMORY_ORGANIZER_AGENT_NAME = "memory-organizer";
 const PLANNER_SKILL_DIR = join(skillRootDir(), "planner");
 const BUGFIX_SKILL_DIR = join(skillRootDir(), "bugfix");
 const STANDARDS_SKILL_DIR = join(skillRootDir(), "ts-standards");
@@ -39,8 +40,11 @@ interface ToolCallRecord {
 const tsStandardsServerPlugin: ServerPlugin.Plugin = {
   id: PLUGIN_ID,
   contributionResolver: async (context) => {
+    if (context.agentName === MEMORY_ORGANIZER_AGENT_NAME) {
+      return {};
+    }
+
     const detection = await detectTsProject(context.env.cwd);
-    const isValidator = isValidatorPrompt(context.prompt);
 
     return {
       skillDirs: [
