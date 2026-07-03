@@ -3,6 +3,8 @@ import type {
   JsonlSessionRepoApi,
   Session
 } from "@earendil-works/pi-agent-core";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { ServerPlugin } from "@hold-rein/plugin-server";
 import { vi } from "vitest";
 
@@ -127,6 +129,7 @@ export function createRuntime(
       : { skillsService: runtimeOptions.skillsService }),
     ...(subagentDatabase === undefined ? {} : { subagentDatabase }),
     subagentRepository,
+    tempSkillDir: join(tmpdir(), "hold-rein-test-skills"),
     ...(tokenUsageOptions?.addTaskTokenUsage === undefined ||
     tokenUsageOptions.addModelTokenUsageHourly === undefined
       ? {}

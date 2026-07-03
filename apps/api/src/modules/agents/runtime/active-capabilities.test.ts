@@ -18,7 +18,10 @@ const loadSkills = vi.hoisted(() =>
 const resolveContributions = vi.hoisted(() =>
   vi.fn().mockResolvedValue({
     skillDirs: ["/plugins/demo/skills"],
-    skills: [{ name: "plugin-skill" }, { name: "disabled-plugin-skill" }],
+    skills: [
+      { content: "# Plugin Skill", name: "plugin-skill" },
+      { content: "# Disabled Plugin Skill", name: "disabled-plugin-skill" }
+    ],
     systemPrompts: [],
     tools: []
   })

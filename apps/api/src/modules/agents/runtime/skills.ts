@@ -6,23 +6,33 @@ import {
 
 import type { BrowserRuntimeSkill } from "../agent-types";
 import type { SkillsService } from "../../skills";
-import { toRuntimeSkills } from "./browser-runtime-contributions";
+import { TEMP_SKILL_DIR } from "../../../config/const";
+import {
+  materializeInlineSkills,
+  type InlineRuntimeSkill
+} from "./materialized-skills";
 import { getRuntimeSkillDirs } from "./support";
 
 export interface LoadRuntimeSkillsInput {
   activeSkills?: readonly string[] | undefined;
   contributionSkillDirs?: readonly string[] | undefined;
-  contributionSkills?: readonly Skill[] | undefined;
+  contributionSkills?: readonly InlineRuntimeSkill[] | undefined;
   env: ExecutionEnv;
   runtimeContributionSkills?: readonly BrowserRuntimeSkill[] | undefined;
   skillDirs?: string[] | undefined;
   skillsService?: SkillsService | undefined;
+  tempSkillDir?: string | undefined;
   workspacePath: string;
+}
+
+export interface LoadedRuntimeSkills {
+  cleanup: () => Promise<void>;
+  skills: Skill[];
 }
 
 export async function loadRuntimeSkills(
   input: LoadRuntimeSkillsInput
-): Promise<Skill[]> {
+): Promise<LoadedRuntimeSkills> {
   const skillDirs = await getRuntimeSkillDirs(
     input.workspacePath,
     input.skillDirs,
@@ -36,14 +46,27 @@ export async function loadRuntimeSkills(
   const activeSkillNames = input.activeSkills === undefined
     ? undefined
     : new Set(input.activeSkills);
-  const runtimeSkills = toRuntimeSkills(input.runtimeContributionSkills);
   const filterActiveSkill = (skill: Skill) =>
     activeSkillNames === undefined || activeSkillNames.has(skill.name);
-
-  return [
-    ...loadedSkills.filter(filterActiveSkill),
-    ...pluginDirSkills,
+  const runtimeSkills = (input.runtimeContributionSkills ?? [])
+    .filter((skill) => activeSkillNames === undefined || activeSkillNames.has(skill.name));
+  const inlineSkills: InlineRuntimeSkill[] = [
     ...(input.contributionSkills ?? []),
-    ...runtimeSkills.filter(filterActiveSkill)
+    ...runtimeSkills
   ];
+  const materialized = inlineSkills.length === 0
+    ? { cleanup: async () => undefined, skills: [] }
+    : await materializeInlineSkills({
+        rootDir: input.tempSkillDir ?? TEMP_SKILL_DIR,
+        skills: inlineSkills
+      });
+
+  return {
+    cleanup: materialized.cleanup,
+    skills: [
+      ...loadedSkills.filter(filterActiveSkill),
+      ...pluginDirSkills,
+      ...materialized.skills
+    ]
+  };
 }

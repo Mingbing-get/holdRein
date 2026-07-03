@@ -34,6 +34,7 @@ export interface CreateAgentRuntimeOptions {
   skillsService?: SkillsService;
   subagentDatabase?: AppDatabase;
   subagentRepository: SubagentRepository;
+  tempSkillDir?: string;
   tokenFlushIntervalMs?: number;
   tokenUsageStorageTarget?: TokenUsageStorageTarget;
 }

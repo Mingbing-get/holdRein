@@ -37,6 +37,12 @@ export interface BrowserRuntimeSkill {
   content: string;
   description?: string;
   name: string;
+  references?: BrowserRuntimeSkillReference[];
+}
+
+export interface BrowserRuntimeSkillReference {
+  content: string;
+  path: string;
 }
 
 export interface BrowserRuntimeContributions {

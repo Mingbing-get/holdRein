@@ -1,10 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 import { createAgentApprovalStore } from "../approval/store";
 import { createAgentEventBus } from "../event/event-bus";
 import { createInMemorySubagentRepository } from "../subagent/repository";
 import { createAgentRuntime } from ".";
 import { createRunInput, createSessionRepo } from "./test-utils";
+import { parseBrowserRuntimeContributions } from "./browser-runtime-contributions";
 
 const prompt = vi.fn().mockResolvedValue(undefined);
 const harnessConstructor = vi.fn();
@@ -59,6 +63,76 @@ describe("agent runtime browser contributions", () => {
       systemPrompts: [],
       tools: []
     });
+  });
+
+  it("parses Markdown references contributed with browser skills", () => {
+    expect(parseBrowserRuntimeContributions({
+      skills: [{
+        content: "# Browser Context",
+        name: "browser-context",
+        references: [{ content: "# Guide", path: "guides/test.md" }]
+      }]
+    })).toEqual({
+      skills: [{
+        content: "# Browser Context",
+        name: "browser-context",
+        references: [{ content: "# Guide", path: "guides/test.md" }]
+      }]
+    });
+  });
+
+  it("rejects non-Markdown browser skill references", () => {
+    expect(parseBrowserRuntimeContributions({
+      skills: [{
+        content: "# Browser Context",
+        name: "browser-context",
+        references: [{ content: "no", path: "guide.txt" }]
+      }]
+    })).toBeNull();
+  });
+
+  it("materializes browser skills and cleans them up after the harness settles", async () => {
+    const tempSkillDir = await mkdtemp(join(tmpdir(), "hold-rein-runtime-skills-"));
+    let resolvePrompt: (() => void) | undefined;
+    prompt.mockReturnValue(new Promise<void>((resolve) => {
+      resolvePrompt = resolve;
+    }));
+    const { repo } = createSessionRepo();
+    const runtime = createAgentRuntime({
+      approvalStore: createAgentApprovalStore(),
+      eventBus: createAgentEventBus(),
+      sessionRepo: repo,
+      subagentRepository: createInMemorySubagentRepository(),
+      tempSkillDir
+    });
+
+    try {
+      await runtime.start({
+        ...createRunInput(),
+        runtimeContributions: {
+          skills: [{
+            content: "# Browser Context",
+            name: "browser-context",
+            references: [{ content: "# Guide", path: "guides/test.md" }]
+          }]
+        }
+      });
+      const skill = getHarnessSkills()[0];
+      if (!skill) throw new Error("Expected a materialized browser skill");
+      expect(skill.filePath).not.toContain("browser-runtime://");
+      await expect(readFile(skill.filePath, "utf8")).resolves.toBe("# Browser Context");
+      await expect(readFile(
+        join(skill.filePath, "..", "references", "guides", "test.md"),
+        "utf8"
+      )).resolves.toBe("# Guide");
+
+      resolvePrompt?.();
+      await vi.waitFor(async () => {
+        await expect(access(skill.filePath)).rejects.toThrow();
+      });
+    } finally {
+      await rm(tempSkillDir, { force: true, recursive: true });
+    }
   });
 
   it("proxies browser tool calls through the event bus", async () => {
@@ -166,4 +240,11 @@ function getHarnessTool(name: string):
     | undefined;
 
   return options?.tools?.find((tool) => tool.name === name);
+}
+
+function getHarnessSkills(): { filePath: string }[] {
+  const options = harnessConstructor.mock.calls.at(-1)?.[0] as
+    | { resources?: { skills?: { filePath: string }[] } }
+    | undefined;
+  return options?.resources?.skills ?? [];
 }

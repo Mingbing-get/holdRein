@@ -13,4 +13,6 @@ export const SKILL_DIR = resolve(AGENT_ROOT_DIR, './skills')
 
 export const PLUGIN_DIR = resolve(AGENT_ROOT_DIR, './plugins')
 
+export const TEMP_SKILL_DIR = resolve(AGENT_ROOT_DIR, './temp/skills')
+
 export const DB_FILE = resolve(AGENT_ROOT_DIR, './hold-rein.sqlite')

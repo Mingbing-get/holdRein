@@ -1,8 +1,7 @@
-import type { Skill } from "@earendil-works/pi-agent-core";
-
 import type {
   BrowserRuntimeContributions,
   BrowserRuntimeSkill,
+  BrowserRuntimeSkillReference,
   BrowserRuntimeToolSchema
 } from "../agent-types";
 
@@ -12,6 +11,8 @@ const MAX_SYSTEM_PROMPTS = 16;
 const MAX_NAME_LENGTH = 80;
 const MAX_DESCRIPTION_LENGTH = 1000;
 const MAX_SKILL_CONTENT_LENGTH = 20_000;
+const MAX_SKILL_REFERENCES = 32;
+const MAX_REFERENCE_PATH_LENGTH = 240;
 const MAX_SYSTEM_PROMPT_LENGTH = 20_000;
 
 export function parseBrowserRuntimeContributions(
@@ -31,17 +32,6 @@ export function parseBrowserRuntimeContributions(
     ...(systemPrompts === undefined ? {} : { systemPrompts }),
     ...(tools === undefined ? {} : { tools })
   };
-}
-
-export function toRuntimeSkills(
-  skills: readonly BrowserRuntimeSkill[] | undefined
-): Skill[] {
-  return (skills ?? []).map((skill) => ({
-    content: skill.content,
-    description: skill.description ?? "",
-    filePath: `browser-runtime://${skill.name}/SKILL.md`,
-    name: skill.name
-  }));
 }
 
 function parseTools(
@@ -92,15 +82,50 @@ function parseSkills(value: unknown): BrowserRuntimeSkill[] | undefined | null {
       item.content,
       MAX_SKILL_CONTENT_LENGTH
     );
-    if (!name || description === null || content === null) return null;
+    const references = parseSkillReferences(item.references);
+    if (
+      !name ||
+      description === null ||
+      content === null ||
+      references === null
+    ) return null;
     skills.push({
       content,
       ...(description === undefined ? {} : { description }),
-      name
+      name,
+      ...(references === undefined ? {} : { references })
     });
   }
 
   return skills;
+}
+
+function parseSkillReferences(
+  value: unknown
+): BrowserRuntimeSkillReference[] | undefined | null {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length > MAX_SKILL_REFERENCES) return null;
+
+  const references: BrowserRuntimeSkillReference[] = [];
+  for (const item of value) {
+    if (!isRecord(item)) return null;
+    const content = parseRequiredString(item.content, MAX_SKILL_CONTENT_LENGTH);
+    const path = parseRequiredString(item.path, MAX_REFERENCE_PATH_LENGTH);
+    if (content === null || path === null || !isMarkdownReferencePath(path)) {
+      return null;
+    }
+    references.push({ content, path });
+  }
+  return references;
+}
+
+function isMarkdownReferencePath(path: string): boolean {
+  const normalized = path.startsWith("./") ? path.slice(2) : path;
+  const segments = normalized.split("/");
+  return normalized.endsWith(".md") &&
+    !normalized.startsWith("/") &&
+    !normalized.includes("\\") &&
+    segments.every((segment) => segment !== "" && segment !== "." && segment !== "..");
 }
 
 function parseSystemPrompts(value: unknown): string[] | undefined | null {

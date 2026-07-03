@@ -238,6 +238,13 @@ export namespace WebPlugin {
     readonly content: string;
     readonly description?: string;
     readonly name: string;
+    readonly references?: readonly BrowserRuntimeSkillReference[];
+  }
+
+  export interface BrowserRuntimeSkillReference {
+    readonly content: string;
+    /** Path relative to the materialized skill's references directory. */
+    readonly path: string;
   }
 
   export interface BrowserRuntimeContributions {

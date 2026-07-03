@@ -4,7 +4,6 @@ import type {
   AgentTool,
   ExecutionEnv,
   Session,
-  Skill,
   ThinkingLevel,
   ToolCallEvent,
   ToolCallResult
@@ -88,13 +87,26 @@ export namespace ServerPlugin {
     ) => ToolBeforeExecuteResult | Promise<ToolBeforeExecuteResult>;
   }
 
+  export interface SkillReference {
+    readonly content: string;
+    /** Path relative to the materialized skill's references directory. */
+    readonly path: string;
+  }
+
+  export interface InlineSkill {
+    readonly content: string;
+    readonly description?: string;
+    readonly name: string;
+    readonly references?: readonly SkillReference[];
+  }
+
   export interface Contribution
     extends Partial<Pick<RuntimeContext, "model" | "thinkingLevel">> {
     readonly tools?: PluginTool[];
     /**
      * 会自动加载skillDirs下所有的skill，会合并skills
      */
-    readonly skills?: readonly Skill[];
+    readonly skills?: readonly InlineSkill[];
     readonly skillDirs?: readonly string[];
     readonly systemPrompts?: readonly string[];
     readonly subscribe?: (event: AgentHarnessEvent) => void;

@@ -110,6 +110,7 @@ function toBrowserRuntimeSkill(
   return {
     content: skill.content,
     ...(skill.description === undefined ? {} : { description: skill.description }),
-    name: skill.name
+    name: skill.name,
+    ...(skill.references === undefined ? {} : { references: skill.references })
   };
 }

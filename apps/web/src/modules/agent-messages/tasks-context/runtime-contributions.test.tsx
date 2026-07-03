@@ -75,7 +75,8 @@ describe("AgentTasksProvider runtime contributions", () => {
           skills: [
             {
               content: "# Browser Context",
-              name: "browser-context"
+              name: "browser-context",
+              references: [{ content: "# Guide", path: "guides/test.md" }]
             }
           ],
           systemPrompts: ["Prefer browser tools."],
@@ -130,7 +131,8 @@ function RegisterRuntimePlugin() {
         skills: [
           {
             content: "# Browser Context",
-            name: "browser-context"
+            name: "browser-context",
+            references: [{ content: "# Guide", path: "guides/test.md" }]
           }
         ],
         systemPrompts: ["Prefer browser tools."],
@@ -252,7 +254,8 @@ function expectedRuntimeContributions(): WebPlugin.BrowserRuntimeContributions {
     skills: [
       {
         content: "# Browser Context",
-        name: "browser-context"
+        name: "browser-context",
+        references: [{ content: "# Guide", path: "guides/test.md" }]
       }
     ],
     systemPrompts: ["Prefer browser tools."],
