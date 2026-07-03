@@ -50,7 +50,7 @@ export interface ServerPluginRegistry {
 }
 
 export interface ResolveContributionsOptions {
-  activePluginIds?: readonly string[];
+  activePluginPackageNames?: readonly string[];
 }
 
 async function resolveContribution(
@@ -109,9 +109,9 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
       context: ServerPlugin.RuntimeContext,
       options: ResolveContributionsOptions = {}
     ) {
-      const activePluginIds = options.activePluginIds === undefined
+      const activePluginPackageNames = options.activePluginPackageNames === undefined
         ? undefined
-        : new Set(options.activePluginIds);
+        : new Set(options.activePluginPackageNames);
       const tools: ServerPlugin.PluginTool[] = [];
       const skills: NonNullable<ServerPlugin.Contribution["skills"]>[number][] = [];
       const skillDirs: string[] = [];
@@ -120,7 +120,10 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
       const agentEndHandlers: NonNullable<ServerPlugin.Contribution["onAgentEnd"]>[] = [];
 
       for (const plugin of plugins.values()) {
-        if (activePluginIds && !activePluginIds.has(plugin.id)) {
+        if (
+          activePluginPackageNames &&
+          !activePluginPackageNames.has(plugin.packageName ?? plugin.id)
+        ) {
           continue;
         }
         if (!plugin.contributionResolver) {

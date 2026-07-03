@@ -109,6 +109,7 @@ export namespace ServerPlugin {
 
   export interface Plugin {
     readonly id: string
+    readonly packageName?: string
     readonly contributionResolver?: ContributionResolver
     readonly registerRoutes?: (context: RouteContext) => Router | Promise<Router>;
   }

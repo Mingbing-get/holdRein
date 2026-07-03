@@ -55,7 +55,7 @@ describe("agent runtime active capabilities", () => {
     resolveContributions.mockClear();
   });
 
-  it("passes active plugin ids to plugin contribution resolution", async () => {
+  it("passes active plugin package names to plugin contribution resolution", async () => {
     const { repo } = createSessionRepo();
     const runtime = createRuntime(repo);
 
@@ -66,7 +66,7 @@ describe("agent runtime active capabilities", () => {
 
     expect(resolveContributions).toHaveBeenCalledWith(
       expect.anything(),
-      { activePluginIds: ["@hold-rein/demo-plugin"] }
+      { activePluginPackageNames: ["@hold-rein/demo-plugin"] }
     );
   });
 

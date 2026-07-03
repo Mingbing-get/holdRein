@@ -60,7 +60,11 @@ export async function loadInstalledServerPlugins(
       );
     }
 
-    plugins.push(module.default as ServerPlugin.Plugin);
+    const plugin = module.default as ServerPlugin.Plugin;
+    plugins.push({
+      ...plugin,
+      packageName: manifest.packageName
+    });
 
     if (manifest.webEntry) {
       const pluginDir = basename(packageDir);

@@ -37,7 +37,10 @@ it("imports plugin default exports and returns web manifests", async () => {
     toImportUrl: (path) => pathToFileURL(path).href
   });
 
-  expect(result.plugins).toEqual([{ id: "demo" }]);
+  expect(result.plugins).toEqual([{
+    id: "demo",
+    packageName: "@scope/demo"
+  }]);
   expect(result.webPlugins[0]).toEqual({
     id: "@scope/demo",
     name: "@scope/demo",

@@ -135,7 +135,7 @@ describe("createServerPluginRegistry", () => {
     expect(subscribeCalls).toEqual(["static", "dynamic"]);
   });
 
-  it("resolves contributions only for active plugin ids when provided", async () => {
+  it("resolves contributions only for active plugin package names when provided", async () => {
     const registry = createServerPluginRegistry();
     const activeResolver = vi.fn().mockReturnValue({
       systemPrompts: ["Active prompt"],
@@ -148,16 +148,18 @@ describe("createServerPluginRegistry", () => {
 
     registry.register({
       id: "active-plugin",
+      packageName: "@scope/active-plugin",
       contributionResolver: activeResolver
     });
     registry.register({
       id: "inactive-plugin",
+      packageName: "@scope/inactive-plugin",
       contributionResolver: inactiveResolver
     });
 
     const contribution = await registry.resolveContributions(
       {} as ServerPlugin.RuntimeContext,
-      { activePluginIds: ["active-plugin"] }
+      { activePluginPackageNames: ["@scope/active-plugin"] }
     );
 
     expect(activeResolver).toHaveBeenCalledOnce();
@@ -166,6 +168,23 @@ describe("createServerPluginRegistry", () => {
     expect(contribution.tools?.map((tool) => tool.name)).toEqual([
       "active-tool"
     ]);
+  });
+
+  it("falls back to the plugin id when no package name is available", async () => {
+    const registry = createServerPluginRegistry();
+    const resolver = vi.fn().mockReturnValue({ systemPrompts: ["Prompt"] });
+
+    registry.register({
+      id: "direct-plugin",
+      contributionResolver: resolver
+    });
+
+    await registry.resolveContributions(
+      {} as ServerPlugin.RuntimeContext,
+      { activePluginPackageNames: ["direct-plugin"] }
+    );
+
+    expect(resolver).toHaveBeenCalledOnce();
   });
 
   it("uses the first plugin agent-end continuation in registration order", async () => {

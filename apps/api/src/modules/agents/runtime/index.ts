@@ -89,7 +89,7 @@ export function createAgentRuntime(
         }
         const contribution = await (input.activePlugins === undefined
           ? pluginRegistry.resolveContributions(pluginContext)
-          : pluginRegistry.resolveContributions(pluginContext, { activePluginIds: input.activePlugins }))
+          : pluginRegistry.resolveContributions(pluginContext, { activePluginPackageNames: input.activePlugins }))
         const skills = await loadRuntimeSkills({
           activeSkills: input.activeSkills,
           contributionSkillDirs: contribution.skillDirs,
