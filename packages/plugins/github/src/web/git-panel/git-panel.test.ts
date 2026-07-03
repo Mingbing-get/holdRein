@@ -7,6 +7,32 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createGitPanel, GitPanel } from ".";
 
+vi.mock("@monaco-editor/react", () => ({
+  DiffEditor: ({
+    language,
+    modified,
+    options,
+    original,
+    theme,
+  }: {
+    language?: string;
+    modified?: string;
+    options?: Record<string, unknown>;
+    original?: string;
+    theme?: string;
+  }) => React.createElement(
+    "pre",
+    {
+      "data-language": language,
+      "data-read-only": String(options?.readOnly),
+      "data-render-side-by-side": String(options?.renderSideBySide),
+      "data-theme": theme,
+      "data-testid": "git-diff-editor"
+    },
+    `${original}\n---\n${modified}`
+  )
+}));
+
 beforeAll(() => {
   const getComputedStyle = window.getComputedStyle.bind(window);
 
@@ -28,6 +54,7 @@ beforeAll(() => {
     getComputedStyle(element)
   );
   vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+  vi.stubGlobal("MutationObserver", MutationObserverStub);
 });
 
 describe("createGitPanel", () => {
@@ -89,6 +116,51 @@ describe("GitPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /当前分支/ }));
     const otherBranch = await screen.findByText("feature/demo");
     expect(otherBranch.closest("li")).toHaveClass("ant-dropdown-menu-item-disabled");
+  });
+
+  it("loads and toggles a file diff when clicking a changed file", async () => {
+    const request = createRequest(initializedStatus());
+    renderPanel(request);
+
+    fireEvent.click(await screen.findByRole("button", { name: "变更 +3 -1" }));
+    fireEvent.click(screen.getByRole("button", { name: "src/new.ts" }));
+    const fileButton = screen.getByRole("button", { name: "src/new.ts" });
+    expect(fileButton.querySelector(".git-panel__file-chevron"))
+      .not.toBeInTheDocument();
+    expect(fileButton).toHaveClass("git-panel__file-row--expanded");
+
+    const editor = await screen.findByTestId("git-diff-editor");
+    expect(editor).toHaveAttribute("data-language", "typescript");
+    expect(editor).toHaveAttribute("data-read-only", "true");
+    expect(editor).toHaveAttribute("data-render-side-by-side", "false");
+    expect(editor).toHaveAttribute("data-theme", "vs");
+    expect(editor).toHaveTextContent("before");
+    expect(editor).toHaveTextContent("after");
+    expect(editor).not.toHaveTextContent("diff --git");
+    expect(request).toHaveBeenCalledWith({
+      method: "GET",
+      path: "/plugin/__github__plugin/diff",
+      query: {
+        filePath: "src/new.ts",
+        workspacePath: "/workspace"
+      }
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "src/new.ts" }));
+    expect(screen.queryByTestId("git-diff-editor")).not.toBeInTheDocument();
+  });
+
+  it("uses Monaco dark theme when the app is in dark mode", async () => {
+    document.documentElement.dataset.themeMode = "dark";
+    const request = createRequest(initializedStatus());
+    renderPanel(request);
+
+    fireEvent.click(await screen.findByRole("button", { name: "变更 +3 -1" }));
+    fireEvent.click(screen.getByRole("button", { name: "src/new.ts" }));
+
+    expect(await screen.findByTestId("git-diff-editor"))
+      .toHaveAttribute("data-theme", "vs-dark");
+    document.documentElement.dataset.themeMode = "light";
   });
 
   it("switches branches when there are no pending changes", async () => {
@@ -172,9 +244,28 @@ function renderPanel(request: ReturnType<typeof vi.fn>): void {
 }
 
 function createRequest(status: object) {
-  return vi.fn(async (options: { path: string }) => options.path.endsWith("/status")
-    ? result(status)
-    : result(undefined));
+  return vi.fn(async (options: { path: string; query?: { filePath?: string } }) => {
+    if (options.path.endsWith("/status")) {
+      return result(status);
+    }
+
+    if (options.path.endsWith("/diff")) {
+      return result({
+        diff: [
+          `diff --git a/${options.query?.filePath} b/${options.query?.filePath}`,
+          "index 1111111..2222222 100644",
+          `--- a/${options.query?.filePath}`,
+          `+++ b/${options.query?.filePath}`,
+          "@@ -1 +1 @@",
+          "-before",
+          "+after",
+          ""
+        ].join("\n")
+      });
+    }
+
+    return result(undefined);
+  });
 }
 
 function initializedStatus(overrides: Record<string, unknown> = {}) {
@@ -192,4 +283,14 @@ function initializedStatus(overrides: Record<string, unknown> = {}) {
 
 function result<T>(data: T) {
   return { code: 0, data, msg: "Success" };
+}
+
+class MutationObserverStub {
+  disconnect(): void {
+    return undefined;
+  }
+
+  observe(): void {
+    return undefined;
+  }
 }

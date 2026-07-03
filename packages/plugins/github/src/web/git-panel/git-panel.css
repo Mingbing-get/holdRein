@@ -35,7 +35,78 @@
   list-style: none;
   margin: 8px 0 0;
   overflow-wrap: anywhere;
-  padding: 0 0 0 24px;
+  padding: 0;
+}
+
+.git-panel__file {
+  display: grid;
+  gap: 6px;
+}
+
+.git-panel__file-row {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: var(--app-color-text);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: 7px;
+  min-height: 30px;
+  overflow: hidden;
+  padding: 0 8px 0 24px;
+  text-align: left;
+  width: 100%;
+}
+
+.git-panel__file-row:hover,
+.git-panel__file-row--expanded {
+  background: var(--app-color-fill-secondary);
+}
+
+.git-panel__file-icon {
+  align-items: center;
+  color: var(--app-color-text-secondary);
+  display: inline-flex;
+  flex: 0 0 16px;
+  font-size: 14px;
+  justify-content: center;
+}
+
+.git-panel__file-path {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-panel__diff {
+  background: var(--app-color-bg-container);
+  border: 1px solid var(--app-color-border-secondary);
+  margin-left: 24px;
+  overflow: hidden;
+}
+
+.git-panel__diff-state {
+  align-items: center;
+  border: 1px solid var(--app-color-border-secondary);
+  display: flex;
+  justify-content: center;
+  margin-left: 24px;
+  min-height: 96px;
+}
+
+.git-panel__diff-alert {
+  margin-left: 24px;
+}
+
+.git-panel__diff-pre {
+  color: var(--app-color-text);
+  margin: 0;
+  overflow: auto;
+  padding: 10px;
 }
 
 .git-panel__additions {

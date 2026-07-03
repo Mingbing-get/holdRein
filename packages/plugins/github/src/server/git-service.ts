@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 
 import simpleGit, { type SimpleGit, type StatusResult } from "simple-git";
 
@@ -22,6 +22,7 @@ type InitializedGitRepositoryStatus = Extract<
 
 export interface GitService {
   commit(message: string, push: boolean): Promise<void>;
+  getFileDiff(filePath: string): Promise<string>;
   getStatus(): Promise<GitRepositoryStatus>;
   initialize(): Promise<void>;
   switchBranch(branch: string): Promise<void>;
@@ -58,6 +59,25 @@ export function createGitService(workspacePath: string): GitService {
       }
 
       return readRepositoryStatus(git, workspacePath);
+    },
+    async getFileDiff(filePath) {
+      const repositoryPath = normalizeRepositoryPath(filePath);
+      if (!repositoryPath) {
+        throw new GitValidationError(
+          "File path must be relative to the repository"
+        );
+      }
+
+      const status = await git.status();
+      if (status.not_added.includes(repositoryPath)) {
+        return readUntrackedFileDiff(workspacePath, repositoryPath);
+      }
+
+      try {
+        return await git.raw(["diff", "HEAD", "--", repositoryPath]);
+      } catch {
+        return git.raw(["diff", "--", repositoryPath]);
+      }
     },
     async initialize() {
       await git.init();
@@ -152,4 +172,53 @@ async function countUntrackedLines(
 
 function parseCount(value: string | undefined): number {
   return value && /^\d+$/u.test(value) ? Number(value) : 0;
+}
+
+function normalizeRepositoryPath(filePath: string): string | undefined {
+  const normalized = filePath.trim().replace(/\\/g, "/");
+  if (
+    !normalized ||
+    normalized === ".." ||
+    normalized.startsWith("../") ||
+    normalized.includes("/../") ||
+    normalized.startsWith("/") ||
+    isAbsolute(normalized)
+  ) {
+    return undefined;
+  }
+
+  return normalized;
+}
+
+async function readUntrackedFileDiff(
+  workspacePath: string,
+  repositoryPath: string
+): Promise<string> {
+  const content = await readFile(join(workspacePath, repositoryPath));
+  if (content.includes(0)) {
+    return [
+      `diff --git a/${repositoryPath} b/${repositoryPath}`,
+      "new file mode 100644",
+      "index 0000000..0000000",
+      `Binary files /dev/null and b/${repositoryPath} differ`,
+      ""
+    ].join("\n");
+  }
+
+  const text = content.toString("utf8");
+  const lines = text.endsWith("\n")
+    ? text.slice(0, -1).split("\n")
+    : text.split("\n");
+  const addedLines = text ? lines.map((line) => `+${line}`) : [];
+  const diffLines = [
+    `diff --git a/${repositoryPath} b/${repositoryPath}`,
+    "new file mode 100644",
+    "index 0000000..0000000",
+    "--- /dev/null",
+    `+++ b/${repositoryPath}`,
+    `@@ -0,0 +1,${text ? lines.length : 0} @@`,
+    ...addedLines
+  ];
+
+  return `${diffLines.join("\n")}\n`;
 }

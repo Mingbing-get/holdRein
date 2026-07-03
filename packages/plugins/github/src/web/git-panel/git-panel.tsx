@@ -1,6 +1,7 @@
 import {
   BranchesOutlined,
   DownOutlined,
+  FileOutlined,
   FileTextOutlined,
   ReloadOutlined
 } from "@ant-design/icons";
@@ -25,7 +26,12 @@ import {
 } from "react";
 
 import { PLUGIN_ID } from "../../plugin-id";
-import type { GitRepositoryStatus } from "./types";
+import {
+  type FileDiffState,
+  GitFileDiffPreview,
+  useMonacoTheme
+} from "./git-diff-preview";
+import type { GitFileDiff, GitRepositoryStatus } from "./types";
 
 import "./git-panel.css";
 
@@ -44,7 +50,14 @@ export function GitPanel(
   const [operation, setOperation] = useState("");
   const [changesOpen, setChangesOpen] = useState(false);
   const [commitOpen, setCommitOpen] = useState(false);
+  const [expandedFiles, setExpandedFiles] = useState<ReadonlySet<string>>(
+    () => new Set()
+  );
+  const [fileDiffs, setFileDiffs] = useState<
+    Readonly<Record<string, FileDiffState>>
+  >(() => ({}));
   const [message, setMessage] = useState("");
+  const monacoTheme = useMonacoTheme();
 
   const refresh = useCallback(async () => {
     if (!workspacePath) return;
@@ -57,6 +70,8 @@ export function GitPanel(
         query: { workspacePath }
       });
       setRepository(result.data);
+      setExpandedFiles(new Set());
+      setFileDiffs({});
     } catch (nextError) {
       setError(readError(nextError));
     } finally {
@@ -152,6 +167,46 @@ export function GitPanel(
     }
   };
 
+  const loadFileDiff = async (filePath: string) => {
+    setFileDiffs((current) => ({
+      ...current,
+      [filePath]: { status: "loading" }
+    }));
+    try {
+      const result = await request<GitFileDiff>({
+        method: "GET",
+        path: `/plugin/${PLUGIN_ID}/diff`,
+        query: { workspacePath, filePath }
+      });
+      setFileDiffs((current) => ({
+        ...current,
+        [filePath]: { status: "loaded", diff: result.data.diff }
+      }));
+    } catch (nextError) {
+      setFileDiffs((current) => ({
+        ...current,
+        [filePath]: { status: "error", message: readError(nextError) }
+      }));
+    }
+  };
+
+  const toggleFileDiff = (filePath: string) => {
+    const isExpanded = expandedFiles.has(filePath);
+    setExpandedFiles((current) => {
+      const next = new Set(current);
+      if (isExpanded) {
+        next.delete(filePath);
+      } else {
+        next.add(filePath);
+      }
+      return next;
+    });
+
+    if (!isExpanded && !fileDiffs[filePath]) {
+      void loadFileDiff(filePath);
+    }
+  };
+
   return (
     <div className="git-panel">
       <div className="git-panel__header">
@@ -191,7 +246,33 @@ export function GitPanel(
         </button>
         {changesOpen ? (
           <ul className="git-panel__files">
-            {repository.files.map((file) => <li key={file}>{file}</li>)}
+            {repository.files.map((file) => {
+              const isExpanded = expandedFiles.has(file);
+              return (
+                <li className="git-panel__file" key={file}>
+                  <button
+                    aria-expanded={isExpanded}
+                    className={isExpanded
+                      ? "git-panel__file-row git-panel__file-row--expanded"
+                      : "git-panel__file-row"}
+                    onClick={() => toggleFileDiff(file)}
+                    type="button"
+                  >
+                    <span className="git-panel__file-icon">
+                      <FileOutlined aria-hidden="true" />
+                    </span>
+                    <span className="git-panel__file-path">{file}</span>
+                  </button>
+                  {isExpanded ? (
+                    <GitFileDiffPreview
+                      diffState={fileDiffs[file]}
+                      filePath={file}
+                      monacoTheme={monacoTheme}
+                    />
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         ) : null}
       </div>

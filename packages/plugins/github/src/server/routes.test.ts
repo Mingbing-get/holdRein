@@ -32,6 +32,22 @@ describe("Git plugin routes", () => {
     expect(service.initialize).toHaveBeenCalledOnce();
   });
 
+  it("returns a changed file diff for the requested workspace", async () => {
+    const service = createService();
+    const harness = createHarness(() => service);
+    vi.mocked(service.getFileDiff).mockResolvedValue("diff --git a/app.ts b/app.ts");
+
+    await harness.call("get", "/diff", {
+      query: { workspacePath: "/workspace", filePath: "src/app.ts" }
+    });
+
+    expect(service.getFileDiff).toHaveBeenCalledWith("src/app.ts");
+    expect(harness.sendSuccess).toHaveBeenCalledWith(
+      harness.response,
+      { diff: "diff --git a/app.ts b/app.ts" }
+    );
+  });
+
   it("switches to a named local branch", async () => {
     const service = createService();
     const harness = createHarness(() => service);
@@ -106,6 +122,7 @@ function createHarness(factory: (workspacePath: string) => GitService) {
 function createService(): GitService {
   return {
     commit: vi.fn(async () => undefined),
+    getFileDiff: vi.fn(async () => ""),
     getStatus: vi.fn(async () => ({ initialized: false as const })),
     initialize: vi.fn(async () => undefined),
     switchBranch: vi.fn(async () => undefined)

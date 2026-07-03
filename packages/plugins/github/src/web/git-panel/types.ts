@@ -9,3 +9,7 @@ export type GitRepositoryStatus =
       readonly hasChanges: boolean;
       readonly initialized: true;
     };
+
+export interface GitFileDiff {
+  readonly diff: string;
+}

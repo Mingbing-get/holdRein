@@ -34,6 +34,20 @@ export default function createRouter(
     });
   });
 
+  router.get("/diff", async (request, response) => {
+    const workspacePath = readWorkspacePath(request.query.workspacePath);
+    const filePath = readNonEmptyString(request.query.filePath);
+    if (!workspacePath || !filePath) {
+      sendBadRequest(context, response, "workspacePath and filePath are required");
+      return;
+    }
+
+    await runOperation(context, response, async () => {
+      const diff = await serviceFactory(workspacePath).getFileDiff(filePath);
+      context.sendSuccess(response, { diff });
+    });
+  });
+
   router.post("/initialize", async (request, response) => {
     const workspacePath = readWorkspacePath(request.body?.workspacePath);
     if (!workspacePath) {

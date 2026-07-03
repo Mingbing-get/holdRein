@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -51,6 +51,39 @@ describe("GitService status", () => {
       files: ["new.txt", "tracked.txt"],
       hasChanges: true
     });
+  });
+});
+
+describe("GitService file diff", () => {
+  it("returns the diff for a changed tracked file", async () => {
+    const workspacePath = await createRepository();
+    await writeFile(join(workspacePath, "tracked.txt"), "one\ntwo changed\nthree\n");
+
+    const diff = await createGitService(workspacePath).getFileDiff("tracked.txt");
+
+    expect(diff).toContain("diff --git a/tracked.txt b/tracked.txt");
+    expect(diff).toContain("-two");
+    expect(diff).toContain("+two changed");
+  });
+
+  it("returns a unified diff for an untracked text file", async () => {
+    const workspacePath = await createRepository();
+    await mkdir(join(workspacePath, "src"));
+    await writeFile(join(workspacePath, "src/new.ts"), "export const value = 1;\n");
+
+    const diff = await createGitService(workspacePath).getFileDiff("src/new.ts");
+
+    expect(diff).toContain("diff --git a/src/new.ts b/src/new.ts");
+    expect(diff).toContain("new file mode");
+    expect(diff).toContain("+export const value = 1;");
+  });
+
+  it("rejects paths outside the repository", async () => {
+    const workspacePath = await createRepository();
+
+    await expect(
+      createGitService(workspacePath).getFileDiff("../outside.txt")
+    ).rejects.toThrow("File path must be relative to the repository");
   });
 });
 
