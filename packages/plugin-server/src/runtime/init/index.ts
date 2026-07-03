@@ -13,7 +13,7 @@ export interface InitPluginPackageOptions {
 const basePackageJson = {
   name: "@hold-rein/plugins-base",
   version: "0.0.0",
-  private: true,
+  private: false,
   type: "module",
   main: "./src/server.ts",
   module: "./src/server.ts",
