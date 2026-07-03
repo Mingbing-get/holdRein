@@ -1,0 +1,51 @@
+.git-panel {
+  color: var(--app-color-text);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+
+.git-panel__header,
+.git-panel__row {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+
+.git-panel__row:disabled {
+  cursor: default;
+}
+
+.git-panel__section {
+  border-bottom: 1px solid var(--app-color-border-secondary);
+  padding-bottom: 12px;
+}
+
+.git-panel__files {
+  color: var(--app-color-text-secondary);
+  list-style: none;
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+  padding: 0 0 0 24px;
+}
+
+.git-panel__additions {
+  color: var(--app-color-success);
+}
+
+.git-panel__deletions {
+  color: var(--app-color-danger);
+}
+
+.git-panel__empty {
+  padding: 24px 12px;
+}
