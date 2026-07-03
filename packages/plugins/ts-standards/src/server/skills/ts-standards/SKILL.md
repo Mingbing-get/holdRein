@@ -33,6 +33,9 @@ dir/feature-two/index.ts
 dir/feature-two/index.test.ts
 ```
 
+Small, focused internal implementations such as `helper.ts` may remain standalone
+files. Do not create a folder and `index.ts` solely to match this structure.
+
 Export each folder's public API through its `index.ts`. Shared functionality may
 be extracted to appropriately scoped common folders such as `utils`,
 `components`, `hooks`, `services`, `apis`, or `consts`. Do not create a shared
