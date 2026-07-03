@@ -1,0 +1,48 @@
+.user-message-navigator {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  pointer-events: none;
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.user-message-navigator__marker {
+  appearance: none;
+  align-items: center;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  height: 11px;
+  justify-content: flex-end;
+  margin: 0;
+  padding: 0;
+  pointer-events: auto;
+  width: 20px;
+}
+
+.user-message-navigator__marker::after {
+  background: var(--app-color-chat-nav-marker);
+  border-radius: 2px;
+  content: "";
+  height: 3px;
+  transition: background-color 160ms ease, width 160ms ease;
+  width: 10px;
+}
+
+.user-message-navigator__marker[aria-current="true"]::after,
+.user-message-navigator__marker:hover::after,
+.user-message-navigator__marker:focus-visible::after {
+  background: var(--app-color-chat-nav-marker-active);
+  width: 20px;
+}
+
+.user-message-navigator__marker:focus-visible {
+  outline: 2px solid var(--app-color-primary);
+  outline-offset: 3px;
+}

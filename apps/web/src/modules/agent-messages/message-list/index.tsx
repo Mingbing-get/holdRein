@@ -99,13 +99,21 @@ function AgentMessageItem({
   workspacePath?: string | undefined;
 }) {
   if (message.role === "user") {
-    return (<Bubble
-      styles={{
-        content: { padding: '8px 12px', minHeight: 'unset', borderRadius: 8 }
-      }}
-      content={getText(message.content)}
-      placement="end"
-    />);
+    const content = getText(message.content);
+
+    return (
+      <div
+        {...(content.trim() ? { "data-user-message-id": message.id } : {})}
+      >
+        <Bubble
+          styles={{
+            content: { padding: '8px 12px', minHeight: 'unset', borderRadius: 8 }
+          }}
+          content={content}
+          placement="end"
+        />
+      </div>
+    );
   }
   if (message.role === "assistant") {
     return (

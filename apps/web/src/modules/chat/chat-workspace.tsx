@@ -15,6 +15,7 @@ import {
   normalizeThinkingLevel
 } from "./sender/task-options";
 import { useWorkspaceFileSuggestions } from "./use-workspace-file-suggestions";
+import { UserMessageNavigator } from "./user-message-navigator";
 
 interface ChatWorkspaceProps {
   activeTaskName: string;
@@ -53,6 +54,7 @@ export function ChatWorkspace({
   );
   const senderDisabled = !activeWorkspaceId || !activeAgent;
   const bottomRef = useRef<HTMLDivElement>(null);
+  const messageScrollRef = useRef<HTMLDivElement>(null);
   const previousTaskIdRef = useRef(activeTaskId);
   const shouldFollowMessagesRef = useRef(true);
   const [thinkingLevel, setThinkingLevel] = useState(DEFAULT_THINKING_LEVEL);
@@ -105,44 +107,58 @@ export function ChatWorkspace({
         gap: 8
       }}
     >
-      <Flex
-        data-testid="chat-message-scroll"
-        vertical
-        gap={16}
-        onScroll={(event) => {
-          if (!event.isTrusted) {
-            return;
-          }
-
-          const { clientHeight, scrollHeight, scrollTop } = event.currentTarget;
-          shouldFollowMessagesRef.current =
-            scrollHeight - clientHeight - scrollTop <= BOTTOM_TOLERANCE_PX;
-        }}
+      <div
         style={{
           flex: 1,
-          overflow: "auto",
+          minHeight: 0,
+          overflow: "hidden",
           position: "relative"
         }}
       >
-        <AgentMessageList
-          messages={taskState?.messages ?? []}
-          status={taskState?.status}
-        />
-        {pendingApproval ? (
-          <ApprovalPanel
-            approval={pendingApproval}
-            onDecide={(approved, reason) =>
-              decideApproval(
-                activeTaskId,
-                pendingApproval.approvalId,
-                approved,
-                reason
-              )
+        <Flex
+          data-testid="chat-message-scroll"
+          ref={messageScrollRef}
+          vertical
+          gap={16}
+          onScroll={(event) => {
+            if (!event.isTrusted) {
+              return;
             }
+
+            const { clientHeight, scrollHeight, scrollTop } = event.currentTarget;
+            shouldFollowMessagesRef.current =
+              scrollHeight - clientHeight - scrollTop <= BOTTOM_TOLERANCE_PX;
+          }}
+          style={{
+            height: "100%",
+            overflow: "auto",
+            position: "relative"
+          }}
+        >
+          <AgentMessageList
+            messages={taskState?.messages ?? []}
+            status={taskState?.status}
           />
-        ) : null}
-        <div aria-hidden ref={bottomRef} />
-      </Flex>
+          {pendingApproval ? (
+            <ApprovalPanel
+              approval={pendingApproval}
+              onDecide={(approved, reason) =>
+                decideApproval(
+                  activeTaskId,
+                  pendingApproval.approvalId,
+                  approved,
+                  reason
+                )
+              }
+            />
+          ) : null}
+          <div aria-hidden ref={bottomRef} />
+        </Flex>
+        <UserMessageNavigator
+          messages={taskState?.messages ?? []}
+          scrollContainerRef={messageScrollRef}
+        />
+      </div>
 
       <Sender
         activeAgent={activeAgent}

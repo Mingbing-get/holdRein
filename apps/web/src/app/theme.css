@@ -31,6 +31,8 @@
   --app-color-chart-series-7: #c86436;
   --app-color-chart-series-8: #7a5af8;
   --app-color-chart-series-9: #b64889;
+  --app-color-chat-nav-marker: rgba(21, 32, 51, 0.28);
+  --app-color-chat-nav-marker-active: rgba(21, 32, 51, 0.82);
   --app-color-fill-secondary: rgba(21, 32, 51, 0.06);
   --app-color-fill-tertiary: rgba(21, 32, 51, 0.04);
   --app-color-markdown-code-bg: rgba(21, 32, 51, 0.06);
@@ -67,6 +69,8 @@
   --app-color-chart-series-7: #ffb07c;
   --app-color-chart-series-8: #b8a6ff;
   --app-color-chart-series-9: #f29bd2;
+  --app-color-chat-nav-marker: rgba(239, 245, 255, 0.3);
+  --app-color-chat-nav-marker-active: rgba(239, 245, 255, 0.9);
   --app-color-fill-secondary: rgba(239, 245, 255, 0.09);
   --app-color-fill-tertiary: rgba(239, 245, 255, 0.06);
   --app-color-markdown-code-bg: rgba(239, 245, 255, 0.09);
