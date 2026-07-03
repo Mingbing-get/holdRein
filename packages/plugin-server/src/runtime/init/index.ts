@@ -1,6 +1,9 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 
+import pluginServerPackageJson from "../../../package.json";
+import pluginWebPackageJson from "../../../../plugin-web/package.json";
+
 export interface InitPluginPackageResult {
   readonly packageName: string;
 }
@@ -59,10 +62,10 @@ const basePackageJson = {
   peerDependencies: {
     "@earendil-works/pi-agent-core": "0.75.4",
     "@earendil-works/pi-ai": "0.76.0",
-    "@hold-rein/plugin-server": "workspace:^",
+    "@hold-rein/plugin-server": `^${pluginServerPackageJson.version}`,
     express: "5.2.1",
     "@ant-design/icons": "6.2.5",
-    "@hold-rein/plugin-web": "workspace:^",
+    "@hold-rein/plugin-web": `^${pluginWebPackageJson.version}`,
     "@monaco-editor/react": "4.7.0",
     antd: "6.4.3",
     "monaco-editor": "0.55.1",
@@ -72,11 +75,11 @@ const basePackageJson = {
   devDependencies: {
     "@earendil-works/pi-agent-core": "0.75.4",
     "@earendil-works/pi-ai": "0.76.0",
-    "@hold-rein/plugin-server": "workspace:^",
+    "@hold-rein/plugin-server": `^${pluginServerPackageJson.version}`,
     express: "5.2.1",
     vite: "6.3.5",
     "@ant-design/icons": "6.2.5",
-    "@hold-rein/plugin-web": "workspace:^",
+    "@hold-rein/plugin-web": `^${pluginWebPackageJson.version}`,
     "@monaco-editor/react": "4.7.0",
     "@types/react": "19.2.15",
     antd: "6.4.3",

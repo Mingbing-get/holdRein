@@ -4,6 +4,9 @@ import { basename, join } from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import pluginServerPackageJson from "../../../package.json";
+import pluginWebPackageJson from "../../../../plugin-web/package.json";
+
 import { initPluginPackage } from ".";
 
 describe("plugin package init", () => {
@@ -28,6 +31,7 @@ describe("plugin package init", () => {
       await readFile(join(directory, "package.json"), "utf8")
     ) as {
       readonly name: string;
+      readonly devDependencies: Record<string, string>;
       readonly peerDependencies: Record<string, string>;
     };
 
@@ -35,6 +39,18 @@ describe("plugin package init", () => {
     expect(packageJson.name).toBe(`hold-rein-plugin-${folderName}`);
     expect(packageJson.peerDependencies.react).toBe("^19.0.0");
     expect(packageJson.peerDependencies["react-dom"]).toBe("^19.0.0");
+    expect(packageJson.peerDependencies["@hold-rein/plugin-server"]).toBe(
+      `^${pluginServerPackageJson.version}`
+    );
+    expect(packageJson.peerDependencies["@hold-rein/plugin-web"]).toBe(
+      `^${pluginWebPackageJson.version}`
+    );
+    expect(packageJson.devDependencies["@hold-rein/plugin-server"]).toBe(
+      `^${pluginServerPackageJson.version}`
+    );
+    expect(packageJson.devDependencies["@hold-rein/plugin-web"]).toBe(
+      `^${pluginWebPackageJson.version}`
+    );
     await expect(
       readFile(join(directory, "tsconfig.json"), "utf8")
     ).resolves.toContain('"rootDir": "src"');
