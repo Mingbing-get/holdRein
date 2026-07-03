@@ -167,9 +167,9 @@ export function GitPanel(
       </div>
       {error ? <Alert closable message={error} showIcon type="error" /> : null}
       <div className="git-panel__section git-panel__row">
-        <Space><BranchesOutlined />Branch</Space>
+        <Space><BranchesOutlined />分支</Space>
         <Dropdown menu={{ items: branchItems }} trigger={["hover", "click"]}>
-          <Button aria-label={`Current branch ${repository.currentBranch}`} type="text">
+          <Button aria-label={`当前分支 ${repository.currentBranch}`} type="text">
             {repository.currentBranch || "No commits"} <DownOutlined />
           </Button>
         </Dropdown>
@@ -177,13 +177,13 @@ export function GitPanel(
       <div className="git-panel__section">
         <button
           aria-expanded={changesOpen}
-          aria-label={`Changes +${repository.additions} -${repository.deletions}`}
+          aria-label={`变更 +${repository.additions} -${repository.deletions}`}
           className="git-panel__row"
           disabled={!repository.hasChanges}
           onClick={() => setChangesOpen((current) => !current)}
           type="button"
         >
-          <Space><FileTextOutlined />Changes</Space>
+          <Space><FileTextOutlined />变更</Space>
           <span>
             <span className="git-panel__additions">+{repository.additions}</span>{" "}
             <span className="git-panel__deletions">-{repository.deletions}</span>
@@ -200,29 +200,30 @@ export function GitPanel(
         onClick={() => setCommitOpen(true)}
         type="primary"
       >
-        Commit changes
+        提交变更
       </Button>
       <Modal
         destroyOnHidden
         footer={(
           <Space>
-            <Button onClick={() => setCommitOpen(false)}>Cancel</Button>
+            <Button autoInsertSpace={false} onClick={() => setCommitOpen(false)}>取消</Button>
             <Button
+              autoInsertSpace={false}
               disabled={!message.trim()}
               loading={operation === "commit"}
               onClick={() => void submitCommit(false)}
-            >Commit</Button>
+            >提交</Button>
             <Button
               disabled={!message.trim()}
               loading={operation === "commit"}
               onClick={() => void submitCommit(true)}
               type="primary"
-            >Commit and Push</Button>
+            >提交并推送</Button>
           </Space>
         )}
         onCancel={() => setCommitOpen(false)}
         open={commitOpen}
-        title="Commit changes"
+        title="提交变更"
       >
         <Input.TextArea
           autoFocus

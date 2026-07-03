@@ -49,7 +49,7 @@ describe("GitPanel", () => {
     renderPanel(request);
 
     expect(await screen.findByText("main")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Changes +3 -1" }))
+    expect(screen.getByRole("button", { name: "变更 +3 -1" }))
       .toBeInTheDocument();
     expect(request).toHaveBeenCalledWith({
       method: "GET",
@@ -82,11 +82,11 @@ describe("GitPanel", () => {
     const request = createRequest(initializedStatus());
     renderPanel(request);
 
-    fireEvent.click(await screen.findByRole("button", { name: /Changes/ }));
+    fireEvent.click(await screen.findByRole("button", { name: "变更 +3 -1" }));
     expect(screen.getByText("src/new.ts")).toBeInTheDocument();
     expect(screen.getByText("src/old.ts")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Current branch/ }));
+    fireEvent.click(screen.getByRole("button", { name: /当前分支/ }));
     const otherBranch = await screen.findByText("feature/demo");
     expect(otherBranch.closest("li")).toHaveClass("ant-dropdown-menu-item-disabled");
   });
@@ -100,7 +100,7 @@ describe("GitPanel", () => {
     }));
     renderPanel(request);
 
-    fireEvent.click(await screen.findByRole("button", { name: /Current branch/ }));
+    fireEvent.click(await screen.findByRole("button", { name: /当前分支/ }));
     fireEvent.click(await screen.findByText("feature/demo"));
 
     await waitFor(() => expect(request).toHaveBeenCalledWith(expect.objectContaining({
@@ -116,12 +116,14 @@ describe("GitPanel", () => {
   it("submits commit without push", async () => {
     const request = createRequest(initializedStatus());
     renderPanel(request);
-    fireEvent.click(await screen.findByRole("button", { name: "Commit changes" }));
+    fireEvent.click(await screen.findByRole("button", { name: "提交变更" }));
+    expect(screen.getByRole("dialog", { name: "提交变更" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "取消" })).toBeInTheDocument();
 
     fireEvent.change(screen.getByPlaceholderText("Commit message"), {
       target: { value: "save local work" }
     });
-    fireEvent.click(screen.getByRole("button", { name: "Commit" }));
+    fireEvent.click(screen.getByRole("button", { name: "提交" }));
 
     await waitFor(() => expect(request).toHaveBeenCalledWith(expect.objectContaining({
       method: "POST",
@@ -137,9 +139,9 @@ describe("GitPanel", () => {
   it("requires a message and submits commit-and-push before refreshing", async () => {
     const request = createRequest(initializedStatus());
     renderPanel(request);
-    fireEvent.click(await screen.findByRole("button", { name: "Commit changes" }));
+    fireEvent.click(await screen.findByRole("button", { name: "提交变更" }));
 
-    const pushButton = screen.getByRole("button", { name: "Commit and Push" });
+    const pushButton = screen.getByRole("button", { name: "提交并推送" });
     expect(pushButton).toBeDisabled();
     fireEvent.change(screen.getByPlaceholderText("Commit message"), {
       target: { value: "ship it" }
