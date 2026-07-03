@@ -110,6 +110,7 @@ export namespace ServerPlugin {
     readonly skillDirs?: readonly string[];
     readonly systemPrompts?: readonly string[];
     readonly subscribe?: (event: AgentHarnessEvent) => void;
+    readonly agentEndPriority?: number;
     readonly onAgentEnd?: (
       input: AgentEndInput
     ) => AgentContinuation | undefined | Promise<AgentContinuation | undefined>;

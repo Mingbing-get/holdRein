@@ -187,7 +187,7 @@ describe("createServerPluginRegistry", () => {
     expect(resolver).toHaveBeenCalledOnce();
   });
 
-  it("uses the first plugin agent-end continuation in registration order", async () => {
+  it("uses the first plugin agent-end continuation in descending priority order", async () => {
     const registry = createServerPluginRegistry();
     const calls: string[] = [];
     const context = {} as ServerPlugin.RuntimeContext;
@@ -208,29 +208,41 @@ describe("createServerPluginRegistry", () => {
     };
 
     registry.register({
-      id: "first",
+      id: "default-priority",
       contributionResolver: {
         onAgentEnd() {
-          calls.push("first");
+          calls.push("default-priority");
           return undefined;
         }
       }
     });
     registry.register({
-      id: "second",
+      id: "negative-priority",
       contributionResolver: {
+        agentEndPriority: -1,
         onAgentEnd() {
-          calls.push("second");
+          calls.push("negative-priority");
           return { prompt: "Continue" };
         }
       }
     });
     registry.register({
-      id: "third",
+      id: "high-priority-first",
       contributionResolver: {
+        agentEndPriority: 10,
         onAgentEnd() {
-          calls.push("third");
-          return { prompt: "Skip" };
+          calls.push("high-priority-first");
+          return undefined;
+        }
+      }
+    });
+    registry.register({
+      id: "high-priority-second",
+      contributionResolver: {
+        agentEndPriority: 10,
+        onAgentEnd() {
+          calls.push("high-priority-second");
+          return undefined;
         }
       }
     });
@@ -240,6 +252,11 @@ describe("createServerPluginRegistry", () => {
     await expect(contribution.onAgentEnd?.(input)).resolves.toEqual({
       prompt: "Continue"
     });
-    expect(calls).toEqual(["first", "second"]);
+    expect(calls).toEqual([
+      "high-priority-first",
+      "high-priority-second",
+      "default-priority",
+      "negative-priority"
+    ]);
   });
 });

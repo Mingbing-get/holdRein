@@ -117,7 +117,10 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
       const skillDirs: string[] = [];
       const systemPrompts: string[] = [];
       const subscribes: NonNullable<ServerPlugin.Contribution["subscribe"]>[] = [];
-      const agentEndHandlers: NonNullable<ServerPlugin.Contribution["onAgentEnd"]>[] = [];
+      const agentEndHandlers: {
+        handler: NonNullable<ServerPlugin.Contribution["onAgentEnd"]>;
+        priority: number;
+      }[] = [];
 
       for (const plugin of plugins.values()) {
         if (
@@ -144,9 +147,14 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
           subscribes.push(contribution.subscribe);
         }
         if (contribution.onAgentEnd) {
-          agentEndHandlers.push(contribution.onAgentEnd);
+          agentEndHandlers.push({
+            handler: contribution.onAgentEnd,
+            priority: contribution.agentEndPriority ?? 0
+          });
         }
       }
+
+      agentEndHandlers.sort((left, right) => right.priority - left.priority);
 
       const contribution: ServerPlugin.Contribution = {
         tools,
@@ -169,8 +177,8 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
         ...(agentEndHandlers.length > 0
           ? {
               async onAgentEnd(input: ServerPlugin.AgentEndInput) {
-                for (const onAgentEnd of agentEndHandlers) {
-                  const continuation = await onAgentEnd(input);
+                for (const { handler } of agentEndHandlers) {
+                  const continuation = await handler(input);
                   if (continuation) {
                     return continuation;
                   }
