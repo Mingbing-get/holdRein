@@ -160,6 +160,7 @@ export function PluginInstallModal({
         open={selectorOpen}
         selectableTypes={["folder"]}
         title="选择本地插件文件夹"
+        zIndex={1100}
       />
     </>
   );

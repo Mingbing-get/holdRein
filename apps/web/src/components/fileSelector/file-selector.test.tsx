@@ -312,6 +312,36 @@ describe("FileSelector", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("applies the provided modal z-index", async () => {
+    fetchMock.mockResolvedValueOnce({
+      json: async () => ({
+        code: 0,
+        data: {
+          parentPath: "/workspace",
+          entries: []
+        },
+        msg: "ok"
+      }),
+      ok: true
+    } as Response);
+
+    render(
+      <FileSelector
+        apiBaseUrl=""
+        open
+        selectableTypes={["folder"]}
+        zIndex={1100}
+        onConfirm={vi.fn()}
+      />
+    );
+
+    const modalWrap = (
+      await screen.findByRole("dialog", { name: "选择文件" })
+    ).closest(".ant-modal-wrap");
+
+    expect(modalWrap).toHaveStyle({ zIndex: "1100" });
+  });
+
   it("keeps callback types aligned with the multiple option", () => {
     const singleProps: FileSelectorProps = {
       onConfirm: (path: string) => path,
