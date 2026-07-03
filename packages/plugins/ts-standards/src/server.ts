@@ -7,8 +7,8 @@ import { PLUGIN_ID } from './plugin-id'
 
 const VALIDATOR_MARKER = "[ts-standards-validator]";
 const VALIDATOR_AGENT_NAME = "ts-standards-validator";
-const VALIDATOR_SKILL_DIR = join(skillRootDir(), "validator");
-const PLANNING_SKILL_DIR = join(skillRootDir(), "planning");
+const PLANNER_SKILL_DIR = join(skillRootDir(), "planner");
+const BUGFIX_SKILL_DIR = join(skillRootDir(), "bugfix");
 const STANDARDS_SKILL_DIR = join(skillRootDir(), "ts-standards");
 
 export interface ProjectDetectionResult {
@@ -44,19 +44,26 @@ const tsStandardsServerPlugin: ServerPlugin.Plugin = {
 
     return {
       skillDirs: [
-        PLANNING_SKILL_DIR,
-        ...(detection.detected ? [STANDARDS_SKILL_DIR] : []),
-        ...(isValidator ? [VALIDATOR_SKILL_DIR] : [])
+        ...(context.agentName === "main"
+          ? [PLANNER_SKILL_DIR, BUGFIX_SKILL_DIR]
+          : []),
+        ...(detection.detected ? [STANDARDS_SKILL_DIR] : [])
       ],
       systemPrompts: [
         ...(context.agentName === "main"
           ? [
-              "Use the planning skill to break down implementation work before editing code."
+              [
+                "Before any task that may involve code changes, first make sure you fully understand the user's requirements.",
+                "You may read workspace files to learn project context, but if anything remains unclear, stop and ask the user before planning or writing code.",
+                "For a new feature, use the planner skill to design and decompose the work before implementation.",
+                "For a bug fix, use the bugfix skill and follow its diagnosis and test-first workflow.",
+                "When a task contains many independent feature areas, you may split them among focused subagents."
+              ].join(" ")
             ]
           : []),
         ...(detection.detected
           ? [
-              "This workspace looks like a TypeScript or JavaScript project. Use the ts-standards skill for code organization, tests, and verification."
+              "This workspace looks like a TypeScript or JavaScript project. Any agent that will write code must ensure the ts-standards skill is installed and must use the ts-standards skill before writing code, including writing tests before implementation."
             ]
           : [])
       ],
@@ -172,6 +179,8 @@ export function createValidationPrompt(input: ValidationPromptInput): string {
     "",
     "You are an independent validation subagent for a TypeScript/JavaScript coding task.",
     "Do not rely on the implementing agent's conclusions. Use only this prompt, the changed files, and the workspace files you inspect yourself.",
+    "This is a strictly read-only validation. Do not modify, create, delete, or format any file.",
+    "Only inspect the changed or newly added files listed below for compliance. You may read project configuration and rules only to determine the applicable standards; do not review unrelated source files.",
     "",
     "Original task:",
     input.originalPrompt,
@@ -180,18 +189,22 @@ export function createValidationPrompt(input: ValidationPromptInput): string {
     changedFiles,
     "",
     "Validation duties:",
-    "1. Read project rules such as AGENTS.md, package.json, tsconfig, ESLint config, and nearby tests.",
-    "2. Run the relevant test command for the changed behavior. Prefer the narrowest reliable command, but broaden when needed.",
-    "3. Check code style and organization against project rules, including file size limits, test placement, folder APIs, and TypeScript public types.",
-    "4. Check task completion against the original task, including missing edge cases or incomplete UI/API behavior.",
+    "1. Read applicable rules such as AGENTS.md, package.json, tsconfig, and ESLint config. Check only the listed changed/new files against those rules and the ts-standards folder structure rules.",
+    "2. Check whether every changed behavior has sufficient and comprehensive tests covering functionality, interactions, edge cases, and multiple possible outcomes. CSS does not require tests and CSS appearance must not be tested.",
+    "3. Run the relevant tests and record every command and its actual result, including failures.",
+    "4. Run the project's code-style or lint script and record its actual result, including failures.",
+    "5. Check the listed files' organization, including single responsibility, folder structure, colocated index tests, child feature folders, public index exports, file-size limits, and all applicable AGENTS.md rules.",
     "",
     "Return a concise structured result:",
     "Status: passed | failed",
-    "Test Commands: list each command and result",
-    "Findings: required fixes with file paths when failed",
-    "Completion Review: whether the original task is satisfied",
+    "File Organization: result for each listed file and the rule checked",
+    "Test Coverage: covered and missing scenarios for each changed non-CSS behavior",
+    "Test Commands: every command and its actual pass/fail result",
+    "Style Command: the command and its actual pass/fail result",
+    "Summary: a factual consolidation of all passed and failed checks",
     "",
-    "If validation fails, tell the implementing agent exactly what to change. If validation passes, say so directly."
+    "Report every check whether it passes or fails. For failures, identify the exact file, test, missing scenario, command error, or violated rule.",
+    "Do not provide fixes or modification suggestions. Do not edit files after reporting."
   ].join("\n");
 }
 
