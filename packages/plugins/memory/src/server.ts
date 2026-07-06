@@ -27,15 +27,13 @@ const serverPlugin: ServerPlugin.Plugin = {
           MEMORY_ORGANIZER_AGENT_NAME
         );
 
-        console.log(JSON.stringify(messages))
-
         if (!hasNonEmptyUserMessage(messages)) {
           return undefined;
         }
 
         return {
           agentName: MEMORY_ORGANIZER_AGENT_NAME,
-          prompt: createMemoryOrganizerPrompt(messages),
+          prompt: createMemoryOrganizerPrompt(simplifyMessagesForMemory(messages)),
           useSubagent: true
         };
       },
@@ -45,6 +43,73 @@ const serverPlugin: ServerPlugin.Plugin = {
 };
 
 export default serverPlugin;
+
+function simplifyMessagesForMemory(
+  messages: readonly unknown[]
+): readonly unknown[] {
+  return messages.flatMap((message) => {
+    const simplified = simplifyMessageForMemory(message);
+    return simplified === undefined ? [] : [simplified];
+  });
+}
+
+function simplifyMessageForMemory(
+  message: unknown
+): Record<string, unknown> | undefined {
+  if (!isRecord(message)) {
+    return undefined;
+  }
+
+  if (message.role === "user") {
+    return { content: message.content, role: "user" };
+  }
+
+  if (message.role === "assistant") {
+    return {
+      content: message.content,
+      role: "assistant",
+      stopReason: message.stopReason
+    };
+  }
+
+  if (message.role === "toolResult") {
+    return {
+      content: message.content,
+      isError: message.isError,
+      role: "toolResult",
+      toolCallId: message.toolCallId,
+      toolName: message.toolName
+    };
+  }
+
+  if (message.role === "custom") {
+    return {
+      content: message.content,
+      customType: message.customType,
+      role: "custom"
+    };
+  }
+
+  if (message.role === "bashExecution") {
+    return {
+      command: message.command,
+      ...(message.exitCode === undefined ? {} : { exitCode: message.exitCode }),
+      output: message.output,
+      role: "bashExecution",
+      truncated: message.truncated
+    };
+  }
+
+  if (message.role === "branchSummary") {
+    return { role: "branchSummary", summary: message.summary };
+  }
+
+  if (message.role === "compactionSummary") {
+    return { role: "compactionSummary", summary: message.summary };
+  }
+
+  return undefined;
+}
 
 function scopeMessagesAfterLatestCustomMessageFromAgent(
   messages: readonly unknown[],

@@ -74,7 +74,9 @@ describe("memory server plugin", () => {
       agentName: "memory-organizer",
       useSubagent: true
     });
-    expect(continuation?.prompt).toContain(JSON.stringify(messages, null, 2));
+    expect(continuation?.prompt).toContain(
+      JSON.stringify(simplifyExpectedMessages(messages), null, 2)
+    );
     expect(continuation?.prompt).toContain(".hold-rein/memories/index.md");
     expect(continuation?.prompt).toContain("500 lines");
     expect(continuation?.prompt).toContain("conflict");
@@ -113,9 +115,127 @@ describe("memory server plugin", () => {
       agentName: "memory-organizer",
       useSubagent: true
     });
-    expect(continuation?.prompt).toContain(JSON.stringify(newMessages, null, 2));
+    expect(continuation?.prompt).toContain(
+      JSON.stringify(simplifyExpectedMessages(newMessages), null, 2)
+    );
     expect(continuation?.prompt).toContain("Prefer concise release notes");
     expect(continuation?.prompt).not.toContain("Remember the old dashboard constraint");
+  });
+
+  it("sends only memory-relevant fields to the organizer prompt", async () => {
+    const workspacePath = await createWorkspace();
+    const contribution = await resolveContribution("main", workspacePath);
+    const messages = [
+      {
+        content: "Keep user content",
+        id: "user-1",
+        role: "user",
+        timestamp: 1
+      },
+      {
+        api: "unused-api",
+        content: [
+          { text: "Assistant content", type: "text" },
+          { arguments: { path: "src/a.ts" }, id: "call-1", name: "read_file", type: "toolCall" }
+        ],
+        id: "assistant-1",
+        model: "unused-model",
+        provider: "unused-provider",
+        role: "assistant",
+        stopReason: "toolUse",
+        timestamp: 2
+      },
+      {
+        content: [{ text: "Tool output", type: "text" }],
+        id: "tool-1",
+        isError: false,
+        role: "toolResult",
+        timestamp: 3,
+        toolCallId: "call-1",
+        toolName: "read_file"
+      },
+      {
+        content: "Custom content",
+        customType: "agent_continuation",
+        details: { source: "test-plugin" },
+        display: true,
+        id: "custom-1",
+        role: "custom",
+        timestamp: 4
+      },
+      {
+        cancelled: false,
+        command: "corepack pnpm test",
+        excludeFromContext: true,
+        exitCode: 0,
+        fullOutputPath: "/tmp/output.txt",
+        id: "bash-1",
+        output: "Test output",
+        role: "bashExecution",
+        timestamp: 5,
+        truncated: false
+      },
+      {
+        fromId: "message-old",
+        id: "branch-summary-1",
+        role: "branchSummary",
+        summary: "Branch summary",
+        timestamp: 6
+      },
+      {
+        id: "compaction-summary-1",
+        role: "compactionSummary",
+        summary: "Compaction summary",
+        timestamp: 7,
+        tokensBefore: 1000
+      }
+    ] as unknown as ServerPlugin.AgentEndInput["messages"];
+    const expectedMessages = [
+      { content: "Keep user content", role: "user" },
+      {
+        content: [
+          { text: "Assistant content", type: "text" },
+          { arguments: { path: "src/a.ts" }, id: "call-1", name: "read_file", type: "toolCall" }
+        ],
+        role: "assistant",
+        stopReason: "toolUse"
+      },
+      {
+        content: [{ text: "Tool output", type: "text" }],
+        isError: false,
+        role: "toolResult",
+        toolCallId: "call-1",
+        toolName: "read_file"
+      },
+      {
+        content: "Custom content",
+        customType: "agent_continuation",
+        role: "custom"
+      },
+      {
+        command: "corepack pnpm test",
+        exitCode: 0,
+        output: "Test output",
+        role: "bashExecution",
+        truncated: false
+      },
+      { role: "branchSummary", summary: "Branch summary" },
+      { role: "compactionSummary", summary: "Compaction summary" }
+    ];
+
+    const continuation = await contribution.onAgentEnd?.(
+      createAgentEndInput(workspacePath, messages)
+    );
+    const transcript = readPromptTranscript(continuation?.prompt);
+
+    expect(transcript).toEqual(expectedMessages);
+    expect(continuation?.prompt).not.toContain("unused-api");
+    expect(continuation?.prompt).not.toContain("unused-model");
+    expect(continuation?.prompt).not.toContain("unused-provider");
+    expect(continuation?.prompt).not.toContain("source");
+    expect(continuation?.prompt).not.toContain("fullOutputPath");
+    expect(continuation?.prompt).not.toContain("tokensBefore");
+    expect(continuation?.prompt).not.toContain("timestamp");
   });
 
   it("does not start memory organizer when no non-empty user message follows the latest memory run", async () => {
@@ -203,6 +323,45 @@ function createMemoryOrganizerMessage(
     role: "custom",
     timestamp: Date.now()
   };
+}
+
+function simplifyExpectedMessages(
+  messages: readonly unknown[]
+): readonly unknown[] {
+  return messages.map((message) => {
+    if (!isRecord(message)) {
+      return message;
+    }
+
+    if (message.role === "user") {
+      return { content: message.content, role: "user" };
+    }
+
+    if (message.role === "assistant") {
+      return {
+        content: message.content,
+        role: "assistant",
+        stopReason: message.stopReason
+      };
+    }
+
+    return message;
+  });
+}
+
+function readPromptTranscript(prompt: string | undefined): unknown {
+  if (!prompt) {
+    return undefined;
+  }
+
+  const marker = "Complete conversation transcript (JSON):\n";
+  const markerIndex = prompt.indexOf(marker);
+  expect(markerIndex).toBeGreaterThanOrEqual(0);
+  return JSON.parse(prompt.slice(markerIndex + marker.length)) as unknown;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 async function createWorkspace(indexContent?: string): Promise<string> {
