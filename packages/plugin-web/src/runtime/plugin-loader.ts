@@ -62,13 +62,9 @@ async function importRuntimePlugin(
 async function importRuntimePluginModule(
   entryUrl: string
 ): Promise<{ readonly default?: WebPlugin.Plugin }> {
-  const res = import(/* @vite-ignore */ entryUrl) as Promise<{
+  return import(/* @vite-ignore */ entryUrl) as Promise<{
     readonly default?: WebPlugin.Plugin;
   }>;
-
-  console.log(entryUrl, res)
-  
-  return res
 }
 
 function loadPluginStyle(manifest: RuntimePluginManifest): void {

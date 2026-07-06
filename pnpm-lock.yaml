@@ -290,7 +290,7 @@ importers:
         specifier: 6.3.5
         version: 6.3.5(@types/node@22.15.29)(tsx@4.22.3)(yaml@2.9.0)
 
-  packages/plugins/github:
+  packages/plugins/git:
     dependencies:
       simple-git:
         specifier: ^3.36.0

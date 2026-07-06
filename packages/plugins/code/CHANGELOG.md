@@ -1,5 +1,14 @@
 # @hold-rein/plugins-code
 
+## 0.0.2
+
+### Patch Changes
+
+- 优化开发插件体验、修复 bug
+- Updated dependencies
+  - @hold-rein/plugin-server@0.0.2
+  - @hold-rein/plugin-web@0.0.1
+
 ## 0.0.1
 
 ### Patch Changes
