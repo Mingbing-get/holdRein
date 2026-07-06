@@ -21,6 +21,18 @@ describe("memory server plugin", () => {
     expect(contribution.systemPrompts?.[0]).toContain("Prefer pnpm.");
   });
 
+  it("instructs regular agents to treat memory as read-only", async () => {
+    const workspacePath = await createWorkspace("# Primary memory\n\n- Prefer pnpm.\n");
+
+    const contribution = await resolveContribution("main", workspacePath);
+
+    expect(contribution.systemPrompts).toHaveLength(1);
+    expect(contribution.systemPrompts?.[0]).toMatch(/read-only/i);
+    expect(contribution.systemPrompts?.[0]).toContain(
+      "Do not create, edit, move, delete, or otherwise modify memory files."
+    );
+  });
+
   it("keeps directory guidance when the primary index does not exist", async () => {
     const workspacePath = await createWorkspace();
 

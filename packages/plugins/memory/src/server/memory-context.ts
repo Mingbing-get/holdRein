@@ -9,7 +9,8 @@ export async function createMemorySystemPrompt(
   const indexContent = await readMemoryIndex(workspacePath);
   const guidance = [
     `Workspace memory is available in ${MEMORY_DIRECTORY}.`,
-    "Use it as durable context when it is relevant to the current task."
+    "Use it as read-only durable context when it is relevant to the current task.",
+    "Do not create, edit, move, delete, or otherwise modify memory files."
   ].join(" ");
 
   if (indexContent === undefined) {
