@@ -36,7 +36,7 @@ const basePackageJson = {
   },
   files: ["dist"],
   publishConfig: {
-    access: "restricted",
+    access: "public",
     main: "./dist/server.cjs",
     module: "./dist/server.js",
     types: "./dist/server.d.ts",
