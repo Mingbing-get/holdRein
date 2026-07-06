@@ -6,12 +6,18 @@ import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const cliRuntimeDirectory = resolve(root, "apps/cli/dist/runtime");
+const apiPackageJsonPath = resolve(root, "apps/api/package.json");
+const cliPackageJsonPath = resolve(root, "apps/cli/package.json");
 
 if (import.meta.url === pathToFileURL(argv[1] ?? "").href) {
   await copyRuntime();
 }
 
 async function copyRuntime() {
+  await syncRuntimeApiDependencies({
+    apiPackageJsonPath,
+    cliPackageJsonPath
+  });
   await rm(cliRuntimeDirectory, { force: true, recursive: true });
   await mkdir(cliRuntimeDirectory, { recursive: true });
   const apiRuntimeDirectory = resolve(cliRuntimeDirectory, "api");
@@ -21,6 +27,29 @@ async function copyRuntime() {
   await cp(resolve(root, "apps/web/dist"), resolve(cliRuntimeDirectory, "web"), {
     recursive: true
   });
+}
+
+export async function syncRuntimeApiDependencies(options) {
+  const apiPackageJson = await readPackageJson(options.apiPackageJsonPath);
+  const cliPackageJson = await readPackageJson(options.cliPackageJsonPath);
+  const cliDependencies = cliPackageJson.dependencies ?? {};
+  const missingDependencies = Object.entries(apiPackageJson.dependencies ?? {})
+    .filter(([, version]) => !version.startsWith("workspace:"))
+    .filter(([name]) => cliDependencies[name] === undefined);
+
+  if (missingDependencies.length === 0) {
+    return;
+  }
+
+  cliPackageJson.dependencies = {
+    ...cliDependencies,
+    ...Object.fromEntries(missingDependencies)
+  };
+
+  await writeFile(
+    options.cliPackageJsonPath,
+    `${JSON.stringify(cliPackageJson, null, 2)}\n`
+  );
 }
 
 async function copyRuntimeApi(sourceDirectory, destinationDirectory) {
@@ -117,6 +146,10 @@ async function resolveRuntimeSpecifier(filePath, specifier) {
   }
 
   return specifier;
+}
+
+async function readPackageJson(path) {
+  return JSON.parse(await readFile(path, "utf8"));
 }
 
 async function pathExists(path) {

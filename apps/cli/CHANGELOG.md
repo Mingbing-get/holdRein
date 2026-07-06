@@ -1,5 +1,11 @@
 # @hold-rein/cli
 
+## 0.0.5
+
+### Patch Changes
+
+- 修复部分依赖未安装的问题
+
 ## 0.0.4
 
 ### Patch Changes

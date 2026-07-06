@@ -16,10 +16,10 @@
     "@earendil-works/pi-agent-core": "0.75.4",
     "@earendil-works/pi-ai": "0.76.0",
     "better-sqlite3": "12.10.0",
-    "cron-parser": "latest",
+    "cron-parser": "^5.6.1",
     "drizzle-orm": "0.45.2",
     "express": "5.2.1",
-    "node-cron": "latest",
+    "node-cron": "^4.6.0",
     "@hold-rein/plugin-server": "workspace:^"
   },
   "devDependencies": {
