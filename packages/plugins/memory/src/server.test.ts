@@ -54,7 +54,7 @@ describe("memory server plugin", () => {
     expect(contribution.agentEndPriority).toBeUndefined();
   });
 
-  it("starts the final memory organizer with the complete transcript", async () => {
+  it("starts the final memory organizer with the complete transcript when memory has not run", async () => {
     const workspacePath = await createWorkspace();
     const contribution = await resolveContribution("main", workspacePath);
     const messages = [
@@ -83,6 +83,59 @@ describe("memory server plugin", () => {
     expect(continuation?.prompt).toContain("write_file");
     expect(continuation?.prompt).toContain("edit_file");
     expect(continuation?.prompt).toContain("delete_file");
+  });
+
+  it("only sends messages after the latest memory organizer run", async () => {
+    const workspacePath = await createWorkspace();
+    const contribution = await resolveContribution("main", workspacePath);
+    const previousMessages = [
+      { content: "Remember the old dashboard constraint", role: "user" },
+      createMemoryOrganizerMessage("memory-start-1", "Memory organizer is running."),
+      createMemoryOrganizerMessage("memory-result-1", "Updated memory files.")
+    ];
+    const newMessages = [
+      { content: "Prefer concise release notes", role: "user" },
+      {
+        content: [{ text: "Got it.", type: "text" }],
+        role: "assistant"
+      }
+    ] as unknown as ServerPlugin.AgentEndInput["messages"];
+    const messages = [
+      ...previousMessages,
+      ...newMessages
+    ] as unknown as ServerPlugin.AgentEndInput["messages"];
+
+    const continuation = await contribution.onAgentEnd?.(
+      createAgentEndInput(workspacePath, messages)
+    );
+
+    expect(continuation).toMatchObject({
+      agentName: "memory-organizer",
+      useSubagent: true
+    });
+    expect(continuation?.prompt).toContain(JSON.stringify(newMessages, null, 2));
+    expect(continuation?.prompt).toContain("Prefer concise release notes");
+    expect(continuation?.prompt).not.toContain("Remember the old dashboard constraint");
+  });
+
+  it("does not start memory organizer when no non-empty user message follows the latest memory run", async () => {
+    const workspacePath = await createWorkspace();
+    const contribution = await resolveContribution("main", workspacePath);
+    const messages = [
+      createMemoryOrganizerMessage("memory-start-1", "Memory organizer is running."),
+      createMemoryOrganizerMessage("memory-result-1", "Updated memory files."),
+      {
+        content: [{ text: "Summary of memory work.", type: "text" }],
+        role: "assistant"
+      },
+      { content: "   ", role: "user" }
+    ] as unknown as ServerPlugin.AgentEndInput["messages"];
+
+    const continuation = await contribution.onAgentEnd?.(
+      createAgentEndInput(workspacePath, messages)
+    );
+
+    expect(continuation).toBeUndefined();
   });
 });
 
@@ -134,6 +187,21 @@ function createAgentEndInput(
       id: "session-1",
       path: join(workspacePath, "session.jsonl")
     }
+  };
+}
+
+function createMemoryOrganizerMessage(
+  id: string,
+  content: string
+): unknown {
+  return {
+    content,
+    customType: "subagent_result",
+    details: { agentName: "memory-organizer" },
+    display: true,
+    id,
+    role: "custom",
+    timestamp: Date.now()
   };
 }
 
