@@ -118,3 +118,84 @@ it("passes optional import versions to import URL resolution", async () => {
     2
   );
 });
+
+it("defaults import URL resolution to the plugin package version", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hold-rein-load-"));
+  const dir = join(root, "@scope__demo");
+  const toImportUrl = vi.fn((path: string, version?: number | string) =>
+    `${pathToFileURL(path).href}?holdReinReload=${version ?? 0}`
+  );
+
+  await mkdir(join(dir, "dist", "server"), { recursive: true });
+  await writeFile(
+    join(dir, "dist", "server", "index.js"),
+    'export default { id: "demo" };'
+  );
+  await writeFile(
+    join(dir, "package.json"),
+    JSON.stringify({
+      exports: {
+        "./server": "./dist/server/index.js"
+      },
+      name: "@scope/demo",
+      version: "1.2.3"
+    })
+  );
+
+  await loadInstalledServerPlugins({
+    hostNodeModules: join(root, "host", "node_modules"),
+    pluginRoot: root,
+    toImportUrl
+  });
+
+  expect(toImportUrl).toHaveBeenCalledWith(
+    join(dir, "dist", "server", "index.js"),
+    "1.2.3"
+  );
+});
+
+it("reloads installed plugin code when the package version changes", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hold-rein-load-"));
+  const dir = join(root, "@scope__demo");
+  const entryPath = join(dir, "dist", "server", "index.js");
+
+  await mkdir(join(dir, "dist", "server"), { recursive: true });
+  await writeInstalledPlugin(dir, entryPath, "1.0.0", "first");
+
+  const first = await loadInstalledServerPlugins({
+    hostNodeModules: join(root, "host", "node_modules"),
+    pluginRoot: root
+  });
+
+  await writeInstalledPlugin(dir, entryPath, "1.0.1", "second");
+
+  const second = await loadInstalledServerPlugins({
+    hostNodeModules: join(root, "host", "node_modules"),
+    pluginRoot: root
+  });
+
+  expect(first.plugins[0]).toMatchObject({ marker: "first" });
+  expect(second.plugins[0]).toMatchObject({ marker: "second" });
+});
+
+async function writeInstalledPlugin(
+  dir: string,
+  entryPath: string,
+  version: string,
+  marker: string
+): Promise<void> {
+  await writeFile(
+    entryPath,
+    `export default { id: "demo", marker: ${JSON.stringify(marker)} };`
+  );
+  await writeFile(
+    join(dir, "package.json"),
+    JSON.stringify({
+      exports: {
+        "./server": "./dist/server/index.js"
+      },
+      name: "@scope/demo",
+      version
+    })
+  );
+}

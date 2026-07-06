@@ -12,10 +12,13 @@ import { linkServerPluginSharedPackages } from "../shared/symlinks";
 export interface LoadInstalledServerPluginsOptions {
   readonly disabledPluginIds?: readonly string[];
   readonly hostNodeModules: string;
-  readonly importVersion?: number;
+  readonly importVersion?: number | string;
   readonly pluginRoot: string;
   readonly resolvePackageTarget?: (packageName: string) => string;
-  readonly toImportUrl?: (path: string, importVersion?: number) => string;
+  readonly toImportUrl?: (
+    path: string,
+    importVersion?: number | string
+  ) => string;
 }
 
 export interface LoadedServerPlugins {
@@ -52,9 +55,9 @@ export async function loadInstalledServerPlugins(
 
     const entryPath = resolve(packageDir, manifest.serverEntry);
     const module = await import(
-      (options.toImportUrl ?? ((path) => pathToFileURL(path).href))(
+      (options.toImportUrl ?? toInstalledPluginImportUrl)(
         entryPath,
-        options.importVersion
+        options.importVersion ?? manifest.version
       )
     );
 
@@ -96,4 +99,17 @@ function toPluginAssetUrl(pluginDir: string, entry: string): string {
 
 function toPluginAssetPath(entry: string): string {
   return entry.replace(/^\.\//, "").replace(/^dist\//, "");
+}
+
+function toInstalledPluginImportUrl(
+  entryPath: string,
+  importVersion?: number | string
+): string {
+  const url = pathToFileURL(entryPath);
+
+  if (importVersion !== undefined) {
+    url.searchParams.set("holdReinPluginVersion", String(importVersion));
+  }
+
+  return url.href;
 }
