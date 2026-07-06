@@ -1,8 +1,9 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useSyncExternalStore } from "react";
 import type { PropsWithChildren } from "react";
 
 import type { WebPlugin } from "@hold-rein/plugin-web";
 import type { AgentMessageFetcher } from "../api";
+import type { AgentMessageStore } from "../message-store";
 import type {
   AgentTaskState,
   ContinueTaskInput,
@@ -12,6 +13,7 @@ import type {
 } from "../agent-message-types";
 
 export const EMPTY_MESSAGES: WebPlugin.AgentMessage[] = [];
+export const EMPTY_MESSAGE_IDS: string[] = [];
 export const EMPTY_RUNTIME_CONTRIBUTIONS: WebPlugin.ResolvedBrowserRuntimeContributions =
   { skills: [], systemPrompts: [], tools: [] };
 
@@ -32,6 +34,7 @@ export interface AgentTasksContextValue {
   getTaskState: (taskId: string) => AgentTaskState | undefined;
   hasPendingApproval: (taskId: string) => boolean;
   hasUnreadCompletion: (taskId: string) => boolean;
+  messageStore: AgentMessageStore;
   startTask: (input: StartTaskInput) => Promise<void>;
 }
 
@@ -52,4 +55,51 @@ export function useAgentTasks(): AgentTasksContextValue {
   }
 
   return value;
+}
+
+export function useTaskMessage(
+  taskId: string,
+  messageId: string
+): WebPlugin.AgentMessage | undefined {
+  const { messageStore } = useAgentTasks();
+
+  return useSyncExternalStore(
+    (listener) =>
+      messageStore.subscribeTaskMessage(taskId, messageId, listener),
+    () => messageStore.getTaskMessage(taskId, messageId),
+    () => undefined
+  );
+}
+
+export function useTaskMessageIds(taskId: string): string[] {
+  const { messageStore } = useAgentTasks();
+
+  return useSyncExternalStore(
+    (listener) => messageStore.subscribeTaskMessageIds(taskId, listener),
+    () => messageStore.getTaskMessageIds(taskId),
+    () => EMPTY_MESSAGE_IDS
+  );
+}
+
+export function useTaskMessages(taskId: string): WebPlugin.AgentMessage[] {
+  const { messageStore } = useAgentTasks();
+
+  return useSyncExternalStore(
+    (listener) => messageStore.subscribeTaskMessageIds(taskId, listener),
+    () => messageStore.getTaskMessages(taskId),
+    () => EMPTY_MESSAGES
+  );
+}
+
+export function useToolResultMessage(
+  taskId: string,
+  toolCallId: string
+): WebPlugin.ToolResultMessage | undefined {
+  const { messageStore } = useAgentTasks();
+
+  return useSyncExternalStore(
+    (listener) => messageStore.subscribeToolResult(taskId, toolCallId, listener),
+    () => messageStore.getToolResult(taskId, toolCallId),
+    () => undefined
+  );
 }

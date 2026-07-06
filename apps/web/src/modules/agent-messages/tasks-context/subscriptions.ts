@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from "react";
 
 import { fetchTaskMessages } from "../api";
 import type { AgentMessageFetcher } from "../api";
+import type { AgentMessageStore } from "../message-store";
 import { startAgentEventSubscription } from "../agent-event-subscription";
 import {
   createInitialAgentTaskState,
@@ -31,6 +32,7 @@ interface UseAgentTaskSubscriptionsInput {
   readonly handleTaskEvent: (taskId: string, event: AgentEventEnvelope) => void;
   readonly handleTaskSubscriptionError: (taskId: string, error: unknown) => void;
   readonly loadedTaskIds: RefValue<Set<string>>;
+  readonly messageStore: AgentMessageStore;
   readonly setSubagentMessagesById: Dispatch<SetStateAction<SubagentStatesById>>;
   readonly setTaskStates: Dispatch<SetStateAction<Record<string, AgentTaskState>>>;
   readonly subagentMessagesById: SubagentStatesById;
@@ -49,6 +51,7 @@ export function useAgentTaskSubscriptions(
     handleTaskEvent,
     handleTaskSubscriptionError,
     loadedTaskIds,
+    messageStore,
     setSubagentMessagesById,
     setTaskStates,
     subagentMessagesById,
@@ -69,7 +72,7 @@ export function useAgentTaskSubscriptions(
 
   useEffect(() => {
     if (!activeTaskId || loadedTaskIds.current.has(activeTaskId)) return;
-    if (taskStates[activeTaskId]?.messages.length) {
+    if (messageStore.getTaskMessageIds(activeTaskId).length) {
       loadedTaskIds.current.add(activeTaskId);
       return;
     }
@@ -88,6 +91,7 @@ export function useAgentTaskSubscriptions(
             activeTaskId
           )
         );
+        messageStore.replaceTaskMessages(activeTaskId, history.messages);
         setTaskStates((current) => ({
           ...current,
           [activeTaskId]: reduceAgentTaskState(
@@ -104,6 +108,7 @@ export function useAgentTaskSubscriptions(
     apiBaseUrl,
     fetcher,
     loadedTaskIds,
+    messageStore,
     setSubagentMessagesById,
     setTaskStates,
     taskStates

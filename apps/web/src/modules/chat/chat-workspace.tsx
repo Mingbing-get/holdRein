@@ -1,10 +1,11 @@
 import { Flex } from "antd";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { useAppWorkspace } from "../../app/app-workspace-context";
 import {
   AgentMessageList,
   ApprovalPanel,
+  useTaskMessages,
   useAgentTasks
 } from "../agent-messages";
 import Sender from "./sender";
@@ -47,6 +48,7 @@ export function ChatWorkspace({
     (task) => task.id === activeTaskId
   );
   const taskState = getTaskState(activeTaskId);
+  const taskMessages = useTaskMessages(activeTaskId);
   const pendingApproval = getPendingApproval(activeTaskId);
   const suggestionGroups = useWorkspaceFileSuggestions(
     apiBaseUrl,
@@ -62,6 +64,11 @@ export function ChatWorkspace({
   const activeWorkspaceTaskModelId =
     activeWorkspaceTask?.lastModelId ?? activeWorkspaceTask?.lastModelName;
   const activeWorkspaceTaskProvider = activeWorkspaceTask?.lastModelProvider;
+  const scrollToBottomIfFollowing = useCallback(() => {
+    if (shouldFollowMessagesRef.current) {
+      bottomRef.current?.scrollIntoView?.({ block: "end" });
+    }
+  }, []);
 
   useEffect(() => {
     setThinkingLevel(normalizeThinkingLevel(activeWorkspaceTask?.thinkingLevel));
@@ -89,10 +96,8 @@ export function ChatWorkspace({
       shouldFollowMessagesRef.current = true;
     }
 
-    if (shouldFollowMessagesRef.current) {
-      bottomRef.current?.scrollIntoView?.({ block: "end" });
-    }
-  }, [activeTaskId, pendingApproval, taskState?.messages]);
+    scrollToBottomIfFollowing();
+  }, [activeTaskId, pendingApproval, scrollToBottomIfFollowing, taskMessages.length]);
 
   return (
     <Flex
@@ -136,8 +141,9 @@ export function ChatWorkspace({
           }}
         >
           <AgentMessageList
-            messages={taskState?.messages ?? []}
+            onMessageChange={scrollToBottomIfFollowing}
             status={taskState?.status}
+            taskId={activeTaskId}
           />
           {pendingApproval ? (
             <ApprovalPanel
@@ -155,7 +161,7 @@ export function ChatWorkspace({
           <div aria-hidden ref={bottomRef} />
         </Flex>
         <UserMessageNavigator
-          messages={taskState?.messages ?? []}
+          messages={taskMessages}
           scrollContainerRef={messageScrollRef}
         />
       </div>

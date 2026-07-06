@@ -34,9 +34,9 @@ const agentTasksMock = vi.hoisted(() => ({
 
 vi.mock("../agent-messages", () => ({
   ApprovalPanel: () => <div data-testid="approval-panel">Approval</div>,
-  AgentMessageList: ({ messages }: { messages: { content: string }[] }) => (
+  AgentMessageList: () => (
     <div data-testid="agent-message-list">
-      {messages.map((message) => message.content).join(",")}
+      {agentTasksMock.messages.map((message) => message.content).join(",")}
     </div>
   ),
   useAgentTasks: () => ({
@@ -52,7 +52,8 @@ vi.mock("../agent-messages", () => ({
           }
         : undefined,
     startTask: agentTasksMock.startTask
-  })
+  }),
+  useTaskMessages: () => agentTasksMock.messages
 }));
 
 vi.mock("./sender", () => ({

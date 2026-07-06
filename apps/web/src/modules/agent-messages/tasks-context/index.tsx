@@ -45,6 +45,7 @@ import {
 import type { LocalApprovalResolver } from "./local-browser-approval";
 import { useAgentTaskSubscriptions } from "./subscriptions";
 import { discoverSubagents, reduceSubagentResumeEvent } from "../subagent-message/store";
+import { createAgentMessageStore } from "../message-store";
 import type {
   AgentEventEnvelope,
   AgentTaskState,
@@ -55,7 +56,13 @@ import type {
 } from "../agent-message-types";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
-export { useAgentTasks } from "./context";
+export {
+  useAgentTasks,
+  useTaskMessage,
+  useTaskMessageIds,
+  useTaskMessages,
+  useToolResultMessage
+} from "./context";
 
 export function AgentTasksProvider({
   apiBaseUrl,
@@ -77,6 +84,7 @@ export function AgentTasksProvider({
   const [subagentMessagesById, setSubagentMessagesById] =
     useState<SubagentStatesById>({});
   const subscriptions = useRef(new Map<string, AbortController>());
+  const messageStore = useRef(createAgentMessageStore());
   const localApprovalResolvers = useRef(new Map<string, LocalApprovalResolver>());
   const loadedTaskIds = useRef(new Set<string>());
   const activeTaskIdRef = useRef(activeTaskId);
@@ -124,13 +132,17 @@ export function AgentTasksProvider({
 
   const handleTaskEvent = useCallback(
     (taskId: string, event: AgentEventEnvelope) => {
-      setTaskStates((current) => ({
-        ...current,
-        [taskId]: reduceAgentTaskState(
-          current[taskId] ?? createInitialAgentTaskState(taskId),
-          { event, type: "event_received" }
-        )
-      }));
+      if (isMessageEvent(event.type)) {
+        messageStore.current.reduceTaskEvent(taskId, event);
+      } else {
+        setTaskStates((current) => ({
+          ...current,
+          [taskId]: reduceAgentTaskState(
+            current[taskId] ?? createInitialAgentTaskState(taskId),
+            { event, type: "event_received" }
+          )
+        }));
+      }
       const message = getAgentEventMessage(event);
       if (message) {
         setSubagentMessagesById((current) =>
@@ -184,7 +196,8 @@ export function AgentTasksProvider({
     subagentMessagesById,
     subscriptions,
     taskStates,
-    workspaces
+    workspaces,
+    messageStore: messageStore.current
   });
 
   const startTask = useCallback(
@@ -198,12 +211,13 @@ export function AgentTasksProvider({
         { ...result.task, activeAgentId: result.agentId },
         input.prompt
       );
+      messageStore.current.appendOptimisticPrompt(taskId, input.prompt);
       setTaskStates((current) => ({
         ...current,
-        [taskId]: reduceAgentTaskState(
-          current[taskId] ?? createInitialAgentTaskState(taskId),
-          { prompt: input.prompt, type: "prompt_submitted" }
-        )
+        [taskId]: {
+          ...(current[taskId] ?? createInitialAgentTaskState(taskId)),
+          status: "running"
+        }
       }));
 
       startAgentEventSubscription({
@@ -244,12 +258,13 @@ export function AgentTasksProvider({
         fetcher
       );
       updateTaskStatus(taskId, "running", result.agentId);
+      messageStore.current.appendOptimisticPrompt(taskId, input.prompt);
       setTaskStates((current) => ({
         ...current,
-        [taskId]: reduceAgentTaskState(
-          current[taskId] ?? createInitialAgentTaskState(taskId),
-          { prompt: input.prompt, type: "prompt_submitted" }
-        )
+        [taskId]: {
+          ...(current[taskId] ?? createInitialAgentTaskState(taskId)),
+          status: "running"
+        }
       }));
       startAgentEventSubscription({
         agentId: result.agentId,
@@ -351,10 +366,17 @@ export function AgentTasksProvider({
       getSubagentMessages: (agentId) =>
         subagentMessagesById[agentId]?.messages ?? EMPTY_MESSAGES,
       getSubagentStatus: (agentId) => subagentMessagesById[agentId]?.status,
-      getTaskState: (taskId) => taskStates[taskId],
+      getTaskState: (taskId) => {
+        const state = taskStates[taskId];
+
+        return state
+          ? { ...state, messages: messageStore.current.getTaskMessages(taskId) }
+          : undefined;
+      },
       hasPendingApproval: (taskId) =>
         Boolean(taskStates[taskId]?.pendingApprovals.length),
       hasUnreadCompletion: (taskId) => unreadCompletionTaskIds.has(taskId),
+      messageStore: messageStore.current,
       startTask
     }),
     [
@@ -372,5 +394,13 @@ export function AgentTasksProvider({
     <AgentTasksContext.Provider value={contextValue}>
       {children}
     </AgentTasksContext.Provider>
+  );
+}
+
+function isMessageEvent(type: string): boolean {
+  return (
+    type === "message_start" ||
+    type === "message_delta" ||
+    type === "message_end"
   );
 }

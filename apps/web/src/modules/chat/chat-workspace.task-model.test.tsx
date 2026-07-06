@@ -22,7 +22,8 @@ vi.mock("../agent-messages", () => ({
     getPendingApproval: () => undefined,
     getTaskState: () => undefined,
     startTask: vi.fn()
-  })
+  }),
+  useTaskMessages: () => []
 }));
 
 vi.mock("./sender", () => ({

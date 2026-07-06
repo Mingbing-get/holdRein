@@ -40,7 +40,8 @@ vi.mock("../agent-messages", () => ({
     getPendingApproval: () => undefined,
     getTaskState: () => ({ messages: taskMessages, status: "completed" }),
     startTask: vi.fn()
-  })
+  }),
+  useTaskMessages: () => taskMessages
 }));
 
 vi.mock("./sender", () => ({ default: () => <div data-testid="sender" /> }));

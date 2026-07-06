@@ -1,5 +1,5 @@
 import { Alert, Flex, Typography } from "antd";
-import { InfoCircleOutlined, RollbackOutlined, ToolOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, RollbackOutlined } from "@ant-design/icons";
 import { Bubble, Think } from "@ant-design/x";
 import "./index.css";
 
@@ -8,22 +8,58 @@ import { useAppWorkspace } from "../../../app/app-workspace-context";
 import { getCalledSubagentId } from "../collection";
 import { MarkdownContent } from "../markdown-content";
 import { SubagentMessageList } from "../subagent-message";
-import { Fragment, useCallback, useMemo } from "react";
+import { Fragment, useLayoutEffect, useMemo } from "react";
+import {
+  useTaskMessage,
+  useTaskMessages
+} from "../tasks-context";
 import {
   useTurnFooterMessageGroups,
   type TurnFooterStatus
 } from "../use-turn-footer-message-groups";
 import type { WebPlugin } from '@hold-rein/plugin-web'
 import { customTypeMap } from "../consts";
+import { getText, isContinueSentinel } from "./message-utils";
+import {
+  StaticToolCallMessageItem,
+  StoredToolCallMessageItem
+} from "./tool-call-message";
 
-const AGENT_CONTINUE_PROMPT = "";
+const EMPTY_AGENT_MESSAGES: WebPlugin.AgentMessage[] = [];
 
 export interface AgentMessageListProps {
-  messages: WebPlugin.AgentMessage[];
+  messages?: WebPlugin.AgentMessage[];
+  onMessageChange?: () => void;
   status?: TurnFooterStatus;
+  taskId?: string;
 }
 
-export function AgentMessageList({ messages, status }: AgentMessageListProps) {
+export function AgentMessageList({
+  messages = EMPTY_AGENT_MESSAGES,
+  onMessageChange,
+  status,
+  taskId
+}: AgentMessageListProps) {
+  if (taskId) {
+    return (
+      <AgentStoredMessageList
+        onMessageChange={onMessageChange}
+        status={status}
+        taskId={taskId}
+      />
+    );
+  }
+
+  return <AgentStaticMessageList messages={messages} status={status} />;
+}
+
+function AgentStaticMessageList({
+  messages,
+  status
+}: {
+  messages: WebPlugin.AgentMessage[];
+  status?: TurnFooterStatus;
+}) {
   const {
     state: { activeWorkspaceId, workspaces }
   } = useAppWorkspace();
@@ -67,6 +103,87 @@ export function AgentMessageList({ messages, status }: AgentMessageListProps) {
   );
 }
 
+function AgentStoredMessageList({
+  onMessageChange,
+  status,
+  taskId
+}: {
+  onMessageChange?: (() => void) | undefined;
+  status?: TurnFooterStatus;
+  taskId: string;
+}) {
+  const {
+    state: { activeWorkspaceId, workspaces }
+  } = useAppWorkspace();
+  const messages = useTaskMessages(taskId);
+  const workspacePath = useMemo(
+    () =>
+      workspaces.find((workspace) => workspace.id === activeWorkspaceId)?.path,
+    [activeWorkspaceId, workspaces]
+  );
+  const footerSourceMessages = useMemo(
+    () => messages.filter((message) => !isContinueSentinel(message)),
+    [messages]
+  );
+  const visibleMessages = useMemo(
+    () => footerSourceMessages.filter((message) => message.role !== "toolResult"),
+    [footerSourceMessages]
+  );
+  const footerGroups = useTurnFooterMessageGroups(footerSourceMessages, status);
+
+  return (
+    <Flex data-testid="agent-message-list" gap={12} vertical>
+      {visibleMessages.map((message) => {
+        const footerMessages = footerGroups[message.id];
+
+        return (
+          <Fragment key={message.id}>
+            <AgentStoredMessageItem
+              messageId={message.id}
+              onMessageChange={onMessageChange}
+              taskId={taskId}
+              workspacePath={workspacePath}
+            />
+            {footerMessages ? (
+              <AgentTurnFooter
+                messages={footerMessages}
+                workspacePath={workspacePath}
+              />
+            ) : null}
+          </Fragment>
+        );
+      })}
+    </Flex>
+  );
+}
+
+function AgentStoredMessageItem({
+  messageId,
+  onMessageChange,
+  taskId,
+  workspacePath
+}: {
+  messageId: string;
+  onMessageChange?: (() => void) | undefined;
+  taskId: string;
+  workspacePath?: string | undefined;
+}) {
+  const message = useTaskMessage(taskId, messageId);
+
+  useLayoutEffect(() => {
+    if (message) onMessageChange?.();
+  }, [message, onMessageChange]);
+
+  return message ? (
+    <AgentMessageItem
+      message={message}
+      messages={[]}
+      taskId={taskId}
+      workspacePath={workspacePath}
+    />
+  ) : null;
+}
+
 function AgentTurnFooter({
   messages,
   workspacePath
@@ -92,10 +209,12 @@ function AgentTurnFooter({
 function AgentMessageItem({
   message,
   messages,
+  taskId,
   workspacePath
 }: {
   message: WebPlugin.AgentMessage;
   messages: WebPlugin.AgentMessage[];
+  taskId?: string | undefined;
   workspacePath?: string | undefined;
 }) {
   if (message.role === "user") {
@@ -120,6 +239,7 @@ function AgentMessageItem({
       <AssistantMessageItem
         message={message}
         messages={messages}
+        taskId={taskId}
         workspacePath={workspacePath}
       />
     );
@@ -168,10 +288,12 @@ function AgentMessageItem({
 function AssistantMessageItem({
   message,
   messages,
+  taskId,
   workspacePath
 }: {
   message: WebPlugin.AssistantMessage;
   messages: WebPlugin.AgentMessage[];
+  taskId?: string | undefined;
   workspacePath?: string | undefined;
 }) {
   return (
@@ -199,149 +321,24 @@ function AssistantMessageItem({
           );
         }
         return (
-          <ToolCallMessageItem
-            key={index}
-            messages={messages}
-            toolCall={block}
-            workspacePath={workspacePath}
-          />
+          taskId ? (
+            <StoredToolCallMessageItem
+              key={index}
+              taskId={taskId}
+              toolCall={block}
+              workspacePath={workspacePath}
+            />
+          ) : (
+            <StaticToolCallMessageItem
+              key={index}
+              messages={messages}
+              toolCall={block}
+              workspacePath={workspacePath}
+            />
+          )
         );
       })}
       {message.errorMessage ? <Alert type="error" title="Agent 错误" description={message.errorMessage} /> : null}
     </Flex>
   );
-}
-
-function ToolCallMessageItem({
-  messages,
-  toolCall,
-  workspacePath
-}: {
-  messages: WebPlugin.AgentMessage[];
-  toolCall: WebPlugin.ToolCall;
-  workspacePath?: string | undefined;
-}) {
-  const { toolRenders } = useAppPlugins();
-
-  const toolResult = useMemo(() => {
-    return messages.find(
-      (message): message is WebPlugin.ToolResultMessage =>
-        message.role === "toolResult" && message.toolCallId === toolCall.id
-    )
-  }, [messages, toolCall.id]);
-
-  const toolRender = useMemo(() => {
-    return toolRenders.find(item => item.toolName === toolCall.name)
-  }, [toolRenders, toolCall.name])
-  const canUseToolRender =
-    toolCall.argumentsText === undefined || toolCall.argumentsParsed === true;
-  const rawArgumentsText =
-    toolCall.argumentsParsed === false ? toolCall.argumentsText : undefined;
-  const shouldShowRawArguments = rawArgumentsText !== undefined;
-
-  const renderDefaultChildren = useCallback(() => (
-    <div className="agent-tool-call">
-      <ToolCallSection
-        title="参数"
-        value={
-          shouldShowRawArguments
-            ? rawArgumentsText
-            : formatToolValue(toolCall.arguments)
-        }
-      />
-      {toolResult ? (
-        <ToolCallSection
-          danger={toolResult.isError}
-          title="执行结果"
-          value={toolResult ? getText(toolResult.content) : ""}
-        />
-      ) : null}
-    </div>
-  ), [rawArgumentsText, shouldShowRawArguments, toolCall, toolResult])
-
-  if (toolRender && canUseToolRender) {
-    return (
-      <toolRender.Render
-        toolCall={toolCall}
-        DefaultToolRender={DefaultToolRender}
-        renderDefaultChildren={renderDefaultChildren}
-        workspacePath={workspacePath}
-        {...(toolResult ? { result: toolResult } : {})}
-      />
-    )
-  }
-
-  return (
-    <DefaultToolRender
-      defaultExpanded={shouldShowRawArguments}
-      title={`run tool: ${toolCall.name}`}
-      icon={<ToolOutlined />}
-    >
-      {renderDefaultChildren()}
-    </DefaultToolRender>
-  )
-}
-
-function DefaultToolRender({
-  defaultExpanded = false,
-  icon,
-  title,
-  children
-}: WebPlugin.DefaultToolRenderProps) {
-  return (
-    <Think
-      title={title}
-      blink
-      defaultExpanded={defaultExpanded}
-      icon={icon}
-    >
-      {children}
-    </Think>
-  )
-}
-
-function ToolCallSection({
-  danger,
-  title,
-  value
-}: {
-  danger?: boolean;
-  title: string;
-  value: string;
-}) {
-  return (
-    <section className="agent-tool-call__section">
-      <div className="agent-tool-call__section-title">{title}</div>
-      <pre
-        className={
-          danger
-            ? "agent-tool-call__content agent-tool-call__content--danger"
-            : "agent-tool-call__content"
-        }
-      >
-        {value || "(empty)"}
-      </pre>
-    </section>
-  );
-}
-
-function formatToolValue(value: unknown): string {
-  if (typeof value === "string") return value;
-  try {
-    return JSON.stringify(value, null, 2);
-  } catch {
-    return String(value);
-  }
-}
-
-function getText(content: string | { type: string; text?: string }[]): string {
-  if (typeof content === "string") return content;
-  return content
-    .filter((block) => block.type === "text")
-    .map((block) => block.text ?? "")
-    .join("");
-}
-
-function isContinueSentinel(message: WebPlugin.AgentMessage): boolean {
-  return message.role === "user" && getText(message.content) === AGENT_CONTINUE_PROMPT;
 }
