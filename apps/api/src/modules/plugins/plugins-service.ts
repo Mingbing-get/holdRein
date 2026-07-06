@@ -30,6 +30,7 @@ export interface CreatePluginsServiceOptions {
     options: InstallPluginPackageOptions
   ) => Promise<string>;
   readonly pluginRoot?: string;
+  readonly runtimePluginManifests?: () => readonly RuntimePluginManifest[];
 }
 
 export function createPluginsService(
@@ -60,12 +61,27 @@ export function createPluginsService(
   const listPlugins = async (): Promise<InstalledPlugin[]> => {
     const config = await readConfig();
     const manifests = await readRuntimePluginManifests(pluginRoot);
+    const pluginsById = new Map<string, InstalledPlugin>();
 
-    return manifests
-      .map((plugin) => ({
+    for (const plugin of manifests) {
+      pluginsById.set(plugin.id, {
         ...plugin,
         disabled: config[plugin.id]?.disabled === true
-      }))
+      });
+    }
+
+    for (const plugin of options.runtimePluginManifests?.() ?? []) {
+      if (config[plugin.id]?.disabled === true) {
+        continue;
+      }
+
+      pluginsById.set(plugin.id, {
+        ...plugin,
+        disabled: false
+      });
+    }
+
+    return [...pluginsById.values()]
       .sort((left, right) => left.name.localeCompare(right.name));
   };
 

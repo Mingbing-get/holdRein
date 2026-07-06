@@ -1,10 +1,12 @@
 import { readFileSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   createServerPluginRegistry,
   loadInstalledServerPlugins,
+  type DevPluginManager,
+  type DevServerPluginEntry,
   type ServerPlugin,
   type RuntimePluginManifest
 } from "@hold-rein/plugin-server";
@@ -17,15 +19,30 @@ export const pluginRegistry = createServerPluginRegistry();
 let runtimeWebPlugins: RuntimePluginManifest[] = [];
 let activePluginRouter: Router = Router();
 let activeRouteContext: ServerPlugin.RouteContext | null = null;
+let activeDevPluginManager: DevPluginManager | undefined;
+let devImportVersion = 0;
+let activeDevPlugins: ServerPlugin.Plugin[] = [];
 const runtimeModuleDirectory = dirname(fileURLToPath(import.meta.url));
 
-export async function bootstrapServerPlugins(pluginRoot: string): Promise<void> {
-  await reloadServerPlugins(pluginRoot);
+export interface ReloadServerPluginsOptions {
+  readonly devPluginManager?: DevPluginManager;
+  readonly importDevModule?: (
+    importUrl: string
+  ) => Promise<{ readonly default?: ServerPlugin.Plugin }>;
+}
+
+export async function bootstrapServerPlugins(
+  pluginRoot: string,
+  options: ReloadServerPluginsOptions = {}
+): Promise<void> {
+  await reloadServerPlugins(pluginRoot, options);
 }
 
 export async function reloadServerPlugins(
-  pluginRoot = getApiEnv().pluginRoot
+  pluginRoot = getApiEnv().pluginRoot,
+  options: ReloadServerPluginsOptions = {}
 ): Promise<void> {
+  activeDevPluginManager = options.devPluginManager ?? activeDevPluginManager;
   const pluginsService = createPluginsService({ pluginRoot });
   const loaded = await loadInstalledServerPlugins({
     disabledPluginIds: await pluginsService.listDisabledPluginIds(),
@@ -33,9 +50,21 @@ export async function reloadServerPlugins(
     pluginRoot,
     resolvePackageTarget: resolveRuntimePackageTarget
   });
+  const devLoaded = await loadDevServerPlugins({
+    entries: activeDevPluginManager?.getServerPluginEntries() ?? [],
+    ...(options.importDevModule === undefined
+      ? {}
+      : { importDevModule: options.importDevModule })
+  });
 
-  pluginRegistry.replaceAll(loaded.plugins);
-  runtimeWebPlugins = loaded.webPlugins;
+  await disposeDevPlugins(activeDevPlugins);
+  activeDevPlugins = [...devLoaded.plugins];
+
+  pluginRegistry.replaceAll([...loaded.plugins, ...devLoaded.plugins]);
+  runtimeWebPlugins = [
+    ...loaded.webPlugins,
+    ...(activeDevPluginManager?.getWebPluginManifests() ?? [])
+  ];
 
   if (activeRouteContext) {
     await rebuildPluginRouter(activeRouteContext);
@@ -44,6 +73,15 @@ export async function reloadServerPlugins(
 
 export function getRuntimeWebPlugins(): readonly RuntimePluginManifest[] {
   return runtimeWebPlugins;
+}
+
+export function clearRuntimePluginsForTests(): void {
+  runtimeWebPlugins = [];
+  activePluginRouter = Router();
+  activeRouteContext = null;
+  activeDevPluginManager = undefined;
+  devImportVersion = 0;
+  activeDevPlugins = [];
 }
 
 export async function createRuntimePluginRequestHandler(
@@ -64,6 +102,53 @@ async function rebuildPluginRouter(
 
   await pluginRegistry.registerRoutes(nextPluginRouter, context);
   activePluginRouter = nextPluginRouter;
+}
+
+async function loadDevServerPlugins(options: {
+  readonly entries: readonly DevServerPluginEntry[];
+  readonly importDevModule?: (
+    importUrl: string
+  ) => Promise<{ readonly default?: ServerPlugin.Plugin }>;
+}): Promise<{ readonly plugins: readonly ServerPlugin.Plugin[] }> {
+  if (options.entries.length === 0) {
+    return { plugins: [] };
+  }
+
+  devImportVersion += 1;
+  const importDevModule = options.importDevModule ?? ((url) => import(url));
+  const plugins: ServerPlugin.Plugin[] = [];
+
+  for (const entry of options.entries) {
+    const importUrl = toDevImportUrl(entry.entryPath, devImportVersion);
+    const module = await importDevModule(importUrl);
+
+    if (!module.default) {
+      throw new Error(
+        `Plugin "${entry.manifest.id}" does not export a default plugin.`
+      );
+    }
+
+    plugins.push({
+      ...module.default,
+      packageName: entry.manifest.packageName
+    });
+  }
+
+  return { plugins };
+}
+
+async function disposeDevPlugins(
+  plugins: readonly ServerPlugin.Plugin[]
+): Promise<void> {
+  for (const plugin of plugins) {
+    await plugin.dispose?.();
+  }
+}
+
+function toDevImportUrl(entryPath: string, importVersion: number): string {
+  const url = pathToFileURL(entryPath);
+  url.searchParams.set("holdReinReload", String(importVersion));
+  return url.href;
 }
 
 function resolveRuntimePackageTarget(packageName: string): string {

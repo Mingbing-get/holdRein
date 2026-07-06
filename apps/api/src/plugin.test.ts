@@ -4,14 +4,21 @@ import {
   realpathSync as nodeRealpathSync
 } from "node:fs";
 
+import express, { Router } from "express";
+import request from "supertest";
 import { beforeEach, expect, it, vi } from "vitest";
+import type {
+  DevPluginManager,
+  DevServerPluginEntry
+} from "@hold-rein/plugin-server";
 
 const mocks = vi.hoisted(() => ({
   installPluginPackage: vi.fn(),
   readFileSync: vi.fn(),
   realpathSync: vi.fn(),
   loadInstalledServerPlugins: vi.fn(),
-  replaceAll: vi.fn()
+  replaceAll: vi.fn(),
+  registerRoutes: vi.fn()
 }));
 
 type NodeFsMockModule = {
@@ -36,26 +43,35 @@ vi.mock("@hold-rein/plugin-server", () => ({
   createServerPluginRegistry: () => ({
     has: vi.fn(() => true),
     register: vi.fn(),
-    replaceAll: mocks.replaceAll
+    replaceAll: mocks.replaceAll,
+    registerRoutes: mocks.registerRoutes
   }),
   installPluginPackage: mocks.installPluginPackage,
   loadInstalledServerPlugins: mocks.loadInstalledServerPlugins
 }));
 
-const { bootstrapServerPlugins, reloadServerPlugins } = await import("./plugin");
+const {
+  bootstrapServerPlugins,
+  clearRuntimePluginsForTests,
+  createRuntimePluginRequestHandler,
+  reloadServerPlugins
+} = await import("./plugin");
 
 beforeEach(async () => {
+  clearRuntimePluginsForTests();
   mocks.installPluginPackage.mockReset();
   mocks.readFileSync.mockReset();
   mocks.realpathSync.mockReset();
   mocks.loadInstalledServerPlugins.mockReset();
   mocks.replaceAll.mockReset();
+  mocks.registerRoutes.mockReset();
   mocks.readFileSync.mockImplementation(nodeReadFileSync);
   mocks.realpathSync.mockImplementation(nodeRealpathSync);
   mocks.loadInstalledServerPlugins.mockResolvedValue({
     plugins: [],
     webPlugins: []
   });
+  mocks.registerRoutes.mockResolvedValue(undefined);
 });
 
 it("replaces the active server plugins when plugins are reloaded", async () => {
@@ -119,6 +135,66 @@ it("resolves shared plugin packages from the CLI runtime root", async () => {
   const options = mocks.loadInstalledServerPlugins.mock.calls[0]?.[0];
 
   expect(options.resolvePackageTarget(packageName)).toBe(packageRoot);
+});
+
+it("disposes replaced development plugin instances before registry replacement", async () => {
+  const firstDispose = vi.fn();
+  const firstPlugin = { dispose: firstDispose, id: "demo" };
+  const secondPlugin = { id: "demo" };
+  const devEntry: DevServerPluginEntry = {
+    entryPath: "/tmp/plugin/src/server.ts",
+    manifest: {
+      dev: true,
+      id: "demo",
+      name: "Demo",
+      packageName: "@scope/demo",
+      version: "0.0.0",
+      webEntry: "http://127.0.0.1:5178/src/web.ts",
+      webEntryType: "module"
+    },
+    packageDirectory: "/tmp/plugin"
+  };
+  const devPluginManager: DevPluginManager = {
+    close: vi.fn(),
+    getServerPluginEntries: vi.fn(() => [devEntry]),
+    getWebPluginManifests: vi.fn(() => [])
+  };
+  const importDevModule = vi
+    .fn()
+    .mockResolvedValueOnce({ default: firstPlugin })
+    .mockResolvedValueOnce({ default: secondPlugin });
+
+  await reloadServerPlugins("/tmp/plugins", { devPluginManager, importDevModule });
+  await reloadServerPlugins("/tmp/plugins", { devPluginManager, importDevModule });
+
+  expect(firstDispose).toHaveBeenCalledOnce();
+  expect(mocks.replaceAll).toHaveBeenLastCalledWith([
+    { id: "demo", packageName: "@scope/demo" }
+  ]);
+  expect(importDevModule.mock.calls[1]?.[0]).toContain("holdReinReload=2");
+});
+
+it("rebuilds the stable plugin request handler with replacement routes", async () => {
+  const app = express();
+  const context = {} as Parameters<typeof createRuntimePluginRequestHandler>[0];
+  const oldRouter = Router();
+  oldRouter.get("/value", (_request, response) => response.send("old"));
+  const newRouter = Router();
+  newRouter.get("/value", (_request, response) => response.send("new"));
+
+  mocks.registerRoutes.mockImplementationOnce(async (router) => {
+    router.use("/demo", oldRouter);
+  });
+  app.use("/plugin", await createRuntimePluginRequestHandler(context));
+
+  mocks.registerRoutes.mockImplementationOnce(async (router) => {
+    router.use("/demo", newRouter);
+  });
+  await reloadServerPlugins("/tmp/plugins");
+
+  const response = await request(app).get("/plugin/demo/value");
+
+  expect(response.text).toBe("new");
 });
 
 function mockRuntimePackage(packageName: string): string {

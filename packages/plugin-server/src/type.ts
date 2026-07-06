@@ -124,9 +124,12 @@ export namespace ServerPlugin {
     readonly id: string
     readonly packageName?: string
     readonly contributionResolver?: ContributionResolver
+    readonly dispose?: () => void | Promise<void>
     readonly registerRoutes?: (context: RouteContext) => Router | Promise<Router>;
   }
 }
+
+export type RuntimeWebEntryType = "umd" | "module";
 
 export interface PackageEntryManifest {
   readonly compatibleHost?: string;
@@ -140,11 +143,13 @@ export interface PackageEntryManifest {
 }
 
 export interface RuntimePluginManifest {
+  readonly dev?: boolean;
   readonly disabled?: boolean;
   readonly id: string;
   readonly name: string;
   readonly packageName: string;
   readonly version: string;
   readonly webEntry: string;
+  readonly webEntryType?: RuntimeWebEntryType;
   readonly webStyle?: string;
 }

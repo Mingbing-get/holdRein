@@ -1,6 +1,8 @@
 import type { ComponentType, ReactNode } from "react";
 import type { TSchema } from "typebox";
 
+export type RuntimeWebEntryType = "umd" | "module";
+
 export namespace WebPlugin {
   export type HttpMethod =
     | "DELETE"
@@ -361,11 +363,13 @@ export namespace WebPlugin {
 }
 
 export interface RuntimePluginManifest {
+  readonly dev?: boolean;
   readonly disabled?: boolean;
   readonly id: string;
   readonly name: string;
   readonly packageName: string;
   readonly version: string;
   readonly webEntry: string;
+  readonly webEntryType?: RuntimeWebEntryType;
   readonly webStyle?: string;
 }

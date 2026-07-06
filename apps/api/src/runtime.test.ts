@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
   const agentsService = { startAgent: vi.fn() };
@@ -20,7 +20,13 @@ const mocks = vi.hoisted(() => {
     getDefaultAgentsService: vi.fn(() => agentsService),
     getDefaultScheduledTasksService: vi.fn(() => scheduledService),
     loadApiEnv: vi.fn(),
-    getApiEnv: vi.fn(() => ({ pluginRoot: "/tmp/plugins" }))
+    getApiEnv: vi.fn(() => ({ pluginRoot: "/tmp/plugins" })),
+    devPluginManager: {
+      close: vi.fn(),
+      getServerPluginEntries: vi.fn(() => []),
+      getWebPluginManifests: vi.fn(() => [])
+    },
+    startDevPluginManager: vi.fn()
   };
 });
 
@@ -38,8 +44,15 @@ vi.mock("./modules/scheduled-tasks", () => ({
 vi.mock("./plugin", () => ({
   bootstrapServerPlugins: mocks.bootstrapServerPlugins
 }));
+vi.mock("@hold-rein/plugin-server", () => ({
+  startDevPluginManager: mocks.startDevPluginManager
+}));
 
 describe("runtime startup", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("starts scheduled tasks after creating the default agents service", async () => {
     const { startHoldReinServer } = await import("./runtime");
 
@@ -49,5 +62,24 @@ describe("runtime startup", () => {
       agentsService: mocks.agentsService
     });
     expect(mocks.scheduledService.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("starts development plugins before bootstrapping server plugins", async () => {
+    mocks.startDevPluginManager.mockResolvedValueOnce(mocks.devPluginManager);
+    const { startHoldReinServer } = await import("./runtime");
+
+    await startHoldReinServer({
+      devPluginPaths: ["./packages/plugins/github"],
+      host: "127.0.0.1",
+      port: 3001
+    });
+
+    expect(mocks.startDevPluginManager).toHaveBeenCalledWith({
+      onReload: expect.any(Function),
+      pluginPaths: ["./packages/plugins/github"]
+    });
+    expect(mocks.bootstrapServerPlugins).toHaveBeenCalledWith("/tmp/plugins", {
+      devPluginManager: mocks.devPluginManager
+    });
   });
 });

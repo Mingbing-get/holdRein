@@ -57,6 +57,7 @@ const basePackageJson = {
   scripts: {
     build:
       "vite build --config vite.config.ts && vite build --config vite.web.config.ts && tsc -p tsconfig.json --emitDeclarationOnly",
+    dev: "vite --host 127.0.0.1 --config vite.web.config.ts",
     typecheck: "tsc -p tsconfig.json --noEmit"
   },
   peerDependencies: {
@@ -148,9 +149,11 @@ export default defineConfig({
 });
 `;
 
-const viteWebConfigTs = `import { defineConfig } from "vite";
+const viteWebConfigTs = `import { createHoldReinSharedVitePlugin } from "@hold-rein/plugin-web/vite-shared-plugin";
+import { defineConfig } from "vite";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  plugins: command === "serve" ? [createHoldReinSharedVitePlugin()] : [],
   build: {
     emptyOutDir: false,
     lib: {
@@ -174,7 +177,7 @@ export default defineConfig({
       ]
     }
   }
-});
+}));
 `;
 
 export const initPluginPackage = (

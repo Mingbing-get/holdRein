@@ -5,6 +5,9 @@ import { require } from "./require";
 export interface LoadRuntimeWebPluginsOptions {
   readonly importer?: (entryUrl: string) => Promise<WebPlugin.Plugin>;
   readonly manifests: readonly RuntimePluginManifest[];
+  readonly moduleImporter?: (
+    entryUrl: string
+  ) => Promise<{ readonly default?: WebPlugin.Plugin }>;
   readonly registry: Pick<WebPluginRegistry, "has" | "register">;
 }
 
@@ -12,6 +15,7 @@ export async function loadRuntimeWebPlugins(
   options: LoadRuntimeWebPluginsOptions
 ): Promise<WebPlugin.Plugin[]> {
   const importer = options.importer ?? importRuntimePlugin;
+  const moduleImporter = options.moduleImporter ?? importRuntimePluginModule;
   const loadedPlugins: WebPlugin.Plugin[] = [];
 
   for (const manifest of options.manifests) {
@@ -25,7 +29,10 @@ export async function loadRuntimeWebPlugins(
 
     loadPluginStyle(manifest);
 
-    const module = await importer(manifest.webEntry);
+    const module =
+      manifest.webEntryType === "module"
+        ? (await moduleImporter(manifest.webEntry)).default
+        : await importer(manifest.webEntry);
 
     if (!module) {
       throw new Error(
@@ -50,6 +57,18 @@ async function importRuntimePlugin(
   const [module] = await require.require([entryUrl]);
 
   return module as WebPlugin.Plugin;
+}
+
+async function importRuntimePluginModule(
+  entryUrl: string
+): Promise<{ readonly default?: WebPlugin.Plugin }> {
+  const res = import(/* @vite-ignore */ entryUrl) as Promise<{
+    readonly default?: WebPlugin.Plugin;
+  }>;
+
+  console.log(entryUrl, res)
+  
+  return res
 }
 
 function loadPluginStyle(manifest: RuntimePluginManifest): void {

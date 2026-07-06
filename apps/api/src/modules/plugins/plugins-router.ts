@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 
 import { sendError, sendSuccess } from "../../response";
 import { RESPONSE_CODE_DEFINITIONS } from "../../response/response-codes";
-import { reloadServerPlugins } from "../../plugin";
+import { getRuntimeWebPlugins, reloadServerPlugins } from "../../plugin";
 import { createPluginsService } from "./plugins-service";
 import type {
   PluginInstallRequest,
@@ -29,7 +29,8 @@ export function createPluginsRouter(
 ): Router {
   const router = Router();
   const getService = (): PluginsService =>
-    options.pluginsService ?? createPluginsService();
+    options.pluginsService ??
+    createPluginsService({ runtimePluginManifests: getRuntimeWebPlugins });
   const reloadPlugins = options.reloadPlugins ?? (() => reloadServerPlugins());
 
   router.get("/", (_request: Request, response: Response): void => {

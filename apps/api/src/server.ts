@@ -10,7 +10,8 @@ async function main() {
     port,
     write: (value) => {
       process.stdout.write(value);
-    }
+    },
+    devPluginPaths: ['/Users/mingbing/apps/ai-project/holdRein/packages/plugins/github']
   });
 }
 

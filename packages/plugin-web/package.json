@@ -11,6 +11,11 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts",
       "require": "./src/index.ts"
+    },
+    "./vite-shared-plugin": {
+      "types": "./src/runtime/vite-shared-plugin.ts",
+      "import": "./src/runtime/vite-shared-plugin.ts",
+      "require": "./src/runtime/vite-shared-plugin.ts"
     }
   },
   "files": [
@@ -26,6 +31,11 @@
         "types": "./dist/index.d.ts",
         "import": "./dist/index.js",
         "require": "./dist/index.cjs"
+      },
+      "./vite-shared-plugin": {
+        "types": "./dist/runtime/vite-shared-plugin.d.ts",
+        "import": "./dist/runtime/vite-shared-plugin.js",
+        "require": "./dist/runtime/vite-shared-plugin.cjs"
       }
     }
   },

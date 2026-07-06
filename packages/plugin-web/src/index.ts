@@ -3,7 +3,7 @@ import type { WebPlugin } from "./type";
 export type {
   WebPlugin
 };
-export type { RuntimePluginManifest } from "./type";
+export type { RuntimePluginManifest, RuntimeWebEntryType } from "./type";
 export { loadRuntimeWebPlugins } from "./runtime/plugin-loader";
 export { require } from "./runtime/require";
 export type { LoadRuntimeWebPluginsOptions } from "./runtime/plugin-loader";

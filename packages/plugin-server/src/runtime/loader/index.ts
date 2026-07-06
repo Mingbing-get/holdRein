@@ -12,9 +12,10 @@ import { linkServerPluginSharedPackages } from "../shared/symlinks";
 export interface LoadInstalledServerPluginsOptions {
   readonly disabledPluginIds?: readonly string[];
   readonly hostNodeModules: string;
+  readonly importVersion?: number;
   readonly pluginRoot: string;
   readonly resolvePackageTarget?: (packageName: string) => string;
-  readonly toImportUrl?: (path: string) => string;
+  readonly toImportUrl?: (path: string, importVersion?: number) => string;
 }
 
 export interface LoadedServerPlugins {
@@ -51,7 +52,10 @@ export async function loadInstalledServerPlugins(
 
     const entryPath = resolve(packageDir, manifest.serverEntry);
     const module = await import(
-      (options.toImportUrl ?? ((path) => pathToFileURL(path).href))(entryPath)
+      (options.toImportUrl ?? ((path) => pathToFileURL(path).href))(
+        entryPath,
+        options.importVersion
+      )
     );
 
     if (!module.default) {

@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import { loadInstalledServerPlugins } from ".";
 
@@ -81,4 +81,40 @@ it("skips disabled plugin manifests before importing server entries", async () =
 
   expect(result.plugins).toEqual([]);
   expect(result.webPlugins).toEqual([]);
+});
+
+it("passes optional import versions to import URL resolution", async () => {
+  const root = await mkdtemp(join(tmpdir(), "hold-rein-load-"));
+  const dir = join(root, "@scope__demo");
+  const toImportUrl = vi.fn((path: string, version?: number) =>
+    `${pathToFileURL(path).href}?holdReinReload=${version ?? 0}`
+  );
+
+  await mkdir(join(dir, "dist", "server"), { recursive: true });
+  await writeFile(
+    join(dir, "dist", "server", "index.js"),
+    'export default { id: "demo" };'
+  );
+  await writeFile(
+    join(dir, "package.json"),
+    JSON.stringify({
+      exports: {
+        "./server": "./dist/server/index.js"
+      },
+      name: "@scope/demo",
+      version: "1.0.0"
+    })
+  );
+
+  await loadInstalledServerPlugins({
+    hostNodeModules: join(root, "host", "node_modules"),
+    importVersion: 2,
+    pluginRoot: root,
+    toImportUrl
+  });
+
+  expect(toImportUrl).toHaveBeenCalledWith(
+    join(dir, "dist", "server", "index.js"),
+    2
+  );
 });

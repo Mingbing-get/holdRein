@@ -5,7 +5,7 @@ import {
   executeBrowserTool,
   registerBrowserToolExecutor
 } from "./index";
-import type { WebPlugin } from "./index";
+import type { RuntimePluginManifest, WebPlugin } from "./index";
 
 describe("createWebPluginRegistry", () => {
   afterEach(() => {
@@ -21,6 +21,20 @@ describe("createWebPluginRegistry", () => {
     registry.register(plugin);
 
     expect(registry.list()).toEqual([plugin]);
+  });
+
+  it("types development runtime manifests as module web entries", () => {
+    const manifest: RuntimePluginManifest = {
+      dev: true,
+      id: "demo",
+      name: "Demo",
+      packageName: "@scope/demo",
+      version: "0.0.0",
+      webEntry: "http://127.0.0.1:5178/src/web.ts",
+      webEntryType: "module"
+    };
+
+    expect(manifest.webEntryType).toBe("module");
   });
 
   it("rejects duplicate web plugin ids", () => {

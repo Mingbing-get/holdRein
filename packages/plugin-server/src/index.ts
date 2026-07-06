@@ -35,6 +35,12 @@ export {
 export { SERVER_PLUGIN_SHARED_PACKAGES } from "./runtime/shared/packages";
 export { linkServerPluginSharedPackages } from "./runtime/shared/symlinks";
 export type { LinkServerPluginSharedPackagesOptions } from "./runtime/shared/symlinks";
+export { startDevPluginManager } from "./runtime/dev";
+export type {
+  DevPluginManager,
+  DevServerPluginEntry,
+  StartDevPluginManagerOptions
+} from "./runtime/dev";
 
 export interface ServerPluginRegistry {
   register: (plugin: ServerPlugin.Plugin) => void;

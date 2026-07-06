@@ -3,12 +3,23 @@ import { defineConfig } from "vite";
 export default defineConfig({
   build: {
     lib: {
-      entry: "src/index.ts",
-      fileName: (format) => `index.${format === "cjs" ? "cjs" : "js"}`,
+      entry: {
+        index: "src/index.ts",
+        "runtime/vite-shared-plugin": "src/runtime/vite-shared-plugin.ts"
+      },
+      fileName: (format, entryName) =>
+        `${entryName}.${format === "cjs" ? "cjs" : "js"}`,
       formats: ["es", "cjs"]
     },
     rollupOptions: {
-      external: ["@ant-design/icons", "antd", "react", "react/jsx-runtime"]
+      external: [
+        "@ant-design/icons",
+        "antd",
+        "node:module",
+        "node:url",
+        "react",
+        "react/jsx-runtime"
+      ]
     },
     sourcemap: true
   }

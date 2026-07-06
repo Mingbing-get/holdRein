@@ -15,6 +15,20 @@ describe("createServerPluginRegistry", () => {
     ]);
   });
 
+  it("types server plugins with optional disposal hooks", () => {
+    const disposed: string[] = [];
+    const plugin: ServerPlugin.Plugin = {
+      dispose() {
+        disposed.push("demo");
+      },
+      id: "demo"
+    };
+
+    plugin.dispose?.();
+
+    expect(disposed).toEqual(["demo"]);
+  });
+
   it("registers server plugins and returns them in order", () => {
     const registry = createServerPluginRegistry();
     const plugin: ServerPlugin.Plugin = {

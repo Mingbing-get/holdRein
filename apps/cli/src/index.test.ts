@@ -102,6 +102,37 @@ describe("runCli", () => {
     ]);
   });
 
+  it("passes repeated development plugin paths to the bundled service", async () => {
+    const output = collectOutput();
+    const calls: unknown[] = [];
+
+    const result = await runCli(
+      ["start", "--plugin-dev", "../plugin-a", "--plugin-dev", "../plugin-b"],
+      {
+        packageVersion: "1.2.3",
+        startRunServer: async (options) => {
+          calls.push(options);
+          return {
+            host: options.host,
+            port: options.port,
+            url: `http://${options.host}:${options.port}`
+          };
+        },
+        write: output.write
+      }
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(calls).toEqual([
+      {
+        devPluginPaths: ["../plugin-a", "../plugin-b"],
+        host: "127.0.0.1",
+        port: 3001,
+        write: output.write
+      }
+    ]);
+  });
+
   it("prints help for the help flag", async () => {
     const output = collectOutput();
 
@@ -112,6 +143,9 @@ describe("runCli", () => {
 
     expect(result.exitCode).toBe(0);
     expect(output.lines.join("")).toContain("Usage: hold-rein <command>");
+    expect(output.lines.join("")).toContain(
+      "start --plugin-dev <path>  Load a local plugin source in development mode"
+    );
   });
 
   it("initializes a plugin package in the current directory", async () => {

@@ -22,6 +22,7 @@ export interface CliResult {
 }
 
 export interface RunServerOptions {
+  readonly devPluginPaths?: readonly string[];
   readonly host: string;
   readonly port: number;
   readonly write: (value: string) => void;
@@ -53,6 +54,7 @@ Commands:
 Options:
   start --host <host>    Bind to a specific host (default: 127.0.0.1)
   start --port <port>    Bind to a specific port (default: 3001)
+  start --plugin-dev <path>  Load a local plugin source in development mode
   plugin init --path <path>    Initialize in a specific path
   plugin init --name <name>    Initialize in a child directory
   plugin install --target <path>    Install into a specific plugin directory
@@ -88,6 +90,9 @@ export const runCli = async (
       const runOptions = parseRunOptions([subcommand, ...commandArgs]);
       const startRunServer = options.startRunServer ?? startBundledRunServer;
       const result = await startRunServer({
+        ...(runOptions.devPluginPaths === undefined
+          ? {}
+          : { devPluginPaths: runOptions.devPluginPaths }),
         host: runOptions.host,
         port: runOptions.port,
         write: options.write
@@ -165,8 +170,13 @@ function parsePluginInstallOptions(
 
 function parseRunOptions(
   args: readonly (string | undefined)[]
-): { readonly host: string; readonly port: number } {
+): {
+  readonly devPluginPaths?: readonly string[];
+  readonly host: string;
+  readonly port: number;
+} {
   const compactArgs = args.filter((arg): arg is string => arg !== undefined);
+  const devPluginPaths = readRepeatedOptionValues(compactArgs, "--plugin-dev");
   const host = readOptionValue(compactArgs, "--host") ?? DEFAULT_RUN_HOST;
   const portValue = readOptionValue(compactArgs, "--port");
   const port = portValue === undefined ? DEFAULT_RUN_PORT : Number(portValue);
@@ -175,7 +185,11 @@ function parseRunOptions(
     throw new Error("Port must be an integer between 1 and 65535");
   }
 
-  return { host, port };
+  return {
+    ...(devPluginPaths.length > 0 ? { devPluginPaths } : {}),
+    host,
+    port
+  };
 }
 
 function parsePluginInitOptions(
@@ -230,4 +244,27 @@ function readOptionValue(
   }
 
   return value;
+}
+
+function readRepeatedOptionValues(
+  args: readonly string[],
+  optionName: string
+): readonly string[] {
+  const values: string[] = [];
+
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index] !== optionName) {
+      continue;
+    }
+
+    const value = args[index + 1];
+
+    if (value === undefined || value.startsWith("-")) {
+      throw new Error(`Missing value for ${optionName}`);
+    }
+
+    values.push(value);
+  }
+
+  return values;
 }

@@ -1,6 +1,8 @@
+import { createHoldReinSharedVitePlugin } from "@hold-rein/plugin-web/vite-shared-plugin";
 import { defineConfig } from "vite";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  plugins: command === "serve" ? [createHoldReinSharedVitePlugin()] : [],
   build: {
     emptyOutDir: false,
     lib: {
@@ -24,4 +26,4 @@ export default defineConfig({
       ]
     }
   }
-});
+}));

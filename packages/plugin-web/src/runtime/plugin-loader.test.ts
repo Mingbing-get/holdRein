@@ -29,6 +29,74 @@ it("imports and registers web plugins", async () => {
   expect(loadedPlugins).toEqual([{ id: "demo" }]);
 });
 
+it("imports module web plugin entries with the module importer", async () => {
+  const importer = vi.fn(async () => ({ id: "umd-demo" }));
+  const moduleImporter = vi.fn(async () => ({ default: { id: "module-demo" } }));
+  const register = vi.fn();
+
+  const loadedPlugins = await loadRuntimeWebPlugins({
+    importer,
+    moduleImporter,
+    manifests: [
+      {
+        dev: true,
+        id: "module-demo",
+        name: "Module Demo",
+        packageName: "@scope/module-demo",
+        version: "0.0.0",
+        webEntry: "http://127.0.0.1:5178/src/web.ts",
+        webEntryType: "module"
+      }
+    ],
+    registry: { has: () => false, register }
+  });
+
+  expect(importer).not.toHaveBeenCalled();
+  expect(moduleImporter).toHaveBeenCalledWith(
+    "http://127.0.0.1:5178/src/web.ts"
+  );
+  expect(register).toHaveBeenCalledWith({ id: "module-demo" });
+  expect(loadedPlugins).toEqual([{ id: "module-demo" }]);
+});
+
+it("keeps the UMD importer for missing or UMD web entry types", async () => {
+  const importer = vi
+    .fn()
+    .mockResolvedValueOnce({ id: "implicit-umd" })
+    .mockResolvedValueOnce({ id: "explicit-umd" });
+  const moduleImporter = vi.fn(async () => ({ default: { id: "module-demo" } }));
+  const register = vi.fn();
+
+  await loadRuntimeWebPlugins({
+    importer,
+    moduleImporter,
+    manifests: [
+      {
+        id: "implicit-umd",
+        name: "Implicit UMD",
+        packageName: "@scope/implicit-umd",
+        version: "1.0.0",
+        webEntry: "/implicit.js"
+      },
+      {
+        id: "explicit-umd",
+        name: "Explicit UMD",
+        packageName: "@scope/explicit-umd",
+        version: "1.0.0",
+        webEntry: "/explicit.js",
+        webEntryType: "umd"
+      }
+    ],
+    registry: { has: () => false, register }
+  });
+
+  expect(importer).toHaveBeenCalledWith("/implicit.js");
+  expect(importer).toHaveBeenCalledWith("/explicit.js");
+  expect(moduleImporter).not.toHaveBeenCalled();
+  expect(register).toHaveBeenCalledWith({ id: "implicit-umd" });
+  expect(register).toHaveBeenCalledWith({ id: "explicit-umd" });
+});
+
 it("skips disabled web plugin manifests", async () => {
   const importer = vi.fn(async () => ({ id: "demo" }));
   const register = vi.fn();

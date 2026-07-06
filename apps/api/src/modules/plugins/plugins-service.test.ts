@@ -40,6 +40,82 @@ describe("plugins service", () => {
     ]);
   });
 
+  it("merges active development manifests after installed manifests", async () => {
+    await createPluginPackage("@scope/demo", "1.0.0");
+    const service = createPluginsService({
+      pluginRoot,
+      runtimePluginManifests: () => [
+        {
+          dev: true,
+          id: "@scope/demo",
+          name: "@scope/demo",
+          packageName: "@scope/demo",
+          version: "0.0.0",
+          webEntry: "http://127.0.0.1:5178/src/web.ts",
+          webEntryType: "module"
+        },
+        {
+          dev: true,
+          id: "@scope/extra",
+          name: "@scope/extra",
+          packageName: "@scope/extra",
+          version: "0.0.0",
+          webEntry: "http://127.0.0.1:5179/src/web.ts",
+          webEntryType: "module"
+        }
+      ]
+    });
+
+    await expect(service.listPlugins()).resolves.toEqual([
+      expect.objectContaining({
+        dev: true,
+        disabled: false,
+        id: "@scope/demo",
+        webEntry: "http://127.0.0.1:5178/src/web.ts",
+        webEntryType: "module"
+      }),
+      expect.objectContaining({
+        dev: true,
+        disabled: false,
+        id: "@scope/extra"
+      })
+    ]);
+  });
+
+  it("keeps disabled installed plugins from being overridden by development manifests", async () => {
+    await createPluginPackage("@scope/demo", "1.0.0");
+    await writeFile(
+      join(pluginRoot, "plugins.json"),
+      JSON.stringify({ "@scope/demo": { disabled: true } }),
+      "utf8"
+    );
+    const service = createPluginsService({
+      pluginRoot,
+      runtimePluginManifests: () => [
+        {
+          dev: true,
+          id: "@scope/demo",
+          name: "@scope/demo",
+          packageName: "@scope/demo",
+          version: "0.0.0",
+          webEntry: "http://127.0.0.1:5178/src/web.ts",
+          webEntryType: "module"
+        }
+      ]
+    });
+
+    const plugins = await service.listPlugins();
+
+    expect(plugins).toEqual([
+      expect.objectContaining({
+        disabled: true,
+        id: "@scope/demo",
+        webEntry: "/plugin-assets/%40scope__demo/web.js"
+      })
+    ]);
+    expect(plugins[0]).not.toHaveProperty("dev");
+  });
+
   it("omits webStyle for installed plugins when the exported style file is missing", async () => {
     await createPluginPackage("@scope/demo", "1.0.0", {
       style: "./dist/style.css"

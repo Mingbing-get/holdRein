@@ -22,10 +22,16 @@ vi.mock("antd", () => ({ Button: "button" }));
 vi.mock("monaco-editor", () => ({ editor: "monaco-editor" }));
 vi.mock("react", () => ({ createElement: "create-element" }));
 vi.mock("react-dom", () => ({ createPortal: "create-portal" }));
+vi.mock("react/jsx-dev-runtime", () => ({ jsxDEV: "jsx-dev" }));
 vi.mock("react/jsx-runtime", () => ({ jsx: "jsx" }));
 
 beforeEach(() => {
   vi.clearAllMocks();
+  delete (
+    globalThis as typeof globalThis & {
+      __HOLD_REIN_SHARED__?: unknown;
+    }
+  ).__HOLD_REIN_SHARED__;
 });
 
 it("registers host packages for runtime plugins", async () => {
@@ -57,6 +63,30 @@ it("registers host packages for runtime plugins", async () => {
     "monaco-editor",
     expect.anything()
   );
+});
+
+it("registers host packages as shared ESM globals for development plugins", async () => {
+  const { registerRuntimePluginPackages } = await import("./runtime-require");
+
+  registerRuntimePluginPackages();
+
+  expect(
+    (
+      globalThis as typeof globalThis & {
+        __HOLD_REIN_SHARED__?: Record<string, unknown>;
+      }
+    ).__HOLD_REIN_SHARED__
+  ).toMatchObject({
+    antd: { Button: "button" },
+    icons: expect.any(Function),
+    monaco: { editor: "monaco-editor" },
+    monacoReact: expect.any(Function),
+    pluginWeb: expect.objectContaining({ require: expect.anything() }),
+    react: { createElement: "create-element" },
+    reactDom: { createPortal: "create-portal" },
+    reactJsxDevRuntime: { jsxDEV: "jsx-dev" },
+    reactJsxRuntime: { jsx: "jsx" }
+  });
 });
 
 it("registers default exports as AMD module values with named exports attached", async () => {
