@@ -34,7 +34,7 @@ export function createAgentRuntime(
   const harnessSkillCleanups = new WeakMap<AgentHarness, () => Promise<void>>();
   const interruptedHarnesses = new WeakSet<AgentHarness>();
   const tokenCollections = new Map<string, ReturnType<typeof createTokenCollection>>();
-  const browserToolCalls = createBrowserToolCallStore(options.browserToolTimeoutMs);
+  const browserToolCalls = createBrowserToolCallStore();
   return {
     interrupt: async (agentId) => {
       const runningAgent = runningAgents.get(agentId);

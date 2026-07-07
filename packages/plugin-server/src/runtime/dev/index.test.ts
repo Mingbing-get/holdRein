@@ -27,12 +27,28 @@ async function createDevPluginPackage(): Promise<string> {
         }
       },
       name: "@scope/demo",
+      publishConfig: {
+        exports: {
+          "./server": {
+            import: "./dist/server.js"
+          }
+        }
+      },
       scripts: {
         dev: "vite --config vite.web.config.ts"
       },
       version: "0.0.0"
     })
   );
+  await writeFile(
+    join(root, "src", "plugin-id.ts"),
+    'export const PLUGIN_ID = "__demo__plugin";\n'
+  );
+  await writeFile(
+    join(root, "src", "server.ts"),
+    'import { PLUGIN_ID } from "./plugin-id";\n\nexport default { id: PLUGIN_ID };\n'
+  );
+  await writeFile(join(root, "src", "web.ts"), "export default {};\n");
 
   return root;
 }
@@ -42,23 +58,29 @@ describe("startDevPluginManager", () => {
     const pluginPath = await createDevPluginPackage();
     const child: FakeChildProcess = { kill: vi.fn(), stdout: new EventEmitter() };
     const spawn = vi.fn(() => child);
+    const buildServerBundle = vi.fn();
+    const watch = vi.fn(() => ({ close: vi.fn() }));
 
     await startDevPluginManager({
+      buildServerBundle,
       pluginPaths: [pluginPath],
       spawn,
-      watch: () => ({ close: vi.fn() })
+      watch
     });
 
     expect(spawn).toHaveBeenCalledWith("corepack", ["pnpm", "dev"], {
       cwd: pluginPath
     });
+    expect(watch).toHaveBeenCalledWith(join(pluginPath, "src"), expect.any(Function));
   });
 
   it("resolves development manifests from package exports and Vite stdout", async () => {
     const pluginPath = await createDevPluginPackage();
     const child: FakeChildProcess = { kill: vi.fn(), stdout: new EventEmitter() };
+    const buildServerBundle = vi.fn();
 
     const manager = await startDevPluginManager({
+      buildServerBundle,
       pluginPaths: [pluginPath],
       spawn: () => child,
       watch: () => ({ close: vi.fn() })
@@ -77,23 +99,63 @@ describe("startDevPluginManager", () => {
         webEntryType: "module"
       }
     ]);
-    expect(manager.getServerPluginEntries()).toEqual([
-      {
-        entryPath: join(pluginPath, "src/server.ts"),
-        manifest: manager.getWebPluginManifests()[0],
-        packageDirectory: pluginPath
-      }
-    ]);
+    expect(manager.getServerPluginEntries()[0]).toMatchObject({
+      manifest: manager.getWebPluginManifests()[0],
+      packageDirectory: pluginPath
+    });
+    expect(manager.getServerPluginEntries()[0]?.entryPath).toBe(
+      join(pluginPath, "dist/server.js")
+    );
   });
 
-  it("debounces server reload callbacks after watched file changes", async () => {
+  it("reloads runtime plugin manifests when the frontend dev URL becomes available", async () => {
+    const pluginPath = await createDevPluginPackage();
+    const child: FakeChildProcess = { kill: vi.fn(), stdout: new EventEmitter() };
+    const buildServerBundle = vi.fn();
+    const onReload = vi.fn();
+
+    await startDevPluginManager({
+      buildServerBundle,
+      onReload,
+      pluginPaths: [pluginPath],
+      spawn: () => child,
+      watch: () => ({ close: vi.fn() })
+    });
+
+    child.stdout.emit("data", "  Local:   http://127.0.0.1:5178/\n");
+
+    expect(onReload).toHaveBeenCalledOnce();
+    expect(buildServerBundle).toHaveBeenCalledOnce();
+  });
+
+  it("builds the server bundle before exposing development server entries", async () => {
+    const pluginPath = await createDevPluginPackage();
+    const child: FakeChildProcess = { kill: vi.fn(), stdout: new EventEmitter() };
+    const buildServerBundle = vi.fn();
+
+    const manager = await startDevPluginManager({
+      buildServerBundle,
+      pluginPaths: [pluginPath],
+      spawn: () => child,
+      watch: () => ({ close: vi.fn() })
+    });
+
+    expect(buildServerBundle).toHaveBeenCalledWith(pluginPath);
+    expect(manager.getServerPluginEntries()[0]?.entryPath).toBe(
+      join(pluginPath, "dist/server.js")
+    );
+  });
+
+  it("rebuilds the server bundle before reloading after watched file changes", async () => {
     vi.useFakeTimers();
     const pluginPath = await createDevPluginPackage();
     const child: FakeChildProcess = { kill: vi.fn(), stdout: new EventEmitter() };
     const onReload = vi.fn();
-    const watchers: Array<() => void> = [];
+    const buildServerBundle = vi.fn();
+    const watchers: (() => void)[] = [];
 
     await startDevPluginManager({
+      buildServerBundle,
       debounceMs: 50,
       onReload,
       pluginPaths: [pluginPath],
@@ -110,7 +172,11 @@ describe("startDevPluginManager", () => {
     expect(onReload).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);
+    expect(buildServerBundle).toHaveBeenCalledTimes(2);
     expect(onReload).toHaveBeenCalledTimes(1);
+    expect(buildServerBundle.mock.invocationCallOrder[1]).toBeLessThan(
+      onReload.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER
+    );
     vi.useRealTimers();
   });
 
@@ -118,8 +184,10 @@ describe("startDevPluginManager", () => {
     const pluginPath = await createDevPluginPackage();
     const close = vi.fn();
     const child: FakeChildProcess = { kill: vi.fn(), stdout: new EventEmitter() };
+    const buildServerBundle = vi.fn();
 
     const manager = await startDevPluginManager({
+      buildServerBundle,
       pluginPaths: [pluginPath],
       spawn: () => child,
       watch: () => ({ close })

@@ -18,6 +18,7 @@ export interface DevPluginManager {
 }
 
 export interface StartDevPluginManagerOptions {
+  readonly buildServerBundle?: DevServerBundleBuilder;
   readonly debounceMs?: number;
   readonly onReload?: () => void | Promise<void>;
   readonly pluginPaths: readonly string[];
@@ -30,6 +31,10 @@ export type DevProcessSpawner = (
   args: readonly string[],
   options: { readonly cwd: string }
 ) => DevChildProcess;
+
+export type DevServerBundleBuilder = (
+  packageDirectory: string
+) => Promise<void> | void;
 
 export interface DevChildProcess {
   readonly kill: () => void;
@@ -46,6 +51,7 @@ export type DevFileWatcher = (
 interface PackageJson {
   readonly exports?: unknown;
   readonly name: string;
+  readonly publishConfig?: unknown;
   readonly scripts?: Readonly<Record<string, string>>;
   readonly version: string;
 }
@@ -79,20 +85,30 @@ export async function startDevPluginManager(
 ): Promise<DevPluginManager> {
   const spawn = options.spawn ?? defaultSpawn;
   const watch = options.watch ?? defaultWatch;
+  const buildServerBundle = options.buildServerBundle ?? defaultBuildServerBundle;
   const debounceMs = options.debounceMs ?? DEFAULT_DEBOUNCE_MS;
   let reloadTimer: ReturnType<typeof setTimeout> | undefined;
+  const pendingBuildStates = new Set<DevPluginState>();
   const states: DevPluginState[] = [];
 
-  const scheduleReload = (): void => {
+  const scheduleReload = (state: DevPluginState): void => {
     if (!options.onReload) {
       return;
     }
+    pendingBuildStates.add(state);
     if (reloadTimer !== undefined) {
       clearTimeout(reloadTimer);
     }
-    reloadTimer = setTimeout(() => {
+    reloadTimer = setTimeout(async () => {
       reloadTimer = undefined;
-      void options.onReload?.();
+      const statesToBuild = [...pendingBuildStates];
+      pendingBuildStates.clear();
+      await Promise.all(
+        statesToBuild.map((currentState) =>
+          buildServerBundle(currentState.packageDirectory)
+        )
+      );
+      await options.onReload?.();
     }, debounceMs);
   };
 
@@ -108,9 +124,10 @@ export async function startDevPluginManager(
 
     const serverEntryPath = resolve(
       packageDirectory,
-      resolvePackageExport(packageJson.exports, "./server")
+      resolvePublishedPackageExport(packageJson.publishConfig, "./server")
     );
     const webEntryPath = resolvePackageExport(packageJson.exports, "./web");
+    await buildServerBundle(packageDirectory);
     const manifest: MutableRuntimePluginManifest = {
       dev: true,
       id: packageJson.name,
@@ -128,15 +145,21 @@ export async function startDevPluginManager(
       serverEntryPath,
       webEntryPath
     };
-    const watcher = watch(packageDirectory, scheduleReload);
+    const watcher = watch(resolve(packageDirectory, "src"), () =>
+      scheduleReload(state)
+    );
 
     states.push({ ...state, watcher });
     child.stdout?.on("data", (chunk) => {
       const origin = parseViteOrigin(String(chunk));
       if (origin !== undefined) {
         state.devServerOrigin = origin;
-        manifest.webEntry = new URL(stripRelativePrefix(webEntryPath), origin)
-          .href;
+        const webEntry = new URL(stripRelativePrefix(webEntryPath), origin).href;
+
+        if (manifest.webEntry !== webEntry) {
+          manifest.webEntry = webEntry;
+          void options.onReload?.();
+        }
       }
     });
   }
@@ -183,9 +206,28 @@ async function readPluginPackageJson(
   return {
     name: input.name,
     ...(input.exports === undefined ? {} : { exports: input.exports }),
+    ...(input.publishConfig === undefined
+      ? {}
+      : { publishConfig: input.publishConfig }),
     ...(input.scripts === undefined ? {} : { scripts: input.scripts }),
     version: input.version
   };
+}
+
+function resolvePublishedPackageExport(
+  publishConfig: unknown,
+  subpath: string
+): string {
+  if (!publishConfig || typeof publishConfig !== "object" || Array.isArray(publishConfig)) {
+    throw new Error(
+      `Development plugin publishConfig must define "${subpath}".`
+    );
+  }
+
+  return resolvePackageExport(
+    (publishConfig as Record<string, unknown>).exports,
+    subpath
+  );
 }
 
 function resolvePackageExport(exportsField: unknown, subpath: string): string {
@@ -236,6 +278,30 @@ const defaultSpawn: DevProcessSpawner = (command, args, options) =>
   spawnChildProcess(command, [...args], {
     cwd: options.cwd,
     stdio: ["ignore", "pipe", "inherit"]
+  });
+
+const defaultBuildServerBundle: DevServerBundleBuilder = (
+  packageDirectory: string
+) =>
+  new Promise<void>((resolveBuild, rejectBuild) => {
+    const child = spawnChildProcess(
+      "pnpm",
+      ["exec", "vite", "build", "--config", "vite.config.ts"],
+      {
+        cwd: packageDirectory,
+        stdio: "inherit"
+      }
+    );
+
+    child.once("error", rejectBuild);
+    child.once("exit", (code) => {
+      if (code === 0) {
+        resolveBuild();
+        return;
+      }
+
+      rejectBuild(new Error(`Server plugin build failed with exit code ${code}.`));
+    });
   });
 
 const defaultWatch: DevFileWatcher = (path, callback) =>

@@ -186,6 +186,51 @@ describe("agent runtime browser contributions", () => {
     }));
   });
 
+  it("keeps browser tool calls pending until the browser submits a result", async () => {
+    vi.useFakeTimers();
+    const { repo } = createSessionRepo();
+    const runtime = createAgentRuntime({
+      approvalStore: createAgentApprovalStore(),
+      eventBus: createAgentEventBus(),
+      sessionRepo: repo,
+      subagentRepository: createInMemorySubagentRepository()
+    });
+
+    try {
+      const result = await runtime.start({
+        ...createRunInput(),
+        runtimeContributions: {
+          tools: [
+            { inputSchema: { type: "object" }, name: "read_browser_selection" }
+          ]
+        }
+      });
+      const tool = getHarnessTool("read_browser_selection");
+      expect(tool).toBeDefined();
+      if (!tool) return;
+
+      const execution = tool.execute("tool-call-1", {});
+      const settled = vi.fn();
+      void execution.then(settled, settled);
+
+      await vi.advanceTimersByTimeAsync(60_001);
+      expect(settled).not.toHaveBeenCalled();
+
+      await runtime.submitBrowserToolResult?.({
+        agentId: result.agentId,
+        content: "Selected text after a long wait",
+        toolCallId: "tool-call-1"
+      });
+
+      await expect(execution).resolves.toEqual(expect.objectContaining({
+        content: [{ text: "Selected text after a long wait", type: "text" }],
+        isError: false
+      }));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("resolves pending browser tools with an error on interrupt", async () => {
     prompt.mockReturnValue(new Promise(() => undefined));
     const { repo } = createSessionRepo();

@@ -19,16 +19,13 @@ type BrowserToolResult = AgentToolResult<{ toolName?: string }> & {
   isError?: boolean;
 };
 
-export function createBrowserToolCallStore(
-  timeoutMs = 60_000
-): BrowserToolCallStore {
+export function createBrowserToolCallStore(): BrowserToolCallStore {
   const pending = new Map<string, PendingCall>();
 
   return {
     clearAgent(agentId) {
       for (const [key, call] of pending) {
         if (call.agentId !== agentId) continue;
-        clearTimeout(call.timeout);
         pending.delete(key);
         call.resolve({
           content: [
@@ -52,20 +49,9 @@ export function createBrowserToolCallStore(
       }
 
       return new Promise<BrowserToolResult>((resolve) => {
-        const timeout = setTimeout(() => {
-          pending.delete(key);
-          resolve({
-            content: [
-              { text: "Browser tool call timed out.", type: "text" }
-            ],
-            details: { toolName: request.toolName },
-            isError: true
-          });
-        }, timeoutMs);
         pending.set(key, {
           agentId: request.agentId,
           resolve,
-          timeout,
           toolName: request.toolName
         });
       });
@@ -74,7 +60,6 @@ export function createBrowserToolCallStore(
       const key = createKey(input.agentId, input.toolCallId);
       const call = pending.get(key);
       if (!call) return false;
-      clearTimeout(call.timeout);
       pending.delete(key);
       call.resolve({
         content:
@@ -92,7 +77,6 @@ export function createBrowserToolCallStore(
 interface PendingCall {
   agentId: string;
   resolve: (result: BrowserToolResult) => void;
-  timeout: ReturnType<typeof setTimeout>;
   toolName: string;
 }
 
