@@ -226,7 +226,7 @@ function AgentMessageItem({
       >
         <Bubble
           styles={{
-            content: { padding: '8px 12px', minHeight: 'unset', borderRadius: 8 }
+            content: { padding: '8px 12px', minHeight: 'unset', maxHeight: '240px', overflowY: 'auto', borderRadius: 8 }
           }}
           content={content}
           placement="end"
