@@ -11,7 +11,7 @@ async function main() {
     write: (value) => {
       process.stdout.write(value);
     },
-    // devPluginPaths: ['/Users/mingbing/apps/ai-project/holdRein/packages/plugins/git']
+    devPluginPaths: ['/Users/mingbing/apps/ai-project/holdRein/packages/plugins/gomoku']
   });
 }
 

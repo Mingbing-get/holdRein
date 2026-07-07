@@ -1,0 +1,178 @@
+.gomoku-panel {
+  color: var(--app-color-text);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100%;
+  padding: 0 8px 12px;
+}
+
+.gomoku-empty {
+  align-items: center;
+  display: flex;
+  min-height: 240px;
+  justify-content: center;
+}
+
+.gomoku-header {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--app-color-border-secondary);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding-bottom: 10px;
+}
+
+.gomoku-title {
+  align-items: center;
+  display: flex;
+  font-size: 15px;
+  font-weight: 650;
+  gap: 7px;
+}
+
+.gomoku-subtitle {
+  color: var(--app-color-text-secondary);
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.gomoku-turn {
+  flex-shrink: 0;
+  margin-inline-end: 0;
+}
+
+.gomoku-board {
+  aspect-ratio: 1;
+  background:
+    linear-gradient(
+      var(--app-color-border-secondary),
+      var(--app-color-border-secondary)
+    )
+    center / calc(100% - 6.6667%) 1px no-repeat,
+    linear-gradient(
+      90deg,
+      var(--app-color-border-secondary),
+      var(--app-color-border-secondary)
+    )
+    center / 1px calc(100% - 6.6667%) no-repeat,
+    var(--app-color-bg-container);
+  border: 1px solid var(--app-color-border-secondary);
+  display: grid;
+  flex-shrink: 0;
+  max-width: min(100%, 560px);
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.gomoku-cell {
+  align-items: center;
+  appearance: none;
+  background:
+    linear-gradient(
+      var(--app-color-border-secondary),
+      var(--app-color-border-secondary)
+    )
+    center / 100% 1px no-repeat,
+    linear-gradient(
+      90deg,
+      var(--app-color-border-secondary),
+      var(--app-color-border-secondary)
+    )
+    center / 1px 100% no-repeat;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  padding: 0;
+  position: relative;
+}
+
+.gomoku-cell:disabled {
+  cursor: default;
+}
+
+.gomoku-cell:not(:disabled):hover,
+.gomoku-cell:not(:disabled):focus-visible {
+  background-color: var(--app-color-fill-tertiary);
+  outline: 2px solid var(--app-color-primary);
+  outline-offset: -2px;
+}
+
+.gomoku-cell-last-move::after {
+  border: 2px solid var(--app-color-primary);
+  border-radius: 999px;
+  content: "";
+  height: 78%;
+  opacity: 0;
+  position: absolute;
+  width: 78%;
+  animation: gomoku-last-move-pulse 1.15s ease-in-out infinite;
+}
+
+.gomoku-stone {
+  border-radius: 999px;
+  display: block;
+  height: 70%;
+  width: 70%;
+}
+
+.gomoku-stone-last-move {
+  animation: gomoku-last-stone-blink 1.15s ease-in-out infinite;
+}
+
+.gomoku-stone-black {
+  background: var(--app-color-text);
+  box-shadow: 0 1px 4px var(--app-color-shadow);
+}
+
+.gomoku-stone-white {
+  background: var(--app-color-bg-elevated);
+  border: 1px solid var(--app-color-border);
+  box-shadow: 0 1px 4px var(--app-color-shadow);
+}
+
+.gomoku-footer {
+  color: var(--app-color-text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 8px 12px;
+}
+
+.gomoku-error {
+  border: 1px solid var(--app-color-danger);
+  color: var(--app-color-danger);
+  font-size: 12px;
+  padding: 8px;
+}
+
+@keyframes gomoku-last-move-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+
+  35% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes gomoku-last-stone-blink {
+  0%,
+  100% {
+    filter: none;
+  }
+
+  45% {
+    filter: drop-shadow(0 0 7px var(--app-color-primary));
+  }
+}
