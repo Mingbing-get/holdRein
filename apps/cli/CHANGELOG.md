@@ -1,5 +1,13 @@
 # @hold-rein/cli
 
+## 0.0.7
+
+### Patch Changes
+
+- fix: 修复无法启动 dev 插件的问题
+- Updated dependencies
+  - @hold-rein/plugin-server@0.0.3
+
 ## 0.0.6
 
 ### Patch Changes

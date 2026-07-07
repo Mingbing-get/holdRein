@@ -1,5 +1,11 @@
 # @hold-rein/plugin-server
 
+## 0.0.3
+
+### Patch Changes
+
+- fix: 修复无法启动 dev 插件的问题
+
 ## 0.0.2
 
 ### Patch Changes
