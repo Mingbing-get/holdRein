@@ -155,6 +155,25 @@ describe("agent task message reducer", () => {
     expect(state.messages).toEqual([]);
   });
 
+  it("ignores approval requests that were already decided on the server", () => {
+    const state = reduceAgentTaskState(createInitialAgentTaskState("task-1"), {
+      event: event(1, "approval_requested", {
+        agentId: "agent-1",
+        approvalId: "approval-1",
+        approved: true,
+        status: "decided",
+        tool: {
+          input: {},
+          name: "workspace_patch",
+          toolCallId: "tool-call-1"
+        }
+      }),
+      type: "event_received"
+    });
+
+    expect(state.pendingApprovals).toEqual([]);
+  });
+
   it("removes a decided approval", () => {
     const queued = reduceAgentTaskState(createInitialAgentTaskState("task-1"), {
       event: event(1, "approval_requested", {

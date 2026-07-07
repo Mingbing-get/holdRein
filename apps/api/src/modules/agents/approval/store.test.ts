@@ -28,6 +28,37 @@ describe("agent approval store", () => {
       approved: false,
       reason: "Not during deployment"
     });
+    expect(
+      store.getStatus({
+        agentId: "agent-1",
+        approvalId: "approval-1"
+      })
+    ).toEqual({
+      approved: false,
+      reason: "Not during deployment",
+      status: "decided"
+    });
+  });
+
+  it("reports pending approval status before a decision is submitted", () => {
+    const store = createAgentApprovalStore();
+
+    void store.request({
+      agentId: "agent-1",
+      approvalId: "approval-1",
+      tool: {
+        input: {},
+        name: "workspace_patch",
+        toolCallId: "tool-call-1"
+      }
+    });
+
+    expect(
+      store.getStatus({
+        agentId: "agent-1",
+        approvalId: "approval-1"
+      })
+    ).toEqual({ status: "pending" });
   });
 
   it("rejects decisions for unknown approvals", () => {

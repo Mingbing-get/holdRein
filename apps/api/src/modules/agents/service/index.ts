@@ -1,4 +1,3 @@
-/* eslint-disable max-lines */
 import { randomUUID } from "node:crypto";
 import { basename } from "node:path";
 
@@ -13,6 +12,7 @@ import type { TaskTitleGenerator } from "../task/title-generator";
 import { deleteTask, type DeleteTaskResult, renameTask } from "../task/actions";
 import { startTaskRun } from "../task/run-monitor";
 import { interruptTaskRun } from "./interrupt-task";
+import { addApprovalStatus } from "./approval-event-status";
 import type {
   AgentEventSubscription,
   AgentSessionMetadata,
@@ -37,9 +37,7 @@ import {
 import { resolveWorkspaceCapabilities } from "./workspace-settings";
 
 export interface AgentsService {
-  approveAgentAction: (
-    input: ApprovalDecisionInput
-  ) => Promise<ApprovalDecisionResult>;
+  approveAgentAction: (input: ApprovalDecisionInput) => Promise<ApprovalDecisionResult>;
   deleteTask: (input: GetTaskTitleInput) => Promise<DeleteTaskResult>;
   getTaskTitle: (input: GetTaskTitleInput) => Promise<TaskTitleResult | null>;
   interruptTask: (input: GetTaskTitleInput) => Promise<InterruptTaskResult>;
@@ -329,7 +327,9 @@ export function createAgentsService(options: CreateAgentsServiceOptions): Agents
       return accepted ? input : null;
     },
     subscribeToAgentEvents: (input, listener) =>
-      options.eventBus.subscribe(input, listener)
+      options.eventBus.subscribe(input, (event) =>
+        listener(addApprovalStatus(event, options.approvalStore))
+      )
   };
 }
 

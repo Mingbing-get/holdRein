@@ -125,6 +125,7 @@ function getPendingApproval(
   if (
     typeof value?.agentId !== "string" ||
     typeof value.approvalId !== "string" ||
+    (value.status !== undefined && value.status !== "pending") ||
     (value.title !== undefined && typeof value.title !== "string")
   ) {
     return undefined;
