@@ -4,18 +4,14 @@ import {
   getGameStatus,
   oppositeStone,
   placeStone,
+  type GomokuPhase,
   type GomokuGame,
   type GomokuMove,
   type GomokuStatus,
+  type PersistedGomokuTaskGame,
   type Position,
   type Stone
 } from "../shared";
-
-export type GomokuPhase =
-  | "finished"
-  | "idle"
-  | "waiting_for_model"
-  | "waiting_for_user";
 
 export interface GomokuSnapshot {
   readonly game: GomokuGame;
@@ -31,12 +27,26 @@ export interface StartGameOptions {
   readonly modelStone?: Stone;
 }
 
+export interface GomokuSessionPersistence {
+  readonly loadGame: (taskId: string) => Promise<PersistedGomokuTaskGame | null>;
+  readonly saveGame: (game: PersistedGomokuTaskGame) => Promise<void>;
+}
+
+export interface CreateGomokuSessionStoreOptions {
+  readonly persistence?: GomokuSessionPersistence;
+}
+
 export interface GomokuSessionStore {
   readonly forcePlaceForTests: (position: Position, stone: Stone) => void;
   readonly getSnapshot: () => GomokuSnapshot;
-  readonly placeModelMove: (position: Position) => Promise<string>;
+  readonly loadTask: (taskId: string) => Promise<void>;
+  readonly placeModelMove: (position: Position, taskId?: string) => Promise<string>;
   readonly playUserMove: (position: Position) => void;
-  readonly startGame: (options?: StartGameOptions) => Promise<string>;
+  readonly resumeGame: (taskId: string) => Promise<string>;
+  readonly startGame: (
+    options?: StartGameOptions,
+    taskId?: string
+  ) => Promise<string>;
   readonly subscribe: (listener: () => void) => () => void;
 }
 
@@ -47,10 +57,15 @@ interface PendingUserMove {
 
 const DEFAULT_MODEL_STONE: Stone = "white";
 
-export function createGomokuSessionStore(): GomokuSessionStore {
+export function createGomokuSessionStore(
+  options: CreateGomokuSessionStoreOptions = {}
+): GomokuSessionStore {
   let snapshot = createSnapshot(createInitialGame(), DEFAULT_MODEL_STONE, "idle");
   let pendingUserMove: PendingUserMove | null = null;
+  let activeTaskId: string | undefined;
+  let pendingSavedUserMove: GomokuMove | undefined;
   const listeners = new Set<() => void>();
+  const persistence = options.persistence;
 
   const emit = () => {
     for (const listener of listeners) {
@@ -63,6 +78,40 @@ export function createGomokuSessionStore(): GomokuSessionStore {
     emit();
   };
 
+  const saveSnapshot = async (
+    nextSnapshot: GomokuSnapshot,
+    pendingUserMoveForSave?: GomokuMove
+  ) => {
+    if (!persistence || !activeTaskId) {
+      return;
+    }
+
+    await persistence.saveGame({
+      game: nextSnapshot.game,
+      modelStone: nextSnapshot.modelStone,
+      ...(pendingUserMoveForSave === undefined
+        ? {}
+        : { pendingUserMove: pendingUserMoveForSave }),
+      phase: nextSnapshot.phase,
+      savedAt: new Date().toISOString(),
+      taskId: activeTaskId,
+      version: 1
+    });
+  };
+
+  const persistSnapshot = (
+    nextSnapshot: GomokuSnapshot,
+    pendingUserMoveForSave?: GomokuMove
+  ) => {
+    void saveSnapshot(nextSnapshot, pendingUserMoveForSave).catch((error) => {
+      updateSnapshot({
+        ...snapshot,
+        lastError:
+          error instanceof Error ? error.message : "Failed to save Gomoku game."
+      });
+    });
+  };
+
   const waitForUserMove = () =>
     new Promise<string>((resolve, reject) => {
       settlePending(
@@ -71,6 +120,11 @@ export function createGomokuSessionStore(): GomokuSessionStore {
       pendingUserMove = { reject, resolve };
       updateSnapshot({ ...snapshot, phase: "waiting_for_user" });
     });
+
+  const resetToIdle = () => {
+    pendingSavedUserMove = undefined;
+    updateSnapshot(createSnapshot(createInitialGame(), DEFAULT_MODEL_STONE, "idle"));
+  };
 
   const settlePending = (error: Error) => {
     pendingUserMove?.reject(error);
@@ -95,7 +149,24 @@ export function createGomokuSessionStore(): GomokuSessionStore {
     getSnapshot() {
       return snapshot;
     },
-    placeModelMove(position) {
+    async loadTask(taskId) {
+      activeTaskId = taskId;
+      const persisted = await persistence?.loadGame(taskId);
+      if (!persisted) {
+        resetToIdle();
+        return;
+      }
+
+      pendingSavedUserMove = persisted.pendingUserMove;
+      updateSnapshot(
+        createSnapshot(persisted.game, persisted.modelStone, persisted.phase)
+      );
+    },
+    placeModelMove(position, taskId) {
+      if (taskId) {
+        activeTaskId = taskId;
+      }
+
       if (snapshot.status.state !== "playing") {
         throw new Error("The game is already over.");
       }
@@ -105,13 +176,18 @@ export function createGomokuSessionStore(): GomokuSessionStore {
       }
 
       const game = placeStone(snapshot.game, position, snapshot.modelStone);
-      updateSnapshot(createSnapshot(game, snapshot.modelStone, nextPhase(game)));
+      pendingSavedUserMove = undefined;
+      const nextSnapshot = createSnapshot(game, snapshot.modelStone, nextPhase(game));
+      updateSnapshot(nextSnapshot);
 
       if (snapshot.status.state !== "playing") {
+        persistSnapshot(nextSnapshot);
         return Promise.resolve(formatToolResult(snapshot));
       }
 
-      return waitForUserMove();
+      const userMove = waitForUserMove();
+      persistSnapshot(snapshot);
+      return userMove;
     },
     playUserMove(position) {
       if (snapshot.phase !== "waiting_for_user") {
@@ -124,7 +200,12 @@ export function createGomokuSessionStore(): GomokuSessionStore {
 
       try {
         const game = placeStone(snapshot.game, position, snapshot.userStone);
-        updateSnapshot(createSnapshot(game, snapshot.modelStone, nextPhase(game)));
+        const move = { position, stone: snapshot.userStone };
+        const nextSnapshot = createSnapshot(game, snapshot.modelStone, nextPhase(game));
+        const pendingMove = pendingUserMove ? undefined : move;
+        pendingSavedUserMove = pendingMove;
+        updateSnapshot(nextSnapshot);
+        persistSnapshot(nextSnapshot, pendingMove);
         resolveUserMove(position);
       } catch (error) {
         updateSnapshot({
@@ -133,11 +214,33 @@ export function createGomokuSessionStore(): GomokuSessionStore {
         });
       }
     },
-    startGame(options) {
+    async resumeGame(taskId) {
+      activeTaskId = taskId;
+      const persisted = await persistence?.loadGame(taskId);
+      if (persisted) {
+        pendingSavedUserMove = persisted.pendingUserMove;
+        updateSnapshot(
+          createSnapshot(persisted.game, persisted.modelStone, persisted.phase)
+        );
+      } else {
+        resetToIdle();
+      }
+
+      return formatToolResult(snapshot, undefined, pendingSavedUserMove);
+    },
+    startGame(options, taskId) {
+      if (taskId) {
+        activeTaskId = taskId;
+      }
+
       const modelStone = options?.modelStone ?? DEFAULT_MODEL_STONE;
       const game = createInitialGame();
-      updateSnapshot(createSnapshot(game, modelStone, "waiting_for_user"));
-      return waitForUserMove();
+      pendingSavedUserMove = undefined;
+      const nextSnapshot = createSnapshot(game, modelStone, "waiting_for_user");
+      updateSnapshot(nextSnapshot);
+      const userMove = waitForUserMove();
+      persistSnapshot(nextSnapshot);
+      return userMove;
     },
     subscribe(listener) {
       listeners.add(listener);
@@ -173,7 +276,8 @@ function nextPhase(game: GomokuGame): GomokuPhase {
 
 function formatToolResult(
   snapshot: GomokuSnapshot,
-  userMove?: Position
+  userMove?: Position,
+  pendingUserMove?: GomokuMove
 ): string {
   return JSON.stringify({
     boardSize: BOARD_SIZE,
@@ -193,6 +297,15 @@ function formatToolResult(
             col: userMove.column,
             color: snapshot.userStone,
             row: userMove.row
+          }
+        }),
+    ...(pendingUserMove === undefined
+      ? {}
+      : {
+          pendingUserMove: {
+            col: pendingUserMove.position.column,
+            color: pendingUserMove.stone,
+            row: pendingUserMove.position.row
           }
         })
   });

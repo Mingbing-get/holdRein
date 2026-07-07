@@ -12,7 +12,9 @@ export type {
   GameState,
   GomokuGame,
   GomokuMove,
+  GomokuPhase,
   GomokuStatus,
+  PersistedGomokuTaskGame,
   Position,
   Stone
 } from "./game";

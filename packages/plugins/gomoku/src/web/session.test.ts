@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import type { PersistedGomokuTaskGame } from "../shared";
 import { createGomokuSessionStore } from "./session";
 
 describe("gomoku session store", () => {
@@ -94,4 +95,93 @@ describe("gomoku session store", () => {
       "The game is already over."
     );
   });
+
+  it("persists a user move for later model resume when no tool call is waiting", async () => {
+    const persistence = createMemoryPersistence();
+    const store = createGomokuSessionStore({ persistence });
+    const firstUserMove = store.startGame(
+      { modelStone: "white" },
+      "task-1"
+    );
+    store.playUserMove({ column: 7, row: 7 });
+    await firstUserMove;
+    void store.placeModelMove(
+      { column: 8, row: 7 },
+      "task-1"
+    );
+
+    const restored = createGomokuSessionStore({ persistence });
+    await restored.loadTask("task-1");
+    restored.playUserMove({ column: 7, row: 8 });
+
+    const saved = persistence.records["task-1"];
+    expect(saved?.pendingUserMove).toEqual({
+      position: { column: 7, row: 8 },
+      stone: "black"
+    });
+    expect(saved?.phase).toBe("waiting_for_model");
+  });
+
+  it("returns the pending user move when a task is resumed", async () => {
+    const persistence = createMemoryPersistence();
+    const store = createGomokuSessionStore({ persistence });
+    const firstUserMove = store.startGame(
+      { modelStone: "white" },
+      "task-2"
+    );
+    store.playUserMove({ column: 7, row: 7 });
+    await firstUserMove;
+    void store.placeModelMove(
+      { column: 8, row: 7 },
+      "task-2"
+    );
+
+    const restored = createGomokuSessionStore({ persistence });
+    await restored.loadTask("task-2");
+    restored.playUserMove({ column: 7, row: 8 });
+
+    const result = JSON.parse(await restored.resumeGame("task-2")) as {
+      pendingUserMove?: unknown;
+    };
+    expect(result.pendingUserMove).toEqual({
+      col: 7,
+      color: "black",
+      row: 8
+    });
+  });
+
+  it("clears the previous board when resuming a task with no saved game", async () => {
+    const persistence = createMemoryPersistence();
+    const store = createGomokuSessionStore({ persistence });
+    const firstUserMove = store.startGame(
+      { modelStone: "white" },
+      "task-with-game"
+    );
+    store.playUserMove({ column: 7, row: 7 });
+    await firstUserMove;
+
+    const output = JSON.parse(await store.resumeGame("empty-task")) as {
+      moveNumber?: unknown;
+      pendingUserMove?: unknown;
+      phase?: unknown;
+    };
+
+    expect(output.moveNumber).toBe(0);
+    expect(output.phase).toBe("idle");
+    expect(output.pendingUserMove).toBeUndefined();
+  });
 });
+
+function createMemoryPersistence() {
+  const records: Record<string, PersistedGomokuTaskGame> = {};
+
+  return {
+    records,
+    async loadGame(taskId: string) {
+      return records[taskId] ?? null;
+    },
+    async saveGame(record: PersistedGomokuTaskGame) {
+      records[record.taskId] = record;
+    }
+  };
+}

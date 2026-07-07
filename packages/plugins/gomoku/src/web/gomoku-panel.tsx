@@ -9,9 +9,10 @@ import "./gomoku-panel.css";
 
 export interface GomokuPanelProps {
   readonly store: GomokuSessionStore;
+  readonly taskId?: string;
 }
 
-export function GomokuPanel({ store }: GomokuPanelProps) {
+export function GomokuPanel({ store, taskId }: GomokuPanelProps) {
   const [snapshot, setSnapshot] = useState<GomokuSnapshot>(store.getSnapshot());
 
   useEffect(
@@ -20,6 +21,12 @@ export function GomokuPanel({ store }: GomokuPanelProps) {
     }),
     [store]
   );
+
+  useEffect(() => {
+    if (taskId) {
+      void store.loadTask(taskId);
+    }
+  }, [store, taskId]);
 
   const canUserMove =
     snapshot.phase === "waiting_for_user" &&

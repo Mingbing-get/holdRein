@@ -4,6 +4,11 @@ export const WIN_LENGTH = 5;
 export type Stone = "black" | "white";
 export type Cell = Stone | null;
 export type GameState = "draw" | "playing" | "won";
+export type GomokuPhase =
+  | "finished"
+  | "idle"
+  | "waiting_for_model"
+  | "waiting_for_user";
 
 export interface Position {
   readonly column: number;
@@ -25,6 +30,16 @@ export interface GomokuStatus {
   readonly line?: readonly Position[];
   readonly state: GameState;
   readonly winner?: Stone;
+}
+
+export interface PersistedGomokuTaskGame {
+  readonly game: GomokuGame;
+  readonly modelStone: Stone;
+  readonly pendingUserMove?: GomokuMove;
+  readonly phase: GomokuPhase;
+  readonly savedAt: string;
+  readonly taskId: string;
+  readonly version: 1;
 }
 
 interface Direction {

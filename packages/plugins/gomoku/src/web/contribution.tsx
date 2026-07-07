@@ -4,14 +4,18 @@ import type { WebPlugin } from "@hold-rein/plugin-web";
 import { PLUGIN_ID } from "../plugin-id";
 import type { Position, Stone } from "../shared";
 import { GomokuPanel } from "./gomoku-panel";
+import { createRemoteGomokuPersistence } from "./persistence";
 import { createGomokuSessionStore } from "./session";
 
 const PANEL_ID = `${PLUGIN_ID}_gomoku`;
 
 export function createGomokuContribution({
+  request,
   subscribeAppUi
 }: WebPlugin.RuntimeContext): WebPlugin.Contribution {
-  const store = createGomokuSessionStore();
+  const store = createGomokuSessionStore({
+    persistence: createRemoteGomokuPersistence({ request })
+  });
   let appUi: WebPlugin.AppUiContextValue | null = null;
 
   subscribeAppUi((next) => {
@@ -36,7 +40,12 @@ export function createGomokuContribution({
         id: "gomoku",
         icon: <AimOutlined aria-hidden="true" />,
         title: "Gomoku",
-        Render: () => <GomokuPanel store={store} />
+        Render: (props) => (
+          <GomokuPanel
+            store={store}
+            {...(props.taskId === undefined ? {} : { taskId: props.taskId })}
+          />
+        )
       }
     ],
     skills: [createGomokuSkill()],
@@ -44,9 +53,9 @@ export function createGomokuContribution({
       {
         description:
           "Start a Gomoku game in the right panel, wait for the user to place one stone, then return the move and board state.",
-        executor: ({ arguments: args }) => {
+        executor: ({ arguments: args, taskId }) => {
           openPanel();
-          return store.startGame({ modelStone: readStone(args.modelStone) });
+          return store.startGame({ modelStone: readStone(args.modelStone) }, taskId);
         },
         name: "gomoku_start_game",
         params: {
@@ -65,9 +74,9 @@ export function createGomokuContribution({
       {
         description:
           "Place the model's Gomoku move, wait for the user's next stone, then return the updated board state.",
-        executor: ({ arguments: args }) => {
+        executor: ({ arguments: args, taskId }) => {
           openPanel();
-          return store.placeModelMove(readPosition(args));
+          return store.placeModelMove(readPosition(args), taskId);
         },
         name: "gomoku_place_model_move",
         params: {
@@ -87,6 +96,20 @@ export function createGomokuContribution({
             }
           },
           required: ["row", "column"],
+          type: "object"
+        } as WebPlugin.BrowserRuntimeTool["params"]
+      },
+      {
+        description:
+          "Resume the current task's Gomoku game and return any user move that was saved after a previous tool call ended.",
+        executor: ({ taskId }) => {
+          openPanel();
+          return store.resumeGame(taskId);
+        },
+        name: "gomoku_resume_game",
+        params: {
+          additionalProperties: false,
+          properties: {},
           type: "object"
         } as WebPlugin.BrowserRuntimeTool["params"]
       }
@@ -111,15 +134,17 @@ function createGomokuSkill(): WebPlugin.BrowserRuntimeSkill {
       "- If the board fills with no winner, the game is a draw.",
       "",
       "Tool flow:",
-      "1. Call gomoku_start_game to open the Gomoku panel and wait for the user's first black move.",
-      "2. Choose a white move from the returned stones list. Any coordinate absent from stones is empty.",
-      "3. Call gomoku_place_model_move with row and column. The tool places the white stone, waits for the user's next black move, and returns the updated board.",
-      "4. Repeat until the returned status is won or draw.",
+      "1. Call gomoku_resume_game first when continuing a task. If pendingUserMove is present, continue from that saved user move.",
+      "2. Call gomoku_start_game to open the Gomoku panel and wait for the user's first black move when no game exists or when starting over.",
+      "3. Choose a white move from the returned stones list. Any coordinate absent from stones is empty.",
+      "4. Call gomoku_place_model_move with row and column. The tool places the white stone, waits for the user's next black move, and returns the updated board.",
+      "5. Repeat until the returned status is won or draw.",
       "",
       "Returned board state format:",
       "- stones contains only occupied intersections.",
       "- Each stone is { row: number, col: number, color: 'white' | 'black' }.",
-      "- Empty intersections are omitted."
+      "- Empty intersections are omitted.",
+      "- pendingUserMove is returned when the user moved after a previous tool call ended; treat it as the latest user move to respond to."
     ].join("\n"),
     description: "Rules and tool flow for playing 15x15 Gomoku.",
     name: "gomoku"
