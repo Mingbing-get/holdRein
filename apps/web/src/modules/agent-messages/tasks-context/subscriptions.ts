@@ -19,7 +19,15 @@ import type {
   AgentTaskState,
   SubagentStatesById
 } from "../agent-message-types";
-import type { WorkspaceSummary } from "../../leftSide/workspace-nav-types";
+import type {
+  WorkspaceSummary,
+  WorkspaceTaskSummary
+} from "../../leftSide/workspace-nav-types";
+
+type RunningWorkspaceTask = WorkspaceTaskSummary & {
+  activeAgentId: string;
+  status: "running";
+};
 
 interface RefValue<T> {
   current: T;
@@ -115,10 +123,30 @@ export function useAgentTaskSubscriptions(
   ]);
 
   useEffect(() => {
-    for (const task of workspaces.flatMap((workspace) => workspace.tasks)) {
+    const runningTasks = workspaces
+      .flatMap((workspace) => workspace.tasks)
+      .filter(isRunningWorkspaceTask);
+
+    setTaskStates((current) => {
+      let changed = false;
+      const next = { ...current };
+
+      for (const task of runningTasks) {
+        if (next[task.id]?.status === "running") {
+          continue;
+        }
+        changed = true;
+        next[task.id] = {
+          ...(next[task.id] ?? createInitialAgentTaskState(task.id)),
+          status: "running"
+        };
+      }
+
+      return changed ? next : current;
+    });
+
+    for (const task of runningTasks) {
       if (
-        task.status !== "running" ||
-        !task.activeAgentId ||
         subscriptions.current.has(task.activeAgentId)
       ) {
         continue;
@@ -177,4 +205,10 @@ export function useAgentTaskSubscriptions(
     subagentMessagesById,
     subscriptions
   ]);
+}
+
+function isRunningWorkspaceTask(
+  task: WorkspaceTaskSummary
+): task is RunningWorkspaceTask {
+  return task.status === "running" && Boolean(task.activeAgentId);
 }

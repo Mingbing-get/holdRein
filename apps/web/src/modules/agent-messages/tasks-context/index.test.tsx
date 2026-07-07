@@ -90,6 +90,24 @@ describe("AgentTasksProvider", () => {
     });
   });
 
+  it("hydrates the active resumed task state as running before new events arrive", async () => {
+    const fetcher = createOpenResumedTaskFetcher();
+
+    render(
+      <AppWorkspaceProvider>
+        <AgentTasksProvider apiBaseUrl="" fetcher={fetcher}>
+          <ActiveResumedTaskProbe />
+        </AgentTasksProvider>
+      </AppWorkspaceProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("active-resumed-task-status")).toHaveTextContent(
+        "running"
+      );
+    });
+  });
+
   it("subscribes to a subagent announced by a custom message", async () => {
     const fetcher = createSubagentFetcher();
 
@@ -231,6 +249,47 @@ function ResumedTaskProbe() {
   );
 }
 
+function ActiveResumedTaskProbe() {
+  const {
+    setActiveTaskId,
+    setActiveWorkspaceId,
+    setWorkspaces
+  } = useAppWorkspace();
+  const { getTaskState } = useAgentTasks();
+
+  useEffect(() => {
+    setWorkspaces([
+      {
+        hasMore: false,
+        id: "workspace-1",
+        name: "workspace",
+        path: "/workspace",
+        tasks: [
+          {
+            activeAgentId: "agent-resumed",
+            id: "task-resumed",
+            initialUserMessage: "Inspect",
+            lastContinuedAt: "2026-06-11T00:00:00.000Z",
+            lastModelName: "gpt-4.1",
+            lastModelProvider: "openai",
+            lastModelProviderSource: "built_in",
+            status: "running",
+            title: "Inspect"
+          }
+        ]
+      }
+    ]);
+    setActiveWorkspaceId("workspace-1");
+    setActiveTaskId("task-resumed");
+  }, [setActiveTaskId, setActiveWorkspaceId, setWorkspaces]);
+
+  return (
+    <span data-testid="active-resumed-task-status">
+      {getTaskState("task-resumed")?.status}
+    </span>
+  );
+}
+
 function CancelProbe() {
   const {
     state: { workspaces },
@@ -323,6 +382,25 @@ function createResumedTaskFetcher(
             )
           );
           controller.close();
+        }
+      }),
+      { status: 200 }
+    );
+  }) as AgentMessageFetcher & ReturnType<typeof vi.fn>;
+}
+
+function createOpenResumedTaskFetcher(): AgentMessageFetcher & ReturnType<typeof vi.fn> {
+  return vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+
+    if (url.endsWith("/messages")) {
+      return jsonResponse({ messages: [], subagents: [] });
+    }
+
+    return new Response(
+      new ReadableStream({
+        start() {
+          // Keep the resumed subscription open without emitting events.
         }
       }),
       { status: 200 }
