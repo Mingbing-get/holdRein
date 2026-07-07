@@ -1,5 +1,11 @@
 # @hold-rein/cli
 
+## 0.0.8
+
+### Patch Changes
+
+- fix: 修复前端 dev 运行时报错的问题
+
 ## 0.0.7
 
 ### Patch Changes
