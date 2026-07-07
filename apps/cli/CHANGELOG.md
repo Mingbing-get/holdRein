@@ -1,5 +1,11 @@
 # @hold-rein/cli
 
+## 0.0.6
+
+### Patch Changes
+
+- 修复 bug
+
 ## 0.0.5
 
 ### Patch Changes
