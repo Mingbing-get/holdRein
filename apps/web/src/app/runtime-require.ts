@@ -5,14 +5,12 @@ import * as Antd from "antd";
 import * as MonacoEditor from "monaco-editor";
 import * as React from "react";
 import * as ReactDom from "react-dom";
-import * as ReactJsxDevRuntime from "react/jsx-dev-runtime";
-import * as ReactJsxRuntime from "react/jsx-runtime";
 
 import { require } from "@hold-rein/plugin-web";
 import { registerRuntimeSharedPackages } from "./runtime-shared";
 
 export function registerRuntimePluginPackages(): void {
-  registerRuntimeSharedPackages();
+  const sharedPackages = registerRuntimeSharedPackages();
   require.register("@ant-design/icons", toAmdModuleValue(AntDesignIcons));
   require.register("@hold-rein/plugin-web", HoldReinPluginWeb);
   require.register("@monaco-editor/react", toAmdModuleValue(MonacoEditorReact));
@@ -20,8 +18,8 @@ export function registerRuntimePluginPackages(): void {
   require.register("monaco-editor", MonacoEditor);
   require.register("react", React);
   require.register("react-dom", ReactDom);
-  require.register("react/jsx-dev-runtime", ReactJsxDevRuntime);
-  require.register("react/jsx-runtime", ReactJsxRuntime);
+  require.register("react/jsx-dev-runtime", sharedPackages.reactJsxDevRuntime);
+  require.register("react/jsx-runtime", sharedPackages.reactJsxRuntime);
 }
 
 function toAmdModuleValue(

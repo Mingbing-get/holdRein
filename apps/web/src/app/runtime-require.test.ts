@@ -4,6 +4,22 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 const IconDefault = vi.fn();
 const MonacoDefault = vi.fn();
+const jsxMock = vi.hoisted(() =>
+  vi.fn((type: unknown, props: unknown, key: unknown) => ({
+    key,
+    props,
+    runtime: "jsx",
+    type
+  }))
+);
+const jsxsMock = vi.hoisted(() =>
+  vi.fn((type: unknown, props: unknown, key: unknown) => ({
+    key,
+    props,
+    runtime: "jsxs",
+    type
+  }))
+);
 
 vi.mock("@ant-design/icons", () => ({
   default: IconDefault,
@@ -22,8 +38,15 @@ vi.mock("antd", () => ({ Button: "button" }));
 vi.mock("monaco-editor", () => ({ editor: "monaco-editor" }));
 vi.mock("react", () => ({ createElement: "create-element" }));
 vi.mock("react-dom", () => ({ createPortal: "create-portal" }));
-vi.mock("react/jsx-dev-runtime", () => ({ jsxDEV: "jsx-dev" }));
-vi.mock("react/jsx-runtime", () => ({ jsx: "jsx" }));
+vi.mock("react/jsx-dev-runtime", () => ({
+  Fragment: "fragment",
+  jsxDEV: undefined
+}));
+vi.mock("react/jsx-runtime", () => ({
+  Fragment: "fragment",
+  jsx: jsxMock,
+  jsxs: jsxsMock
+}));
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -46,6 +69,10 @@ it("registers host packages for runtime plugins", async () => {
     "react/jsx-runtime",
     expect.anything()
   );
+  expect(require.register).toHaveBeenCalledWith(
+    "react/jsx-dev-runtime",
+    expect.anything()
+  );
   expect(require.register).toHaveBeenCalledWith("antd", expect.anything());
   expect(require.register).toHaveBeenCalledWith(
     "@ant-design/icons",
@@ -63,6 +90,14 @@ it("registers host packages for runtime plugins", async () => {
     "monaco-editor",
     expect.anything()
   );
+
+  const jsxDevRegistration = vi
+    .mocked(require.register)
+    .mock.calls.find(([packageName]) => packageName === "react/jsx-dev-runtime");
+
+  expect(jsxDevRegistration?.[1]).toMatchObject({
+    jsxDEV: expect.any(Function)
+  });
 });
 
 it("registers host packages as shared ESM globals for development plugins", async () => {
@@ -84,9 +119,45 @@ it("registers host packages as shared ESM globals for development plugins", asyn
     pluginWeb: expect.objectContaining({ require: expect.anything() }),
     react: { createElement: "create-element" },
     reactDom: { createPortal: "create-portal" },
-    reactJsxDevRuntime: { jsxDEV: "jsx-dev" },
-    reactJsxRuntime: { jsx: "jsx" }
+    reactJsxDevRuntime: { Fragment: "fragment", jsxDEV: expect.any(Function) },
+    reactJsxRuntime: { Fragment: "fragment", jsx: jsxMock, jsxs: jsxsMock }
   });
+});
+
+it("provides jsxDEV for development plugins when the host bundle uses React production runtime", async () => {
+  const { registerRuntimePluginPackages } = await import("./runtime-require");
+
+  registerRuntimePluginPackages();
+
+  const shared = (
+    globalThis as typeof globalThis & {
+      __HOLD_REIN_SHARED__?: {
+        reactJsxDevRuntime: {
+          jsxDEV: (
+            type: unknown,
+            props: unknown,
+            key: unknown,
+            isStaticChildren: boolean
+          ) => unknown;
+        };
+      };
+    }
+  ).__HOLD_REIN_SHARED__;
+
+  expect(shared?.reactJsxDevRuntime.jsxDEV("div", { id: "one" }, "a", false))
+    .toEqual({
+      key: "a",
+      props: { id: "one" },
+      runtime: "jsx",
+      type: "div"
+    });
+  expect(shared?.reactJsxDevRuntime.jsxDEV("div", { children: [] }, "b", true))
+    .toEqual({
+      key: "b",
+      props: { children: [] },
+      runtime: "jsxs",
+      type: "div"
+    });
 });
 
 it("registers default exports as AMD module values with named exports attached", async () => {

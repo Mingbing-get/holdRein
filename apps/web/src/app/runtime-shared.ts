@@ -33,13 +33,40 @@ export function registerRuntimeSharedPackages(): RuntimeSharedPackages {
     pluginWeb: HoldReinPluginWeb,
     react: React,
     reactDom: ReactDom,
-    reactJsxDevRuntime: ReactJsxDevRuntime,
+    reactJsxDevRuntime: createReactJsxDevRuntime(),
     reactJsxRuntime: ReactJsxRuntime
   };
 
   globalThis.__HOLD_REIN_SHARED__ = sharedPackages;
 
   return sharedPackages;
+}
+
+type ReactJsxDevRuntimeModule = typeof ReactJsxDevRuntime;
+type ReactJsxDevFunction = NonNullable<ReactJsxDevRuntimeModule["jsxDEV"]>;
+
+function createReactJsxDevRuntime(): ReactJsxDevRuntimeModule {
+  if (typeof ReactJsxDevRuntime.jsxDEV === "function") {
+    return ReactJsxDevRuntime;
+  }
+
+  const jsxDEV: ReactJsxDevFunction = (
+    type,
+    props,
+    key,
+    isStaticChildren
+  ) => {
+    const createElement = isStaticChildren
+      ? ReactJsxRuntime.jsxs
+      : ReactJsxRuntime.jsx;
+
+    return createElement(type, props, key);
+  };
+
+  return {
+    ...ReactJsxDevRuntime,
+    jsxDEV
+  };
 }
 
 function toSharedModuleValue(
