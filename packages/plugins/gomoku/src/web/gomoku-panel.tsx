@@ -36,7 +36,7 @@ export function GomokuPanel({ store, taskId }: GomokuPanelProps) {
     return (
       <div className="gomoku-empty">
         <Empty
-          description="Call gomoku_start_game to begin"
+          description="调用 gomoku_start_game 开始"
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
       </div>
@@ -49,7 +49,7 @@ export function GomokuPanel({ store, taskId }: GomokuPanelProps) {
         <div>
           <div className="gomoku-title">
             <AimOutlined aria-hidden="true" />
-            Gomoku
+            五子棋
           </div>
           <div className="gomoku-subtitle">
             {formatPhase(snapshot)}
@@ -59,7 +59,7 @@ export function GomokuPanel({ store, taskId }: GomokuPanelProps) {
       </div>
 
       <div
-        aria-label="Gomoku board"
+        aria-label="五子棋棋盘"
         className="gomoku-board"
         role="grid"
         style={{
@@ -107,9 +107,9 @@ export function GomokuPanel({ store, taskId }: GomokuPanelProps) {
       </div>
 
       <div className="gomoku-footer">
-        <span>{snapshot.game.moves.length} moves</span>
-        <span>User: {formatStone(snapshot.userStone)}</span>
-        <span>Model: {formatStone(snapshot.modelStone)}</span>
+        <span>{snapshot.game.moves.length} 手</span>
+        <span>用户：{formatStone(snapshot.userStone)}</span>
+        <span>模型：{formatStone(snapshot.modelStone)}</span>
       </div>
 
       {snapshot.lastError ? (
@@ -122,34 +122,34 @@ export function GomokuPanel({ store, taskId }: GomokuPanelProps) {
 }
 
 function formatCellLabel(position: Position, cell: Cell): string {
-  const occupant = cell ? `${formatStone(cell)} stone` : "empty";
-  return `Row ${position.row}, column ${position.column}, ${occupant}`;
+  const occupant = cell ? `${formatStone(cell)}棋子` : "空位";
+  return `第 ${position.row} 行，第 ${position.column} 列，${occupant}`;
 }
 
 function formatPhase(snapshot: GomokuSnapshot): string {
   if (snapshot.status.state === "won") {
-    return `${formatStone(snapshot.status.winner ?? "black")} wins`;
+    return `${formatStone(snapshot.status.winner ?? "black")}获胜`;
   }
 
   if (snapshot.status.state === "draw") {
-    return "Draw";
+    return "平局";
   }
 
   if (snapshot.phase === "waiting_for_user") {
-    return "Waiting for your move";
+    return "等待你落子";
   }
 
   if (snapshot.phase === "waiting_for_model") {
-    return "Waiting for model move";
+    return "等待模型落子";
   }
 
-  return "Ready";
+  return "准备就绪";
 }
 
 function formatTurn(stone: Stone): string {
-  return `${formatStone(stone)} to move`;
+  return `${formatStone(stone)}落子`;
 }
 
 function formatStone(stone: Stone): string {
-  return stone === "black" ? "Black" : "White";
+  return stone === "black" ? "黑棋" : "白棋";
 }

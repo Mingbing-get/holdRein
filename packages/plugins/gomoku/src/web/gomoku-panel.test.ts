@@ -10,6 +10,19 @@ import { GomokuPanel } from "./gomoku-panel";
 import type { GomokuSessionStore, GomokuSnapshot } from "./session";
 
 describe("GomokuPanel", () => {
+  it("renders visible game labels in Chinese", () => {
+    const store = createPanelStore(9);
+    render(React.createElement(GomokuPanel, { store }));
+
+    expect(screen.getByText("五子棋")).toBeInTheDocument();
+    expect(screen.getByText("等待你落子")).toBeInTheDocument();
+    expect(screen.getByText("黑棋落子")).toBeInTheDocument();
+    expect(screen.getByText("0 手")).toBeInTheDocument();
+    expect(screen.getByText("用户：黑棋")).toBeInTheDocument();
+    expect(screen.getByText("模型：白棋")).toBeInTheDocument();
+    expect(screen.getByRole("grid", { name: "五子棋棋盘" })).toBeInTheDocument();
+  });
+
   it("updates both board rows and columns when the board size changes", () => {
     const store = createPanelStore(9);
     render(React.createElement(GomokuPanel, { store }));
@@ -18,7 +31,7 @@ describe("GomokuPanel", () => {
       store.setBoardSize(13);
     });
 
-    const board = screen.getByRole("grid", { name: "Gomoku board" });
+    const board = screen.getByRole("grid", { name: "五子棋棋盘" });
     expect(board).toHaveStyle({
       gridTemplateColumns: "repeat(13, minmax(0, 1fr))",
       gridTemplateRows: "repeat(13, minmax(0, 1fr))"
