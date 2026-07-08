@@ -1,5 +1,12 @@
 # @hold-rein/plugins-base
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @hold-rein/plugin-server@0.0.4
+
 ## 0.0.3
 
 ### Patch Changes

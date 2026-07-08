@@ -1,5 +1,13 @@
 # @hold-rein/cli
 
+## 0.0.9
+
+### Patch Changes
+
+- 支持插件启用子智能体可筛选插件/工具/技能
+- Updated dependencies
+  - @hold-rein/plugin-server@0.0.4
+
 ## 0.0.8
 
 ### Patch Changes
