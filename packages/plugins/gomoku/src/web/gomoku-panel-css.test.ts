@@ -17,4 +17,22 @@ describe("gomoku panel styles", () => {
       "animation: gomoku-last-stone-blink 1.15s ease-in-out infinite;"
     );
   });
+
+  it("does not draw board-level center cross lines", async () => {
+    const css = await readFile(CSS_PATH, "utf8");
+    const boardRule = css.match(/\.gomoku-board\s*\{(?<body>[^}]*)\}/)?.groups
+      ?.body;
+
+    expect(boardRule).toBeDefined();
+    expect(boardRule).not.toContain("linear-gradient");
+  });
+
+  it("keeps cells square as board sizes change", async () => {
+    const css = await readFile(CSS_PATH, "utf8");
+    const cellRule = css.match(/\.gomoku-cell\s*\{(?<body>[^}]*)\}/)?.groups
+      ?.body;
+
+    expect(cellRule).toBeDefined();
+    expect(cellRule).toContain("aspect-ratio: 1;");
+  });
 });

@@ -63,7 +63,8 @@ export function GomokuPanel({ store, taskId }: GomokuPanelProps) {
         className="gomoku-board"
         role="grid"
         style={{
-          gridTemplateColumns: `repeat(${snapshot.game.boardSize}, minmax(0, 1fr))`
+          gridTemplateColumns: `repeat(${snapshot.game.boardSize}, minmax(0, 1fr))`,
+          gridTemplateRows: `repeat(${snapshot.game.boardSize}, minmax(0, 1fr))`
         }}
       >
         {snapshot.game.board.flatMap((row, rowIndex) =>

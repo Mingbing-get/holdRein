@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import type { PersistedGomokuTaskGame } from "../shared";
+import {
+  BOARD_SIZE,
+  createInitialGame,
+  type PersistedGomokuTaskGame
+} from "../shared";
 import { createGomokuSessionStore } from "./session";
 
 describe("gomoku session store", () => {
@@ -195,7 +199,33 @@ describe("gomoku session store", () => {
     expect(output.phase).toBe("idle");
     expect(output.pendingUserMove).toBeUndefined();
   });
+
+  it("defaults historical persisted games without a board size to 15", async () => {
+    const persistence = createMemoryPersistence();
+    const historicalGame = createInitialGame();
+    persistence.records["old-task"] = {
+      game: omitBoardSize(historicalGame),
+      modelStone: "white",
+      phase: "waiting_for_user",
+      savedAt: "2026-01-01T00:00:00.000Z",
+      taskId: "old-task",
+      version: 1
+    };
+
+    const store = createGomokuSessionStore({ persistence });
+    await store.loadTask("old-task");
+
+    expect(store.getSnapshot().game.boardSize).toBe(BOARD_SIZE);
+    expect(JSON.parse(await store.resumeGame("old-task")).boardSize).toBe(
+      BOARD_SIZE
+    );
+  });
 });
+
+function omitBoardSize(game: ReturnType<typeof createInitialGame>) {
+  const { boardSize: _boardSize, ...historicalGame } = game;
+  return historicalGame as PersistedGomokuTaskGame["game"];
+}
 
 function createMemoryPersistence() {
   const records: Record<string, PersistedGomokuTaskGame> = {};

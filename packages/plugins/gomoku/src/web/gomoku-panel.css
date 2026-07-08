@@ -44,19 +44,7 @@
 
 .gomoku-board {
   aspect-ratio: 1;
-  background:
-    linear-gradient(
-      var(--app-color-border-secondary),
-      var(--app-color-border-secondary)
-    )
-    center / calc(100% - 6.6667%) 1px no-repeat,
-    linear-gradient(
-      90deg,
-      var(--app-color-border-secondary),
-      var(--app-color-border-secondary)
-    )
-    center / 1px calc(100% - 6.6667%) no-repeat,
-    var(--app-color-bg-container);
+  background: var(--app-color-bg-container);
   border: 1px solid var(--app-color-border-secondary);
   display: grid;
   flex-shrink: 0;
@@ -69,6 +57,7 @@
 .gomoku-cell {
   align-items: center;
   appearance: none;
+  aspect-ratio: 1;
   background:
     linear-gradient(
       var(--app-color-border-secondary),

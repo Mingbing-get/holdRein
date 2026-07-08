@@ -1,4 +1,5 @@
 import {
+  BOARD_SIZE,
   createInitialGame,
   getGameStatus,
   oppositeStone,
@@ -158,9 +159,10 @@ export function createGomokuSessionStore(
         return;
       }
 
+      const game = normalizePersistedGame(persisted.game);
       pendingSavedUserMove = persisted.pendingUserMove;
       updateSnapshot(
-        createSnapshot(persisted.game, persisted.modelStone, persisted.phase)
+        createSnapshot(game, persisted.modelStone, persisted.phase)
       );
     },
     placeModelMove(position, taskId) {
@@ -219,9 +221,10 @@ export function createGomokuSessionStore(
       activeTaskId = taskId;
       const persisted = await persistence?.loadGame(taskId);
       if (persisted) {
+        const game = normalizePersistedGame(persisted.game);
         pendingSavedUserMove = persisted.pendingUserMove;
         updateSnapshot(
-          createSnapshot(persisted.game, persisted.modelStone, persisted.phase)
+          createSnapshot(game, persisted.modelStone, persisted.phase)
         );
       } else {
         resetToIdle();
@@ -267,6 +270,13 @@ export function createGomokuSessionStore(
         listeners.delete(listener);
       };
     }
+  };
+}
+
+function normalizePersistedGame(game: GomokuGame): GomokuGame {
+  return {
+    ...game,
+    boardSize: game.boardSize ?? BOARD_SIZE
   };
 }
 
