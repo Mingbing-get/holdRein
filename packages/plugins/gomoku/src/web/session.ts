@@ -1,5 +1,4 @@
 import {
-  BOARD_SIZE,
   createInitialGame,
   getGameStatus,
   oppositeStone,
@@ -24,6 +23,8 @@ export interface GomokuSnapshot {
 }
 
 export interface StartGameOptions {
+  readonly boardSize?: number;
+  readonly modelMove?: Position;
   readonly modelStone?: Stone;
 }
 
@@ -234,7 +235,25 @@ export function createGomokuSessionStore(
       }
 
       const modelStone = options?.modelStone ?? DEFAULT_MODEL_STONE;
-      const game = createInitialGame();
+      if (modelStone === "black" && options?.modelMove === undefined) {
+        throw new Error(
+          "A model opening move is required when the model plays black."
+        );
+      }
+
+      if (modelStone === "white" && options?.modelMove !== undefined) {
+        throw new Error(
+          "A model opening move can only be used when the model plays black."
+        );
+      }
+
+      const initialGame = createInitialGame(
+        options?.boardSize === undefined ? {} : { boardSize: options.boardSize }
+      );
+      const game =
+        options?.modelMove === undefined
+          ? initialGame
+          : placeStone(initialGame, options.modelMove, modelStone);
       pendingSavedUserMove = undefined;
       const nextSnapshot = createSnapshot(game, modelStone, "waiting_for_user");
       updateSnapshot(nextSnapshot);
@@ -280,7 +299,7 @@ function formatToolResult(
   pendingUserMove?: GomokuMove
 ): string {
   return JSON.stringify({
-    boardSize: BOARD_SIZE,
+    boardSize: snapshot.game.boardSize,
     moveNumber: snapshot.game.moves.length,
     nextStone: snapshot.game.nextStone,
     phase: snapshot.phase,

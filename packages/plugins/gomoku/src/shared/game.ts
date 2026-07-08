@@ -1,4 +1,6 @@
 export const BOARD_SIZE = 15;
+export const MAX_BOARD_SIZE = 25;
+export const MIN_BOARD_SIZE = 5;
 export const WIN_LENGTH = 5;
 
 export type Stone = "black" | "white";
@@ -17,6 +19,7 @@ export interface Position {
 
 export interface GomokuGame {
   readonly board: readonly (readonly Cell[])[];
+  readonly boardSize: number;
   readonly moves: readonly GomokuMove[];
   readonly nextStone: Stone;
 }
@@ -47,6 +50,10 @@ interface Direction {
   readonly row: number;
 }
 
+export interface CreateInitialGameOptions {
+  readonly boardSize?: number;
+}
+
 const DIRECTIONS: readonly Direction[] = [
   { column: 1, row: 0 },
   { column: 0, row: 1 },
@@ -54,11 +61,17 @@ const DIRECTIONS: readonly Direction[] = [
   { column: 1, row: -1 }
 ];
 
-export function createInitialGame(): GomokuGame {
+export function createInitialGame(
+  options: CreateInitialGameOptions = {}
+): GomokuGame {
+  const boardSize = options.boardSize ?? BOARD_SIZE;
+  assertValidBoardSize(boardSize);
+
   return {
-    board: Array.from({ length: BOARD_SIZE }, () =>
-      Array.from<Cell>({ length: BOARD_SIZE }).fill(null)
+    board: Array.from({ length: boardSize }, () =>
+      Array.from<Cell>({ length: boardSize }).fill(null)
     ),
+    boardSize,
     moves: [],
     nextStone: "black"
   };
@@ -69,7 +82,7 @@ export function placeStone(
   position: Position,
   stone: Stone
 ): GomokuGame {
-  assertPositionInsideBoard(position);
+  assertPositionInsideBoard(position, game.boardSize);
 
   if (game.board[position.row]?.[position.column] !== null) {
     throw new Error("Intersection is already occupied.");
@@ -85,14 +98,15 @@ export function placeStone(
 
   return {
     board,
+    boardSize: game.boardSize,
     moves: [...game.moves, { position, stone }],
     nextStone: oppositeStone(stone)
   };
 }
 
 export function getGameStatus(game: GomokuGame): GomokuStatus {
-  for (let row = 0; row < BOARD_SIZE; row += 1) {
-    for (let column = 0; column < BOARD_SIZE; column += 1) {
+  for (let row = 0; row < game.boardSize; row += 1) {
+    for (let column = 0; column < game.boardSize; column += 1) {
       const stone = game.board[row]?.[column];
       if (!stone) {
         continue;
@@ -107,19 +121,22 @@ export function getGameStatus(game: GomokuGame): GomokuStatus {
     }
   }
 
-  return game.moves.length === BOARD_SIZE * BOARD_SIZE
+  return game.moves.length === game.boardSize * game.boardSize
     ? { state: "draw" }
     : { state: "playing" };
 }
 
-export function isPositionInsideBoard(position: Position): boolean {
+export function isPositionInsideBoard(
+  position: Position,
+  boardSize = BOARD_SIZE
+): boolean {
   return (
     Number.isInteger(position.column) &&
     Number.isInteger(position.row) &&
     position.column >= 0 &&
-    position.column < BOARD_SIZE &&
+    position.column < boardSize &&
     position.row >= 0 &&
-    position.row < BOARD_SIZE
+    position.row < boardSize
   );
 }
 
@@ -127,9 +144,21 @@ export function oppositeStone(stone: Stone): Stone {
   return stone === "black" ? "white" : "black";
 }
 
-function assertPositionInsideBoard(position: Position): void {
-  if (!isPositionInsideBoard(position)) {
+function assertPositionInsideBoard(position: Position, boardSize: number): void {
+  if (!isPositionInsideBoard(position, boardSize)) {
     throw new Error("Move is outside the board.");
+  }
+}
+
+function assertValidBoardSize(boardSize: number): void {
+  if (
+    !Number.isInteger(boardSize) ||
+    boardSize < MIN_BOARD_SIZE ||
+    boardSize > MAX_BOARD_SIZE
+  ) {
+    throw new Error(
+      `Board size must be an integer from ${MIN_BOARD_SIZE} to ${MAX_BOARD_SIZE}.`
+    );
   }
 }
 
@@ -147,7 +176,7 @@ function collectWinningLine(
       row: start.row + direction.row * index
     };
 
-    if (!isPositionInsideBoard(position)) {
+    if (!isPositionInsideBoard(position, game.boardSize)) {
       return null;
     }
 

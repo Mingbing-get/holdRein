@@ -13,8 +13,20 @@ describe("gomoku game rules", () => {
 
     expect(game.board).toHaveLength(BOARD_SIZE);
     expect(game.board[0]).toHaveLength(BOARD_SIZE);
+    expect(game.boardSize).toBe(BOARD_SIZE);
     expect(game.nextStone).toBe("black");
     expect(getGameStatus(game).state).toBe("playing");
+  });
+
+  it("creates a board with the requested size", () => {
+    const game = createInitialGame({ boardSize: 9 });
+
+    expect(game.board).toHaveLength(9);
+    expect(game.board[0]).toHaveLength(9);
+    expect(game.boardSize).toBe(9);
+    expect(() => placeStone(game, { column: 9, row: 0 }, "black")).toThrow(
+      "Move is outside the board."
+    );
   });
 
   it("rejects moves outside the board", () => {

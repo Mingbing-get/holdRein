@@ -2,7 +2,7 @@ import { AimOutlined } from "@ant-design/icons";
 import { Empty, Tag } from "antd";
 import { useEffect, useState } from "react";
 
-import { BOARD_SIZE, type Cell, type Position, type Stone } from "../shared";
+import { type Cell, type Position, type Stone } from "../shared";
 import type { GomokuSessionStore, GomokuSnapshot } from "./session";
 
 import "./gomoku-panel.css";
@@ -63,7 +63,7 @@ export function GomokuPanel({ store, taskId }: GomokuPanelProps) {
         className="gomoku-board"
         role="grid"
         style={{
-          gridTemplateColumns: `repeat(${BOARD_SIZE}, minmax(0, 1fr))`
+          gridTemplateColumns: `repeat(${snapshot.game.boardSize}, minmax(0, 1fr))`
         }}
       >
         {snapshot.game.board.flatMap((row, rowIndex) =>

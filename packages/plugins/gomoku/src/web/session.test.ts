@@ -22,6 +22,31 @@ describe("gomoku session store", () => {
     expect(output.userMove).toEqual({ col: 7, color: "black", row: 7 });
   });
 
+  it("starts a custom-size game with the model's opening move", async () => {
+    const store = createGomokuSessionStore();
+    const result = store.startGame({
+      boardSize: 9,
+      modelMove: { column: 4, row: 4 },
+      modelStone: "black"
+    });
+
+    expect(store.getSnapshot().phase).toBe("waiting_for_user");
+    expect(store.getSnapshot().game.boardSize).toBe(9);
+    expect(store.getSnapshot().game.board[4]?.[4]).toBe("black");
+    expect(store.getSnapshot().game.nextStone).toBe("white");
+
+    store.playUserMove({ column: 4, row: 5 });
+
+    const output = JSON.parse(await result) as Record<string, unknown>;
+
+    expect(output.boardSize).toBe(9);
+    expect(output.stones).toEqual([
+      { col: 4, color: "black", row: 4 },
+      { col: 4, color: "white", row: 5 }
+    ]);
+    expect(output.userMove).toEqual({ col: 4, color: "white", row: 5 });
+  });
+
   it("places a model move and waits for the next user move", async () => {
     const store = createGomokuSessionStore();
     const firstUserMove = store.startGame({ modelStone: "white" });

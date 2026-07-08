@@ -8,6 +8,7 @@ import type {
   PersistedGomokuTaskGame,
   Stone
 } from "../shared";
+import { MAX_BOARD_SIZE, MIN_BOARD_SIZE } from "../shared";
 import {
   createGomokuTaskGameStorage,
   type GomokuTaskGameStorage
@@ -144,9 +145,27 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isGame(value: unknown): value is GomokuGame {
   return (
     isRecord(value) &&
-    Array.isArray(value.board) &&
+    isBoardSize(value.boardSize) &&
+    isBoard(value.board, value.boardSize) &&
     Array.isArray(value.moves) &&
     isStone(value.nextStone)
+  );
+}
+
+function isBoard(value: unknown, boardSize: number): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length === boardSize &&
+    value.every((row) => Array.isArray(row) && row.length === boardSize)
+  );
+}
+
+function isBoardSize(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= MIN_BOARD_SIZE &&
+    value <= MAX_BOARD_SIZE
   );
 }
 
