@@ -1,9 +1,7 @@
-export function createMemoryOrganizerPrompt(
-  messages: readonly unknown[]
-): string {
+export function createMemoryOrganizerPrompt(memoryCandidateSummary: string): string {
   return [
     "You are the memory organizer for this workspace.",
-    "Extract only durable facts, user preferences, decisions, constraints, and project knowledge that will be useful in future agent runs.",
+    "Review the extracted memory candidates and persist only durable facts, user preferences, decisions, constraints, and project knowledge that will be useful in future agent runs.",
     "Inspect the existing memory before changing it. Reconcile duplicate, stale, or conflicting memories instead of blindly appending new entries.",
     "Use the code plugin tools read_file, write_file, edit_file, and delete_file to maintain memory files.",
     "Keep every memory file under .hold-rein/memories and do not modify unrelated workspace files.",
@@ -13,7 +11,7 @@ export function createMemoryOrganizerPrompt(
     "If the transcript contains no durable new information, leave the memory files unchanged.",
     "Do not merely report suggested changes: perform any necessary memory file updates with the provided tools.",
     "",
-    "Complete conversation transcript (JSON):",
-    JSON.stringify(messages, null, 2)
+    "Extracted memory candidates:",
+    memoryCandidateSummary
   ].join("\n");
 }

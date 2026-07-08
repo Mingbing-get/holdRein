@@ -45,16 +45,20 @@ describe("memory server plugin", () => {
     expect(contribution.systemPrompts?.[0]).not.toContain("Primary memory:\n");
   });
 
-  it("does not inject memory context into the memory organizer", async () => {
+  it("does not inject memory context into memory subagents", async () => {
     const workspacePath = await createWorkspace("Sensitive memory");
 
-    const contribution = await resolveContribution(
+    const extractorContribution = await resolveContribution(
+      "memory-extractor",
+      workspacePath
+    );
+    const organizerContribution = await resolveContribution(
       "memory-organizer",
       workspacePath
     );
 
-    expect(contribution.systemPrompts).toEqual([]);
-    expect(contribution.onAgentEnd).toBeUndefined();
+    expect(extractorContribution.systemPrompts).toEqual([]);
+    expect(organizerContribution.systemPrompts).toEqual([]);
   });
 
   it("does not organize memory when a non-main agent ends", async () => {
@@ -66,7 +70,7 @@ describe("memory server plugin", () => {
     expect(contribution.agentEndPriority).toBeUndefined();
   });
 
-  it("starts the final memory organizer with the complete transcript when memory has not run", async () => {
+  it("starts a tool-free memory extractor with the latest main-agent messages", async () => {
     const workspacePath = await createWorkspace();
     const contribution = await resolveContribution("main", workspacePath);
     const messages = [
@@ -83,23 +87,24 @@ describe("memory server plugin", () => {
 
     expect(contribution.agentEndPriority).toBe(-9999);
     expect(continuation).toMatchObject({
-      agentName: "memory-organizer",
+      agentName: "memory-extractor",
       useSubagent: true
     });
     expect(continuation?.prompt).toContain(
       JSON.stringify(simplifyExpectedMessages(messages), null, 2)
     );
-    expect(continuation?.prompt).toContain(".hold-rein/memories/index.md");
-    expect(continuation?.prompt).toContain("500 lines");
-    expect(continuation?.prompt).toContain("conflict");
-    expect(continuation?.prompt).toContain("frequently");
-    expect(continuation?.prompt).toContain("read_file");
-    expect(continuation?.prompt).toContain("write_file");
-    expect(continuation?.prompt).toContain("edit_file");
-    expect(continuation?.prompt).toContain("delete_file");
+    expect(continuation?.prompt).toContain("Extract meaningful memory candidates");
+    expect(continuation?.prompt).toContain("facts");
+    expect(continuation?.prompt).toContain("events");
+    expect(continuation?.pluginFilter?.([
+      { id: "__memory__plugin" },
+      { id: "__code__plugin" }
+    ] as ServerPlugin.Plugin[])).toEqual([{ id: "__memory__plugin" }]);
+    expect(await continuation?.skillFilter?.([{ name: "demo" }] as never)).toEqual([]);
+    expect(await continuation?.toolFilter?.([{ name: "read_file" }] as never)).toEqual([]);
   });
 
-  it("only sends messages after the latest memory organizer run", async () => {
+  it("only sends messages after the latest memory organizer run to the extractor", async () => {
     const workspacePath = await createWorkspace();
     const contribution = await resolveContribution("main", workspacePath);
     const previousMessages = [
@@ -124,7 +129,7 @@ describe("memory server plugin", () => {
     );
 
     expect(continuation).toMatchObject({
-      agentName: "memory-organizer",
+      agentName: "memory-extractor",
       useSubagent: true
     });
     expect(continuation?.prompt).toContain(
@@ -132,6 +137,59 @@ describe("memory server plugin", () => {
     );
     expect(continuation?.prompt).toContain("Prefer concise release notes");
     expect(continuation?.prompt).not.toContain("Remember the old dashboard constraint");
+  });
+
+  it("starts the memory organizer from a memory extractor result", async () => {
+    const workspacePath = await createWorkspace();
+    const contribution = await resolveContribution("memory-extractor", workspacePath);
+    const messages = [
+      { content: "Remember that release notes should be concise.", role: "user" },
+      {
+        content: [{ text: "Fact: release notes should be concise.", type: "text" }],
+        role: "assistant"
+      }
+    ] as unknown as ServerPlugin.AgentEndInput["messages"];
+
+    const continuation = await contribution.onAgentEnd?.(
+      createAgentEndInput(workspacePath, messages)
+    );
+
+    expect(continuation).toMatchObject({
+      agentName: "memory-organizer",
+      useSubagent: true
+    });
+    expect(continuation?.prompt).toContain("Fact: release notes should be concise.");
+    expect(continuation?.prompt).toContain(".hold-rein/memories/index.md");
+    expect(continuation?.prompt).toContain("500 lines");
+    expect(continuation?.prompt).toContain("read_file");
+    expect(continuation?.prompt).toContain("write_file");
+    expect(continuation?.pluginFilter?.([
+      { id: "__memory__plugin" },
+      { id: "__base__plugin" },
+      { id: "__code__plugin" }
+    ] as ServerPlugin.Plugin[])).toEqual([
+      { id: "__base__plugin" },
+      { id: "__code__plugin" }
+    ]);
+    expect(await continuation?.skillFilter?.([{ name: "demo" }] as never)).toEqual([]);
+  });
+
+  it("does not start the memory organizer when extractor already called it", async () => {
+    const workspacePath = await createWorkspace();
+    const contribution = await resolveContribution("memory-extractor", workspacePath);
+    const messages = [
+      {
+        content: [{ text: "Fact: prefer concise release notes.", type: "text" }],
+        role: "assistant"
+      },
+      createMemoryOrganizerMessage("memory-write-1", "Subagent is running.")
+    ] as unknown as ServerPlugin.AgentEndInput["messages"];
+
+    const continuation = await contribution.onAgentEnd?.(
+      createAgentEndInput(workspacePath, messages)
+    );
+
+    expect(continuation).toBeUndefined();
   });
 
   it("sends only memory-relevant fields to the organizer prompt", async () => {

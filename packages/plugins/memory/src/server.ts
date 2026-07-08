@@ -1,16 +1,42 @@
 import type { ServerPlugin } from "@hold-rein/plugin-server";
 
 import { PLUGIN_ID } from "./plugin-id";
+import { createMemoryExtractorPrompt } from "./server/extractor-prompt";
 import { createMemorySystemPrompt } from "./server/memory-context";
 import { createMemoryOrganizerPrompt } from "./server/organizer-prompt";
 
+const BASE_PLUGIN_ID = "__base__plugin";
+const CODE_PLUGIN_ID = "__code__plugin";
+const MEMORY_EXTRACTOR_AGENT_NAME = "memory-extractor";
 const MEMORY_ORGANIZER_AGENT_NAME = "memory-organizer";
+const WRITER_PLUGIN_IDS = new Set([BASE_PLUGIN_ID, CODE_PLUGIN_ID]);
 
 const serverPlugin: ServerPlugin.Plugin = {
   id: PLUGIN_ID,
   contributionResolver: async (context) => {
-    if (context.agentName === MEMORY_ORGANIZER_AGENT_NAME) {
-      return { systemPrompts: [] };
+    if (isMemorySubagent(context.agentName)) {
+      return {
+        onAgentEnd(input) {
+          if (!shouldStartOrganizer(context.agentName, input)) {
+            return undefined;
+          }
+
+          const memoryCandidateSummary = getLatestAssistantText(input.messages);
+
+          if (!hasNonEmptyContent(memoryCandidateSummary)) {
+            return undefined;
+          }
+
+          return {
+            agentName: MEMORY_ORGANIZER_AGENT_NAME,
+            pluginFilter: filterMemoryWriterPlugins,
+            prompt: createMemoryOrganizerPrompt(memoryCandidateSummary),
+            skillFilter: emptySkillFilter,
+            useSubagent: true
+          };
+        },
+        systemPrompts: []
+      };
     }
 
     const systemPrompts = [await createMemorySystemPrompt(context.env.cwd)];
@@ -24,7 +50,7 @@ const serverPlugin: ServerPlugin.Plugin = {
       onAgentEnd(input) {
         const messages = scopeMessagesAfterLatestCustomMessageFromAgent(
           input.messages,
-          MEMORY_ORGANIZER_AGENT_NAME
+          MEMORY_EXTRACTOR_AGENT_NAME
         );
 
         if (!hasNonEmptyUserMessage(messages)) {
@@ -32,8 +58,11 @@ const serverPlugin: ServerPlugin.Plugin = {
         }
 
         return {
-          agentName: MEMORY_ORGANIZER_AGENT_NAME,
-          prompt: createMemoryOrganizerPrompt(simplifyMessagesForMemory(messages)),
+          agentName: MEMORY_EXTRACTOR_AGENT_NAME,
+          pluginFilter: filterMemoryExtractorPlugins,
+          prompt: createMemoryExtractorPrompt(simplifyMessagesForMemory(messages)),
+          skillFilter: emptySkillFilter,
+          toolFilter: emptyToolFilter,
           useSubagent: true
         };
       },
@@ -43,6 +72,39 @@ const serverPlugin: ServerPlugin.Plugin = {
 };
 
 export default serverPlugin;
+
+function isMemorySubagent(agentName: string): boolean {
+  return agentName === MEMORY_EXTRACTOR_AGENT_NAME ||
+    agentName === MEMORY_ORGANIZER_AGENT_NAME;
+}
+
+function shouldStartOrganizer(
+  agentName: string,
+  input: ServerPlugin.AgentEndInput
+): boolean {
+  return agentName === MEMORY_EXTRACTOR_AGENT_NAME &&
+    !hasCustomMessageFromAgent(input.messages, MEMORY_ORGANIZER_AGENT_NAME);
+}
+
+function filterMemoryExtractorPlugins(
+  plugins: ServerPlugin.Plugin[]
+): ServerPlugin.Plugin[] {
+  return plugins.filter((plugin) => plugin.id === PLUGIN_ID);
+}
+
+function filterMemoryWriterPlugins(
+  plugins: ServerPlugin.Plugin[]
+): ServerPlugin.Plugin[] {
+  return plugins.filter((plugin) => WRITER_PLUGIN_IDS.has(plugin.id));
+}
+
+function emptySkillFilter(): [] {
+  return [];
+}
+
+function emptyToolFilter(): [] {
+  return [];
+}
 
 function simplifyMessagesForMemory(
   messages: readonly unknown[]
@@ -164,6 +226,47 @@ function getCustomMessageAgentName(message: unknown): string | undefined {
   return typeof message.details.agentName === "string"
     ? message.details.agentName
     : undefined;
+}
+
+function hasCustomMessageFromAgent(
+  messages: readonly unknown[],
+  agentName: string
+): boolean {
+  return messages.some((message) => getCustomMessageAgentName(message) === agentName);
+}
+
+function getLatestAssistantText(messages: readonly unknown[]): string {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+
+    if (!isRecord(message) || message.role !== "assistant") {
+      continue;
+    }
+
+    return stringifyContent(message.content);
+  }
+
+  return "";
+}
+
+function stringifyContent(content: unknown): string {
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (!Array.isArray(content)) {
+    return "";
+  }
+
+  return content
+    .flatMap((entry) => {
+      if (!isRecord(entry) || typeof entry.text !== "string") {
+        return [];
+      }
+
+      return [entry.text];
+    })
+    .join("\n");
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
