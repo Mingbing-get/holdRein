@@ -184,6 +184,43 @@ describe("createServerPluginRegistry", () => {
     ]);
   });
 
+  it("filters plugins before resolving contributions when a plugin filter is provided", async () => {
+    const registry = createServerPluginRegistry();
+    const selectedResolver = vi.fn().mockReturnValue({
+      tools: [{ name: "selected-tool" }]
+    });
+    const skippedResolver = vi.fn().mockReturnValue({
+      tools: [{ name: "skipped-tool" }]
+    });
+    const pluginFilter = vi.fn((plugins: ServerPlugin.Plugin[]) =>
+      plugins.filter((plugin) => plugin.id === "selected-plugin")
+    );
+
+    registry.register({
+      id: "selected-plugin",
+      contributionResolver: selectedResolver
+    });
+    registry.register({
+      id: "skipped-plugin",
+      contributionResolver: skippedResolver
+    });
+
+    const contribution = await registry.resolveContributions(
+      {} as ServerPlugin.RuntimeContext,
+      { pluginFilter }
+    );
+
+    expect(pluginFilter).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "selected-plugin" }),
+      expect.objectContaining({ id: "skipped-plugin" })
+    ]);
+    expect(selectedResolver).toHaveBeenCalledOnce();
+    expect(skippedResolver).not.toHaveBeenCalled();
+    expect(contribution.tools?.map((tool) => tool.name)).toEqual([
+      "selected-tool"
+    ]);
+  });
+
   it("falls back to the plugin id when no package name is available", async () => {
     const registry = createServerPluginRegistry();
     const resolver = vi.fn().mockReturnValue({ systemPrompts: ["Prompt"] });

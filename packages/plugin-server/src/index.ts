@@ -57,6 +57,7 @@ export interface ServerPluginRegistry {
 
 export interface ResolveContributionsOptions {
   activePluginPackageNames?: readonly string[];
+  pluginFilter?: ServerPlugin.AgentContinuationPluginFilter;
 }
 
 async function resolveContribution(
@@ -128,13 +129,15 @@ export function createServerPluginRegistry(): ServerPluginRegistry {
         priority: number;
       }[] = [];
 
-      for (const plugin of plugins.values()) {
-        if (
-          activePluginPackageNames &&
-          !activePluginPackageNames.has(plugin.packageName ?? plugin.id)
-        ) {
-          continue;
-        }
+      const activePlugins = [...plugins.values()].filter((plugin) =>
+        activePluginPackageNames === undefined ||
+        activePluginPackageNames.has(plugin.packageName ?? plugin.id)
+      );
+      const resolvedPlugins = options.pluginFilter
+        ? await options.pluginFilter(activePlugins)
+        : activePlugins;
+
+      for (const plugin of resolvedPlugins) {
         if (!plugin.contributionResolver) {
           continue;
         }

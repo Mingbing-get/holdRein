@@ -4,6 +4,7 @@ import type { AgentEventBus } from "../event/event-bus";
 import { appendVisibleCustomMessage } from "./messages";
 import { toAgentSessionMetadata } from "./support";
 import type {
+  ContinuationSubagentFilters,
   HarnessSession,
   StartHarnessOptions,
   StartHarnessResult
@@ -25,6 +26,7 @@ interface SessionRepo {
 
 export async function startContinuationSubagent(input: {
   agentName?: string;
+  continuationSubagentFilters?: ContinuationSubagentFilters;
   eventBus: AgentEventBus;
   parentAgentId: string;
   parentAgentName: string | undefined;
@@ -65,6 +67,9 @@ export async function startContinuationSubagent(input: {
     started = await input.startHarness(input.prompt, {
       agentId,
       agentName,
+      ...(input.continuationSubagentFilters === undefined
+        ? {}
+        : { continuationSubagentFilters: input.continuationSubagentFilters }),
       depth,
       isContinue: false,
       parentAgentId: input.parentAgentId,

@@ -1,4 +1,5 @@
 import type { AgentHarness, JsonlSessionRepoApi } from "@earendil-works/pi-agent-core/node";
+import type { ServerPlugin } from "@hold-rein/plugin-server";
 import type { AppDatabase } from "../../../db";
 import type {
   AgentRunResult,
@@ -42,9 +43,15 @@ export interface RunningAgent { harness: AgentHarness; sessionId: string }
 
 export type HarnessSession = Awaited<ReturnType<JsonlSessionRepoApi["create"]>>;
 
+export type ContinuationSubagentFilters = Pick<
+  ServerPlugin.AgentContinuation,
+  "pluginFilter" | "skillFilter" | "toolFilter"
+>;
+
 export interface StartHarnessOptions {
   agentId?: string;
   agentName?: string;
+  continuationSubagentFilters?: ContinuationSubagentFilters;
   depth: number;
   isContinue: boolean;
   parentAgentId?: string;

@@ -89,14 +89,20 @@ export function createAgentRuntime(
           thinkingLevel: input.thinkingLevel,
           model: activeModel
         }
-        const contribution = await (input.activePlugins === undefined
-          ? pluginRegistry.resolveContributions(pluginContext)
-          : pluginRegistry.resolveContributions(pluginContext, { activePluginPackageNames: input.activePlugins }))
+        const continuationSubagentFilters = harnessOptions.continuationSubagentFilters;
+        const contribution = await pluginRegistry.resolveContributions(pluginContext, {
+          ...(input.activePlugins === undefined
+            ? {}
+            : { activePluginPackageNames: input.activePlugins }),
+          ...(continuationSubagentFilters?.pluginFilter === undefined
+            ? {}
+            : { pluginFilter: continuationSubagentFilters.pluginFilter })
+        });
         const browserTools = createBrowserRuntimeTools({
           agentId: harnessOptions.agentId, eventBus: options.eventBus,
           store: browserToolCalls, tools: input.runtimeContributions?.tools
         });
-        const tools = await createRuntimeSubagentTools({
+        const resolvedTools = await createRuntimeSubagentTools({
           contributionTools: [...(contribution.tools || []), ...browserTools],
           depth: harnessOptions.depth,
           eventBus: options.eventBus,
@@ -114,6 +120,9 @@ export function createAgentRuntime(
           taskId: input.taskId,
           workspacePath: input.workspacePath
         });
+        const tools = continuationSubagentFilters?.toolFilter
+          ? [...await continuationSubagentFilters.toolFilter(resolvedTools)]
+          : resolvedTools;
         const loadedSkills = await loadRuntimeSkills({
           activeSkills: input.activeSkills,
           contributionSkillDirs: contribution.skillDirs,
@@ -125,6 +134,9 @@ export function createAgentRuntime(
           tempSkillDir: options.tempSkillDir,
           workspacePath: input.workspacePath
         });
+        const harnessSkills = continuationSubagentFilters?.skillFilter
+          ? [...await continuationSubagentFilters.skillFilter(loadedSkills.skills)]
+          : loadedSkills.skills;
         harnessSessions.set(harnessOptions.agentId, harnessOptions.session);
         harnessTools.set(harnessOptions.agentId, tools);
         const harness = await createWithMaterializedSkills(loadedSkills, () => new AgentHarness({
@@ -138,7 +150,7 @@ export function createAgentRuntime(
             return apiKey ? { apiKey } : undefined;
           },
           model: contribution.model || activeModel,
-          resources: { skills: loadedSkills.skills },
+          resources: { skills: harnessSkills },
           session: harnessOptions.session,
           systemPrompt: ({ resources }) =>
             [
@@ -305,10 +317,24 @@ export function createAgentRuntime(
         }
 
         if (continuation.useSubagent === true) {
+          const continuationSubagentFilters = {
+            ...(continuation.pluginFilter === undefined
+              ? {}
+              : { pluginFilter: continuation.pluginFilter }),
+            ...(continuation.skillFilter === undefined
+              ? {}
+              : { skillFilter: continuation.skillFilter }),
+            ...(continuation.toolFilter === undefined
+              ? {}
+              : { toolFilter: continuation.toolFilter })
+          };
           await startContinuationSubagent({
             ...(continuation.agentName === undefined
               ? {}
               : { agentName: continuation.agentName }),
+            ...(Object.keys(continuationSubagentFilters).length === 0
+              ? {}
+              : { continuationSubagentFilters }),
             eventBus: options.eventBus,
             parentAgentId: harnessAgentId,
             parentAgentName: harnessAgentName,

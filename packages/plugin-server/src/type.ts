@@ -1,6 +1,7 @@
 import type {
   AgentMessage,
   AgentHarnessEvent,
+  Skill,
   AgentTool,
   ExecutionEnv,
   Session,
@@ -67,9 +68,24 @@ export namespace ServerPlugin {
   export interface AgentContinuation {
     readonly agentName?: string;
     readonly details?: unknown;
+    readonly pluginFilter?: AgentContinuationPluginFilter;
     readonly prompt: string;
+    readonly skillFilter?: AgentContinuationSkillFilter;
+    readonly toolFilter?: AgentContinuationToolFilter;
     readonly useSubagent?: boolean;
   }
+
+  export type AgentContinuationPluginFilter = (
+    plugins: Plugin[]
+  ) => Plugin[] | Promise<Plugin[]>;
+
+  export type AgentContinuationSkillFilter = (
+    skills: Skill[]
+  ) => Skill[] | Promise<Skill[]>;
+
+  export type AgentContinuationToolFilter = (
+    tools: PluginTool[]
+  ) => PluginTool[] | Promise<PluginTool[]>;
 
   export type ToolBeforeExecuteResult = ToolCallResult | undefined;
 
