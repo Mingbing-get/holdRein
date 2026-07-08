@@ -1,15 +1,19 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import React from "react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { createInitialGame, type GomokuGame, type Stone } from "../shared";
 import { GomokuPanel } from "./gomoku-panel";
 import type { GomokuSessionStore, GomokuSnapshot } from "./session";
 
 describe("GomokuPanel", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("renders visible game labels in Chinese", () => {
     const store = createPanelStore(9);
     render(React.createElement(GomokuPanel, { store }));

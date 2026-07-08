@@ -79,12 +79,16 @@
   position: relative;
 }
 
+.gomoku-tool-cell {
+  cursor: default;
+}
+
 .gomoku-cell:disabled {
   cursor: default;
 }
 
-.gomoku-cell:not(:disabled):hover,
-.gomoku-cell:not(:disabled):focus-visible {
+button.gomoku-cell:not(:disabled):hover,
+button.gomoku-cell:not(:disabled):focus-visible {
   background-color: var(--app-color-fill-tertiary);
   outline: 2px solid var(--app-color-primary);
   outline-offset: -2px;
@@ -136,6 +140,24 @@
   color: var(--app-color-danger);
   font-size: 12px;
   padding: 8px;
+}
+
+.gomoku-tool-render {
+  color: var(--app-color-text);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gomoku-tool-board {
+  max-width: min(100%, 260px);
+  width: min(100%, 260px);
+}
+
+.gomoku-tool-meta,
+.gomoku-tool-empty {
+  color: var(--app-color-text-secondary);
+  font-size: 12px;
 }
 
 @keyframes gomoku-last-move-pulse {

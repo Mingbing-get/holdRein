@@ -10,6 +10,11 @@ import {
   type Stone
 } from "../shared";
 import { GomokuPanel } from "./gomoku-panel";
+import {
+  gomokuPlaceModelMoveToolRender,
+  gomokuResumeGameToolRender,
+  gomokuStartGameToolRender
+} from "./gomoku-tool-render";
 import { createRemoteGomokuPersistence } from "./persistence";
 import { createGomokuSessionStore } from "./session";
 
@@ -55,6 +60,11 @@ export function createGomokuContribution({
       }
     ],
     skills: [createGomokuSkill()],
+    toolRenders: [
+      gomokuStartGameToolRender,
+      gomokuPlaceModelMoveToolRender,
+      gomokuResumeGameToolRender
+    ],
     tools: [
       {
         description:
