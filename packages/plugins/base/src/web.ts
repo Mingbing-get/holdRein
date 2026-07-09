@@ -1,6 +1,8 @@
 import type { WebPlugin } from '@hold-rein/plugin-web'
 import {
   shellExecTool,
+  shellKillTool,
+  shellReadTool,
   callSubagentTool,
   revokeSubagentTool
 } from './web/tools'
@@ -12,6 +14,8 @@ const baseWebPlugin: WebPlugin.Plugin = {
   contributionResolver: ({ request }) => ({
     toolRenders: [
       shellExecTool,
+      shellReadTool,
+      shellKillTool,
       callSubagentTool,
       revokeSubagentTool
     ],
