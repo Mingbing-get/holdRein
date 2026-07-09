@@ -8,6 +8,10 @@ import { PLUGIN_ID } from './plugin-id'
 const VALIDATOR_MARKER = "[ts-standards-validator]";
 const VALIDATOR_AGENT_NAME = "ts-standards-validator";
 const MEMORY_ORGANIZER_AGENT_NAME = "memory-organizer";
+const VALIDATOR_PLUGIN_IDS = new Set([
+  "__base__plugin",
+  "__code__plugin"
+]);
 const PLANNER_SKILL_DIR = join(skillRootDir(), "planner");
 const BUGFIX_SKILL_DIR = join(skillRootDir(), "bugfix");
 const STANDARDS_SKILL_DIR = join(skillRootDir(), "ts-standards");
@@ -88,6 +92,7 @@ const tsStandardsServerPlugin: ServerPlugin.Plugin = {
 
         return {
           agentName: VALIDATOR_AGENT_NAME,
+          pluginFilter: filterValidatorPlugins,
           prompt: createValidationPrompt({
             changedFiles,
             originalPrompt: extractUserMessageText(validationMessages)
@@ -100,6 +105,12 @@ const tsStandardsServerPlugin: ServerPlugin.Plugin = {
 };
 
 export default tsStandardsServerPlugin;
+
+function filterValidatorPlugins(
+  plugins: ServerPlugin.Plugin[]
+): ServerPlugin.Plugin[] {
+  return plugins.filter((plugin) => VALIDATOR_PLUGIN_IDS.has(plugin.id));
+}
 
 export async function detectTsProject(
   workspacePath: string

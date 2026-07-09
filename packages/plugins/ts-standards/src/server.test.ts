@@ -105,6 +105,14 @@ describe("ts-standards server plugin", () => {
     );
     expect(continuation?.prompt).toContain("- write src/first.ts");
     expect(continuation?.prompt).toContain("- edit src/second.ts");
+    expect(await continuation?.pluginFilter?.([
+      { id: "__base__plugin" },
+      { id: "__code__plugin" },
+      { id: "__memory__plugin" }
+    ] as ServerPlugin.Plugin[])).toEqual([
+      { id: "__base__plugin" },
+      { id: "__code__plugin" }
+    ]);
   });
 });
 
