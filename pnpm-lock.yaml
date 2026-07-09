@@ -354,7 +354,7 @@ importers:
         specifier: 0.76.0
         version: 0.76.0(ws@8.21.0)(zod@4.3.6)
       '@hold-rein/plugin-server':
-        specifier: ^0.0.2
+        specifier: ^0.0.4
         version: link:../../plugin-server
       '@hold-rein/plugin-web':
         specifier: ^0.0.1

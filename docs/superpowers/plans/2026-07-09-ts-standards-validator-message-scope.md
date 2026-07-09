@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Validate all unvalidated work since the first non-empty user message after the previous validator run and include every user instruction from that window.
+**Goal:** Validate all work after the previous validator run and preserve enough task context for repeated validation.
 
-**Architecture:** Introduce one message-window helper that establishes the cycle boundary, then use that same window for changed-file extraction and original-task text aggregation. Keep tool-call parsing and prompt rendering unchanged.
+**Architecture:** Scope changed-file extraction only by the latest validator marker. Aggregate user text from that window when present; otherwise combine the latest user message from full history with the previous validator result.
 
 **Tech Stack:** Strict TypeScript, Vitest, Vite, pnpm via Corepack.
 
@@ -42,4 +42,3 @@
 - [ ] Run `corepack pnpm --filter @hold-rein/plugins-ts-standards typecheck`.
 - [ ] Run the repository ESLint command applicable to the changed files.
 - [ ] Confirm both source files remain at or below 500 lines.
-

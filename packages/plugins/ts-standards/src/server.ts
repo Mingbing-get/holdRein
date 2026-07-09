@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 
 import type { ServerPlugin } from "@hold-rein/plugin-server";
 import { PLUGIN_ID } from './plugin-id'
+import {
+  extractOriginalPrompt,
+  scopeValidationMessages
+} from "./validation-message-context";
 
 const VALIDATOR_MARKER = "[ts-standards-validator]";
 const VALIDATOR_AGENT_NAME = "ts-standards-validator";
@@ -95,7 +99,11 @@ const tsStandardsServerPlugin: ServerPlugin.Plugin = {
           pluginFilter: filterValidatorPlugins,
           prompt: createValidationPrompt({
             changedFiles,
-            originalPrompt: extractUserMessageText(validationMessages)
+            originalPrompt: extractOriginalPrompt(
+              validationMessages,
+              input.messages,
+              VALIDATOR_AGENT_NAME
+            )
           }),
           useSubagent: true,
         };
@@ -295,53 +303,6 @@ function scopeMessagesAfterLatestCustomMessageFromAgent(
   return latestAgentMessageIndex === -1
     ? messages
     : messages.slice(latestAgentMessageIndex + 1);
-}
-
-function scopeValidationMessages(
-  messages: readonly unknown[],
-  validatorAgentName: string
-): readonly unknown[] {
-  const messagesAfterValidator = scopeMessagesAfterLatestCustomMessageFromAgent(
-    messages,
-    validatorAgentName
-  );
-  const firstUserMessageIndex = messagesAfterValidator.findIndex(
-    (message) => getUserMessageText(message) !== undefined
-  );
-
-  return firstUserMessageIndex === -1
-    ? []
-    : messagesAfterValidator.slice(firstUserMessageIndex);
-}
-
-function extractUserMessageText(messages: readonly unknown[]): string {
-  return messages.flatMap((message) => {
-    const text = getUserMessageText(message);
-    return text === undefined ? [] : [text];
-  }).join("\n");
-}
-
-function getUserMessageText(message: unknown): string | undefined {
-  if (!isRecord(message) || message.role !== "user") {
-    return undefined;
-  }
-
-  const textParts =
-    typeof message.content === "string"
-      ? [message.content]
-      : Array.isArray(message.content)
-        ? message.content.flatMap((entry) =>
-            isRecord(entry) && typeof entry.text === "string"
-              ? [entry.text]
-              : []
-          )
-        : [];
-  const text = textParts
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0)
-    .join("\n");
-
-  return text.length === 0 ? undefined : text;
 }
 
 function getToolCalls(message: unknown): ToolCallRecord[] {

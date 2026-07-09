@@ -38,6 +38,24 @@ describe("ts-standards server plugin", () => {
           details: { agentName: "ts-standards-validator" },
           role: "custom"
         },
+        {
+          content: [
+            {
+              arguments: { path: "src/before-user.ts" },
+              id: "edit-before-user",
+              name: "edit_file",
+              type: "toolCall"
+            }
+          ],
+          role: "assistant"
+        },
+        {
+          content: [],
+          isError: false,
+          role: "toolResult",
+          toolCallId: "edit-before-user",
+          toolName: "edit_file"
+        },
         { content: "   ", role: "user" },
         { content: "Implement the original task", role: "user" },
         {
@@ -103,6 +121,7 @@ describe("ts-standards server plugin", () => {
     expect(continuation?.prompt).toContain(
       "Original task:\nImplement the original task\n继续\n\nChanged files"
     );
+    expect(continuation?.prompt).toContain("- edit src/before-user.ts");
     expect(continuation?.prompt).toContain("- write src/first.ts");
     expect(continuation?.prompt).toContain("- edit src/second.ts");
     expect(await continuation?.pluginFilter?.([
@@ -113,6 +132,71 @@ describe("ts-standards server plugin", () => {
       { id: "__base__plugin" },
       { id: "__code__plugin" }
     ]);
+  });
+
+  it("falls back to the latest user message and previous validation result", async () => {
+    const resolver = serverPlugin.contributionResolver;
+    expect(typeof resolver).toBe("function");
+
+    if (typeof resolver !== "function") {
+      throw new TypeError("Expected a contribution resolver function");
+    }
+
+    const contribution = await resolver(createRuntimeContext("main"));
+    const continuation = await contribution.onAgentEnd?.({
+      messages: [
+        { content: "Older unrelated task", role: "user" },
+        { content: "Fix the current task", role: "user" },
+        {
+          content: "Status: failed\nSummary: tests need correction",
+          details: { agentName: "ts-standards-validator" },
+          role: "custom"
+        },
+        {
+          content: [
+            {
+              arguments: { path: "src/correction.ts" },
+              id: "edit-correction",
+              name: "edit_file",
+              type: "toolCall"
+            }
+          ],
+          role: "assistant"
+        },
+        {
+          content: [],
+          isError: false,
+          role: "toolResult",
+          toolCallId: "edit-correction",
+          toolName: "edit_file"
+        }
+      ] as ServerPlugin.AgentEndInput["messages"],
+      runInput: {
+        modelId: "model",
+        prompt: "",
+        provider: "provider",
+        taskId: "task-1",
+        workspacePath: process.cwd()
+      },
+      session: {
+        createdAt: "2026-07-09T00:00:00.000Z",
+        id: "session-1",
+        path: "/tmp/session-1"
+      }
+    });
+
+    expect(continuation?.prompt).toContain(
+      [
+        "Original task:",
+        "Fix the current task",
+        "Status: failed",
+        "Summary: tests need correction",
+        "",
+        "Changed files"
+      ].join("\n")
+    );
+    expect(continuation?.prompt).not.toContain("Older unrelated task");
+    expect(continuation?.prompt).toContain("- edit src/correction.ts");
   });
 });
 

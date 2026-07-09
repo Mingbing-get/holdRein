@@ -17,14 +17,11 @@ For each validator invocation:
    `ts-standards-validator`.
 2. Inspect messages after that marker, or the full history when no marker
    exists.
-3. Find the first user message in that range that contains non-whitespace text.
-4. Use that user message and every later message as the current validation
-   window.
+3. Use every message after that marker as the current validation window.
 
-Messages before the first non-empty user message are excluded so work already
-associated with the previous validation cycle cannot leak into the next one.
-If no non-empty user message exists, the window is empty and validation does
-not run.
+The validation window is not scoped by user messages. This ensures a second
+validation can inspect corrections made after a failed validator result even
+when the user has not sent another message.
 
 ## Original Task
 
@@ -33,7 +30,11 @@ preserving message order. Support both string content and text entries in
 structured user content. Trim surrounding whitespace, ignore empty text and
 non-text entries, and join the resulting messages with newline characters.
 
-The joined text becomes the validator prompt's `Original task` section.
+The joined text becomes the validator prompt's `Original task` section. If the
+validation window contains no non-empty user text, use the latest non-empty user
+message from the full history and append the latest validator result. This
+fallback gives a second validator both the original user task and the previous
+validation findings.
 
 ## Changed Files
 
@@ -51,4 +52,3 @@ Add regression coverage for:
 - empty user messages not starting a validation window or appearing in the
   original task;
 - structured user text content.
-
