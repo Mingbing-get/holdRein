@@ -1,5 +1,11 @@
 # @hold-rein/plugins-base
 
+## 0.0.5
+
+### Patch Changes
+
+- 优化界面
+
 ## 0.0.4
 
 ### Patch Changes

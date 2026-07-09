@@ -1,5 +1,11 @@
 # @hold-rein/plugins-ts-standards
 
+## 0.0.6
+
+### Patch Changes
+
+- 优化界面
+
 ## 0.0.5
 
 ### Patch Changes
