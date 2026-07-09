@@ -1,5 +1,11 @@
 # @hold-rein/plugins-ts-standards
 
+## 0.0.7
+
+### Patch Changes
+
+- fix: 修复 ts 标准流程二次修改无法校验的问题
+
 ## 0.0.6
 
 ### Patch Changes
