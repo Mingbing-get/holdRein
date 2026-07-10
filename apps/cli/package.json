@@ -20,6 +20,11 @@
     "dist",
     "README.md"
   ],
+  "repository": {
+    "type": "github",
+    "url": "https://github.com/Mingbing-get/holdRein"
+  },
+  "homepage": "https://hr.myapping.cn",
   "publishConfig": {
     "access": "public",
     "main": "./dist/index.js",
