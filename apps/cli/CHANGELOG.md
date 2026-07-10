@@ -1,5 +1,11 @@
 # @hold-rein/cli
 
+## 0.0.10
+
+### Patch Changes
+
+- 添加 logo 和导航地址
+
 ## 0.0.9
 
 ### Patch Changes
