@@ -1,5 +1,11 @@
 # @hold-rein/plugin-server
 
+## 0.0.5
+
+### Patch Changes
+
+- 添加 ts 输出
+
 ## 0.0.4
 
 ### Patch Changes

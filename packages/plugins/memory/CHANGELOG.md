@@ -1,5 +1,13 @@
 # @hold-rein/plugins-memory
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies
+  - @hold-rein/plugin-server@0.0.5
+  - @hold-rein/plugin-web@0.0.2
+
 ## 0.0.3
 
 ### Patch Changes

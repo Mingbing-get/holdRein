@@ -1,6 +1,6 @@
 {
   "name": "@hold-rein/plugin-web",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": false,
   "type": "module",
   "main": "./src/index.ts",
@@ -41,7 +41,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json --emitDeclarationOnly && vite build",
+    "build": "vite build && tsc -p tsconfig.json --emitDeclarationOnly",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
