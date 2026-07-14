@@ -66,6 +66,17 @@ interface CapturedTheme {
       selectorBg?: string;
       boxShadowSecondary?: string;
     };
+    Table?: {
+      borderColor?: string;
+      colorBgContainer?: string;
+      colorFillAlter?: string;
+      colorSplit?: string;
+      fixedHeaderSortActiveBg?: string;
+      headerBg?: string;
+      headerColor?: string;
+      headerSplitColor?: string;
+      rowHoverBg?: string;
+    };
     Segmented?: {
       itemActiveBg?: string;
       itemColor?: string;
@@ -315,6 +326,26 @@ describe("AppUiProvider", () => {
         "color-mix(in srgb, var(--app-color-primary) 16%, var(--app-color-bg-elevated))",
       optionSelectedColor: "var(--app-color-text)",
       selectorBg: "var(--app-color-bg-container)"
+    });
+  });
+
+  it("configures tables globally with app theme variables", () => {
+    render(
+      <AppUiProvider>
+        <ThemeModeToggle />
+      </AppUiProvider>
+    );
+
+    expect(capturedTheme?.components?.Table).toMatchObject({
+      borderColor: "var(--app-color-border-secondary)",
+      colorBgContainer: "var(--app-color-bg-container)",
+      colorFillAlter: "var(--app-color-scheduled-table-header-bg)",
+      colorSplit: "var(--app-color-border-secondary)",
+      fixedHeaderSortActiveBg: "var(--app-color-scheduled-table-header-bg)",
+      headerBg: "var(--app-color-scheduled-table-header-bg)",
+      headerColor: "var(--app-color-text)",
+      headerSplitColor: "var(--app-color-border-secondary)",
+      rowHoverBg: "var(--app-color-scheduled-table-row-hover-bg)"
     });
   });
 

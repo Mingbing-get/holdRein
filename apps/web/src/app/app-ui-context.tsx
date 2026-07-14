@@ -233,6 +233,17 @@ const ANTD_COMPONENT_TOKENS = {
     trackPadding: 1
   },
   Select: ANTD_SELECT_COMPONENT_TOKENS,
+  Table: {
+    borderColor: "var(--app-color-border-secondary)",
+    colorBgContainer: "var(--app-color-bg-container)",
+    colorFillAlter: "var(--app-color-scheduled-table-header-bg)",
+    colorSplit: "var(--app-color-border-secondary)",
+    fixedHeaderSortActiveBg: "var(--app-color-scheduled-table-header-bg)",
+    headerBg: "var(--app-color-scheduled-table-header-bg)",
+    headerColor: "var(--app-color-text)",
+    headerSplitColor: "var(--app-color-border-secondary)",
+    rowHoverBg: "var(--app-color-scheduled-table-row-hover-bg)"
+  },
   Tag: {
     defaultBg: "var(--app-color-fill-secondary)",
     defaultColor: "var(--app-color-text-secondary)"

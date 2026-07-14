@@ -1,7 +1,6 @@
 import {
   App,
   Button,
-  ConfigProvider,
   Empty,
   Flex,
   Popconfirm,
@@ -32,22 +31,6 @@ import {
 } from "./scheduled-tasks-api";
 import { ScheduledTaskEditModal } from "./scheduled-task-edit-modal";
 import type { ScheduledTask, ScheduledTaskInput } from "./scheduled-tasks-types";
-
-const scheduledTasksTableTheme = {
-  components: {
-    Table: {
-      borderColor: "var(--app-color-border-secondary)",
-      colorBgContainer: "var(--app-color-bg-container)",
-      colorFillAlter: "var(--app-color-scheduled-table-header-bg)",
-      colorSplit: "var(--app-color-border-secondary)",
-      fixedHeaderSortActiveBg: "var(--app-color-scheduled-table-header-bg)",
-      headerBg: "var(--app-color-scheduled-table-header-bg)",
-      headerColor: "var(--app-color-text)",
-      headerSplitColor: "var(--app-color-border-secondary)",
-      rowHoverBg: "var(--app-color-scheduled-table-row-hover-bg)"
-    }
-  }
-} as const;
 
 interface ScheduledTasksViewProps {
   apiBaseUrl: string;
@@ -282,20 +265,18 @@ export function ScheduledTasksView({
           新增定时任务
         </Button>
       </Flex>
-      <ConfigProvider theme={scheduledTasksTableTheme}>
-        <Table<ScheduledTask>
-          bordered
-          className="scheduled-tasks-table"
-          columns={columns}
-          dataSource={tasks}
-          loading={isLoading}
-          locale={{ emptyText: <Empty description="还没有定时任务。" /> }}
-          pagination={false}
-          rowKey="id"
-          scroll={{ x: 1500 }}
-          size="small"
-        />
-      </ConfigProvider>
+      <Table<ScheduledTask>
+        bordered
+        className="scheduled-tasks-table"
+        columns={columns}
+        dataSource={tasks}
+        loading={isLoading}
+        locale={{ emptyText: <Empty description="还没有定时任务。" /> }}
+        pagination={false}
+        rowKey="id"
+        scroll={{ x: 1500 }}
+        size="small"
+      />
       <ScheduledTaskEditModal
         apiBaseUrl={apiBaseUrl}
         isSubmitting={isSubmitting}
