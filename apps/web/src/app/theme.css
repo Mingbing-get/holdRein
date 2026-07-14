@@ -10,13 +10,18 @@
   --app-color-input-placeholder: rgba(21, 32, 51, 0.45);
   --app-color-text: #152033;
   --app-color-text-on-emphasis: #ffffff;
+  --app-color-text-on-primary: #ffffff;
   --app-color-text-secondary: rgba(21, 32, 51, 0.65);
   --app-color-text-tertiary: rgba(21, 32, 51, 0.45);
   --app-color-primary: #1f6feb;
   --app-color-primary-hover: #388bfd;
+  --app-color-primary-active: #1856c7;
   --app-color-danger: #c93c46;
   --app-color-danger-hover: #b4232d;
   --app-color-success: #2e9b55;
+  --app-color-text-disabled: rgba(21, 32, 51, 0.34);
+  --app-color-disabled-bg: rgba(21, 32, 51, 0.05);
+  --app-color-disabled-border: rgba(127, 145, 170, 0.16);
   --app-color-scheduled-table-header-bg: #eef2f8;
   --app-color-scheduled-table-row-hover-bg: #edf5ff;
   --app-color-chart-input: #1f6feb;
@@ -35,6 +40,9 @@
   --app-color-chat-nav-marker-active: rgba(21, 32, 51, 0.82);
   --app-color-fill-secondary: rgba(21, 32, 51, 0.06);
   --app-color-fill-tertiary: rgba(21, 32, 51, 0.04);
+  --app-color-switch-track-bg: rgba(21, 32, 51, 0.18);
+  --app-color-switch-track-hover-bg: rgba(21, 32, 51, 0.26);
+  --app-color-switch-handle-bg: #ffffff;
   --app-color-markdown-code-bg: rgba(21, 32, 51, 0.06);
   --app-color-border: rgba(127, 145, 170, 0.28);
   --app-color-border-secondary: rgba(127, 145, 170, 0.18);
@@ -48,13 +56,18 @@
   --app-color-input-placeholder: rgba(239, 245, 255, 0.56);
   --app-color-text: #eff5ff;
   --app-color-text-on-emphasis: #ffffff;
+  --app-color-text-on-primary: #08111f;
   --app-color-text-secondary: rgba(239, 245, 255, 0.68);
   --app-color-text-tertiary: rgba(239, 245, 255, 0.48);
   --app-color-primary: #7cc7ff;
   --app-color-primary-hover: #a5d8ff;
+  --app-color-primary-active: #5bb6f7;
   --app-color-danger: #ff9ca2;
   --app-color-danger-hover: #ffb4b9;
   --app-color-success: #65d98b;
+  --app-color-text-disabled: rgba(239, 245, 255, 0.34);
+  --app-color-disabled-bg: rgba(239, 245, 255, 0.08);
+  --app-color-disabled-border: rgba(142, 165, 196, 0.18);
   --app-color-scheduled-table-header-bg: #1a2a3e;
   --app-color-scheduled-table-row-hover-bg: #20334a;
   --app-color-chart-input: #7cc7ff;
@@ -73,6 +86,9 @@
   --app-color-chat-nav-marker-active: rgba(239, 245, 255, 0.9);
   --app-color-fill-secondary: rgba(239, 245, 255, 0.09);
   --app-color-fill-tertiary: rgba(239, 245, 255, 0.06);
+  --app-color-switch-track-bg: rgba(239, 245, 255, 0.22);
+  --app-color-switch-track-hover-bg: rgba(239, 245, 255, 0.3);
+  --app-color-switch-handle-bg: #eff5ff;
   --app-color-markdown-code-bg: rgba(239, 245, 255, 0.09);
   --app-color-border: rgba(142, 165, 196, 0.32);
   --app-color-border-secondary: rgba(142, 165, 196, 0.22);
@@ -94,4 +110,37 @@ body {
 
 .ant-select-dropdown {
   border: 1px solid var(--app-color-border-secondary);
+}
+
+.ant-btn-color-primary.ant-btn-variant-solid {
+  background: var(--app-color-primary);
+  border-color: var(--app-color-primary);
+  box-shadow: none;
+  color: var(--app-color-text-on-primary);
+}
+
+.ant-btn-color-primary.ant-btn-variant-solid:not(:disabled):not(
+    .ant-btn-disabled
+  ):hover {
+  background: var(--app-color-primary-hover);
+  border-color: var(--app-color-primary-hover);
+  color: var(--app-color-text-on-primary);
+}
+
+.ant-btn-color-primary.ant-btn-variant-solid:not(:disabled):not(
+    .ant-btn-disabled
+  ):active {
+  background: var(--app-color-primary-active);
+  border-color: var(--app-color-primary-active);
+  color: var(--app-color-text-on-primary);
+}
+
+.ant-btn:disabled,
+.ant-btn.ant-btn-disabled,
+.ant-btn-color-primary.ant-btn-variant-solid:disabled,
+.ant-btn-color-primary.ant-btn-variant-solid.ant-btn-disabled {
+  background: var(--app-color-disabled-bg);
+  border-color: var(--app-color-disabled-border);
+  box-shadow: none;
+  color: var(--app-color-text-disabled);
 }

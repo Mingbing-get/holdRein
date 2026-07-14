@@ -153,6 +153,7 @@ const ANTD_THEME_TOKEN = {
   colorFillSecondary: "var(--app-color-fill-secondary)",
   colorFillTertiary: "var(--app-color-fill-tertiary)",
   colorPrimary: "var(--app-color-primary)",
+  colorPrimaryActive: "var(--app-color-primary-active)",
   colorText: "var(--app-color-text)",
   colorTextBase: "var(--app-color-text)",
   colorTextSecondary: "var(--app-color-text-secondary)",
@@ -201,12 +202,14 @@ const ANTD_COMPONENT_TOKENS = {
     defaultActiveBg: "var(--app-color-fill-secondary)",
     defaultActiveBorderColor: "var(--app-color-border-secondary)",
     defaultActiveColor: "var(--app-color-text)",
-    defaultBg: "transparent",
+    defaultBg: "var(--app-color-fill-tertiary)",
     defaultBorderColor: "var(--app-color-border-secondary)",
     defaultColor: "var(--app-color-text)",
-    defaultHoverBg: "var(--app-color-fill-tertiary)",
+    defaultHoverBg: "var(--app-color-fill-secondary)",
     defaultHoverBorderColor: "var(--app-color-border-secondary)",
     defaultHoverColor: "var(--app-color-text)",
+    primaryColor: "var(--app-color-text-on-primary)",
+    primaryShadow: "none",
     textHoverBg: "var(--app-color-fill-tertiary)",
     textTextActiveColor: "var(--app-color-text)",
     textTextColor: "var(--app-color-text)",
@@ -233,6 +236,15 @@ const ANTD_COMPONENT_TOKENS = {
     trackPadding: 1
   },
   Select: ANTD_SELECT_COMPONENT_TOKENS,
+  Switch: {
+    colorPrimary: "var(--app-color-primary)",
+    colorPrimaryHover: "var(--app-color-primary-hover)",
+    colorTextQuaternary: "var(--app-color-switch-track-bg)",
+    colorTextTertiary: "var(--app-color-switch-track-hover-bg)",
+    handleBg: "var(--app-color-switch-handle-bg)",
+    handleShadow:
+      "0 1px 4px color-mix(in srgb, var(--app-color-shadow) 70%, transparent)"
+  },
   Table: {
     borderColor: "var(--app-color-border-secondary)",
     colorBgContainer: "var(--app-color-bg-container)",

@@ -22,10 +22,20 @@ interface CapturedTheme {
       defaultHoverBg?: string;
       defaultHoverBorderColor?: string;
       defaultHoverColor?: string;
+      primaryColor?: string;
+      primaryShadow?: string;
       textTextActiveColor?: string;
       textTextColor?: string;
       textTextHoverColor?: string;
       textHoverBg?: string;
+    };
+    Switch?: {
+      colorPrimary?: string;
+      colorPrimaryHover?: string;
+      colorTextQuaternary?: string;
+      colorTextTertiary?: string;
+      handleBg?: string;
+      handleShadow?: string;
     };
     Input?: {
       activeBg?: string;
@@ -95,6 +105,9 @@ interface CapturedTheme {
       trackPadding?: string | number;
     };
   };
+  token?: {
+    colorPrimaryActive?: string;
+  };
 }
 
 interface CapturedSegmentedConfig {
@@ -121,7 +134,7 @@ const EXPECTED_INPUT_COMPONENT_TOKENS = {
 } as const;
 
 function getWebSourcePath(pathFromWebSrc: string): string {
-  return join(process.cwd(), "apps", "web", "src", pathFromWebSrc);
+  return join(import.meta.dirname, "..", pathFromWebSrc);
 }
 
 vi.mock("antd", () => ({
@@ -235,7 +248,7 @@ describe("AppUiProvider", () => {
     ).toBe("true");
   });
 
-  it("keeps default button hover text readable in dark mode", () => {
+  it("keeps default buttons and switches visible in dark mode", () => {
     render(
       <AppUiProvider>
         <ThemeModeToggle />
@@ -251,12 +264,26 @@ describe("AppUiProvider", () => {
       defaultActiveBg: "var(--app-color-fill-secondary)",
       defaultActiveBorderColor: "var(--app-color-border-secondary)",
       defaultActiveColor: "var(--app-color-text)",
-      defaultBg: "transparent",
+      defaultBg: "var(--app-color-fill-tertiary)",
       defaultBorderColor: "var(--app-color-border-secondary)",
       defaultColor: "var(--app-color-text)",
-      defaultHoverBg: "var(--app-color-fill-tertiary)",
+      defaultHoverBg: "var(--app-color-fill-secondary)",
       defaultHoverBorderColor: "var(--app-color-border-secondary)",
-      defaultHoverColor: "var(--app-color-text)"
+      defaultHoverColor: "var(--app-color-text)",
+      primaryColor: "var(--app-color-text-on-primary)",
+      primaryShadow: "none"
+    });
+    expect(capturedTheme?.components?.Switch).toMatchObject({
+      colorPrimary: "var(--app-color-primary)",
+      colorPrimaryHover: "var(--app-color-primary-hover)",
+      colorTextQuaternary: "var(--app-color-switch-track-bg)",
+      colorTextTertiary: "var(--app-color-switch-track-hover-bg)",
+      handleBg: "var(--app-color-switch-handle-bg)",
+      handleShadow:
+        "0 1px 4px color-mix(in srgb, var(--app-color-shadow) 70%, transparent)"
+    });
+    expect(capturedTheme?.token).toMatchObject({
+      colorPrimaryActive: "var(--app-color-primary-active)"
     });
   });
 
@@ -379,6 +406,29 @@ describe("AppUiProvider", () => {
     expect(themeCssSource).toContain(
       "border: 1px solid var(--app-color-border-secondary);"
     );
+  });
+
+  it("defines visible primary and switch colors for both theme modes", () => {
+    const themeCssSource = readFileSync(getWebSourcePath("app/theme.css"), "utf8");
+
+    expect(themeCssSource).toContain(
+      ".ant-btn-color-primary.ant-btn-variant-solid"
+    );
+    expect(themeCssSource).toContain(".ant-btn:disabled");
+    expect(themeCssSource).toContain(".ant-btn.ant-btn-disabled");
+    expect(themeCssSource).toContain(
+      ".ant-btn-color-primary.ant-btn-variant-solid:disabled"
+    );
+    expect(themeCssSource).toContain("background: var(--app-color-primary);");
+    expect(themeCssSource).toContain("color: var(--app-color-text-on-primary);");
+    expect(themeCssSource).toContain("background: var(--app-color-disabled-bg);");
+    expect(themeCssSource).toContain("color: var(--app-color-text-disabled);");
+    expect(themeCssSource).toContain("--app-color-disabled-border");
+    expect(themeCssSource).toContain("--app-color-text-on-primary");
+    expect(themeCssSource).toContain("--app-color-primary-active");
+    expect(themeCssSource).toContain("--app-color-switch-track-bg");
+    expect(themeCssSource).toContain("--app-color-switch-track-hover-bg");
+    expect(themeCssSource).toContain("--app-color-switch-handle-bg");
   });
 });
 
