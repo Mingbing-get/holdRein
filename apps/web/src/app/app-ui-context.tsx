@@ -244,6 +244,13 @@ const ANTD_COMPONENT_TOKENS = {
     headerSplitColor: "var(--app-color-border-secondary)",
     rowHoverBg: "var(--app-color-scheduled-table-row-hover-bg)"
   },
+  Tabs: {
+    inkBarColor: "var(--app-color-primary)",
+    itemActiveColor: "var(--app-color-primary)",
+    itemColor: "var(--app-color-text-secondary)",
+    itemHoverColor: "var(--app-color-primary-hover)",
+    itemSelectedColor: "var(--app-color-primary)"
+  },
   Tag: {
     defaultBg: "var(--app-color-fill-secondary)",
     defaultColor: "var(--app-color-text-secondary)"

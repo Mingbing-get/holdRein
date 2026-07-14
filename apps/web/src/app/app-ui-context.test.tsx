@@ -77,6 +77,13 @@ interface CapturedTheme {
       headerSplitColor?: string;
       rowHoverBg?: string;
     };
+    Tabs?: {
+      inkBarColor?: string;
+      itemActiveColor?: string;
+      itemColor?: string;
+      itemHoverColor?: string;
+      itemSelectedColor?: string;
+    };
     Segmented?: {
       itemActiveBg?: string;
       itemColor?: string;
@@ -346,6 +353,22 @@ describe("AppUiProvider", () => {
       headerColor: "var(--app-color-text)",
       headerSplitColor: "var(--app-color-border-secondary)",
       rowHoverBg: "var(--app-color-scheduled-table-row-hover-bg)"
+    });
+  });
+
+  it("configures tabs globally with app theme variables", () => {
+    render(
+      <AppUiProvider>
+        <ThemeModeToggle />
+      </AppUiProvider>
+    );
+
+    expect(capturedTheme?.components?.Tabs).toMatchObject({
+      inkBarColor: "var(--app-color-primary)",
+      itemActiveColor: "var(--app-color-primary)",
+      itemColor: "var(--app-color-text-secondary)",
+      itemHoverColor: "var(--app-color-primary-hover)",
+      itemSelectedColor: "var(--app-color-primary)"
     });
   });
 
