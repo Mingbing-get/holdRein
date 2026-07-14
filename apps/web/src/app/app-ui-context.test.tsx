@@ -76,6 +76,7 @@ interface CapturedTheme {
       selectorBg?: string;
       boxShadowSecondary?: string;
     };
+    Pagination?: Record<string, unknown>;
     Table?: {
       borderColor?: string;
       colorBgContainer?: string;
@@ -175,21 +176,13 @@ describe("AppUiProvider", () => {
   it("restores the saved theme mode from local storage", () => {
     window.localStorage.setItem("hold-rein.theme-mode", "dark");
 
-    render(
-      <AppUiProvider>
-        <ThemeModeToggle />
-      </AppUiProvider>
-    );
+    renderThemeModeToggle();
 
     expect(document.documentElement.dataset.themeMode).toBe("dark");
   });
 
   it("stores the selected theme mode in local storage", () => {
-    render(
-      <AppUiProvider>
-        <ThemeModeToggle />
-      </AppUiProvider>
-    );
+    renderThemeModeToggle();
 
     fireEvent.click(screen.getByRole("button", { name: "Toggle dark mode" }));
 
@@ -199,11 +192,7 @@ describe("AppUiProvider", () => {
   it("ignores invalid saved theme modes", () => {
     window.localStorage.setItem("hold-rein.theme-mode", "midnight");
 
-    render(
-      <AppUiProvider>
-        <ThemeModeToggle />
-      </AppUiProvider>
-    );
+    renderThemeModeToggle();
 
     expect(document.documentElement.dataset.themeMode).toBe("light");
   });
@@ -249,11 +238,7 @@ describe("AppUiProvider", () => {
   });
 
   it("keeps default buttons and switches visible in dark mode", () => {
-    render(
-      <AppUiProvider>
-        <ThemeModeToggle />
-      </AppUiProvider>
-    );
+    renderThemeModeToggle();
 
     fireEvent.click(screen.getByRole("button", { name: "Toggle dark mode" }));
 
@@ -288,11 +273,7 @@ describe("AppUiProvider", () => {
   });
 
   it("configures segmented controls globally with app theme variables", () => {
-    render(
-      <AppUiProvider>
-        <ThemeModeToggle />
-      </AppUiProvider>
-    );
+    renderThemeModeToggle();
 
     expect(capturedTheme?.components?.Segmented).toMatchObject({
       itemActiveBg: "var(--app-color-fill-tertiary)",
@@ -311,11 +292,7 @@ describe("AppUiProvider", () => {
   });
 
   it("configures inputs globally with app theme variables", () => {
-    render(
-      <AppUiProvider>
-        <ThemeModeToggle />
-      </AppUiProvider>
-    );
+    renderThemeModeToggle();
 
     expect(capturedTheme?.components?.Input).toMatchObject(
       EXPECTED_INPUT_COMPONENT_TOKENS
@@ -323,11 +300,7 @@ describe("AppUiProvider", () => {
   });
 
   it("configures input numbers globally with app theme variables", () => {
-    render(
-      <AppUiProvider>
-        <ThemeModeToggle />
-      </AppUiProvider>
-    );
+    renderThemeModeToggle();
 
     expect(capturedTheme?.components?.InputNumber).toMatchObject({
       ...EXPECTED_INPUT_COMPONENT_TOKENS,
@@ -337,11 +310,7 @@ describe("AppUiProvider", () => {
   });
 
   it("configures selects globally to match input triggers and sender popup styles", () => {
-    render(
-      <AppUiProvider>
-        <ThemeModeToggle />
-      </AppUiProvider>
-    );
+    renderThemeModeToggle();
 
     expect(capturedTheme?.components?.Select).toMatchObject({
       activeBorderColor: "var(--app-color-primary)",
@@ -363,12 +332,26 @@ describe("AppUiProvider", () => {
     });
   });
 
+  it("configures pagination globally with app theme variables", () => {
+    renderThemeModeToggle();
+
+    expect(capturedTheme?.components?.Pagination).toMatchObject({
+      borderRadius: 4,
+      colorBgContainer: "var(--app-color-bg-container)",
+      colorPrimary: "var(--app-color-primary)",
+      colorText: "var(--app-color-text)",
+      colorTextDisabled: "var(--app-color-text-disabled)",
+      itemActiveBg: "var(--app-color-bg-elevated)",
+      itemActiveColor: "var(--app-color-primary)",
+      itemActiveColorHover: "var(--app-color-pagination-item-hover-text)",
+      itemBg: "var(--app-color-fill-tertiary)",
+      itemInputBg: "var(--app-color-bg-container)",
+      itemLinkBg: "var(--app-color-fill-tertiary)"
+    });
+  });
+
   it("configures tables globally with app theme variables", () => {
-    render(
-      <AppUiProvider>
-        <ThemeModeToggle />
-      </AppUiProvider>
-    );
+    renderThemeModeToggle();
 
     expect(capturedTheme?.components?.Table).toMatchObject({
       borderColor: "var(--app-color-border-secondary)",
@@ -384,11 +367,7 @@ describe("AppUiProvider", () => {
   });
 
   it("configures tabs globally with app theme variables", () => {
-    render(
-      <AppUiProvider>
-        <ThemeModeToggle />
-      </AppUiProvider>
-    );
+    renderThemeModeToggle();
 
     expect(capturedTheme?.components?.Tabs).toMatchObject({
       inkBarColor: "var(--app-color-primary)",
@@ -430,6 +409,18 @@ describe("AppUiProvider", () => {
     expect(themeCssSource).toContain("--app-color-switch-track-hover-bg");
     expect(themeCssSource).toContain("--app-color-switch-handle-bg");
   });
+
+  it("defines pagination hover text colors through app theme variables", () => {
+    const themeCssSource = readFileSync(getWebSourcePath("app/theme.css"), "utf8");
+
+    expect(themeCssSource.match(/--app-color-pagination-item-hover-text:/g)).toHaveLength(2);
+    expect(themeCssSource).toContain(
+      ".ant-pagination .ant-pagination-item:not(.ant-pagination-item-active):hover a"
+    );
+    expect(themeCssSource).toContain(
+      "color: var(--app-color-pagination-item-hover-text);"
+    );
+  });
 });
 
 function ThemeModeToggle() {
@@ -439,6 +430,14 @@ function ThemeModeToggle() {
     <button onClick={toggleThemeMode} type="button">
       Toggle dark mode
     </button>
+  );
+}
+
+function renderThemeModeToggle() {
+  render(
+    <AppUiProvider>
+      <ThemeModeToggle />
+    </AppUiProvider>
   );
 }
 

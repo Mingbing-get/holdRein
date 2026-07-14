@@ -221,6 +221,19 @@ const ANTD_COMPONENT_TOKENS = {
     handleBg: "var(--app-color-bg-container)",
     handleBorderColor: "var(--app-color-border-secondary)"
   },
+  Pagination: {
+    borderRadius: 4,
+    colorBgContainer: "var(--app-color-bg-container)",
+    colorPrimary: "var(--app-color-primary)",
+    colorText: "var(--app-color-text)",
+    colorTextDisabled: "var(--app-color-text-disabled)",
+    itemActiveBg: "var(--app-color-bg-elevated)",
+    itemActiveColor: "var(--app-color-primary)",
+    itemActiveColorHover: "var(--app-color-pagination-item-hover-text)",
+    itemBg: "var(--app-color-fill-tertiary)",
+    itemInputBg: "var(--app-color-bg-container)",
+    itemLinkBg: "var(--app-color-fill-tertiary)"
+  },
   Segmented: {
     borderRadius: 4,
     borderRadiusSM: 4,

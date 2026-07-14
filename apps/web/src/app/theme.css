@@ -16,6 +16,7 @@
   --app-color-primary: #1f6feb;
   --app-color-primary-hover: #388bfd;
   --app-color-primary-active: #1856c7;
+  --app-color-pagination-item-hover-text: #1f6feb;
   --app-color-danger: #c93c46;
   --app-color-danger-hover: #b4232d;
   --app-color-success: #2e9b55;
@@ -62,6 +63,7 @@
   --app-color-primary: #7cc7ff;
   --app-color-primary-hover: #a5d8ff;
   --app-color-primary-active: #5bb6f7;
+  --app-color-pagination-item-hover-text: #ffffff;
   --app-color-danger: #ff9ca2;
   --app-color-danger-hover: #ffb4b9;
   --app-color-success: #65d98b;
@@ -110,6 +112,18 @@ body {
 
 .ant-select-dropdown {
   border: 1px solid var(--app-color-border-secondary);
+}
+
+.ant-pagination .ant-pagination-item:not(.ant-pagination-item-active):hover a,
+.ant-pagination .ant-pagination-prev:not(.ant-pagination-disabled):hover button,
+.ant-pagination .ant-pagination-next:not(.ant-pagination-disabled):hover button,
+.ant-pagination
+  .ant-pagination-prev:not(.ant-pagination-disabled):hover
+  .ant-pagination-item-link,
+.ant-pagination
+  .ant-pagination-next:not(.ant-pagination-disabled):hover
+  .ant-pagination-item-link {
+  color: var(--app-color-pagination-item-hover-text);
 }
 
 .ant-btn-color-primary.ant-btn-variant-solid {
