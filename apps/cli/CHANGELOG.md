@@ -1,5 +1,11 @@
 # @hold-rein/cli
 
+## 0.0.12
+
+### Patch Changes
+
+- 优化前端组件样式
+
 ## 0.0.11
 
 ### Patch Changes
