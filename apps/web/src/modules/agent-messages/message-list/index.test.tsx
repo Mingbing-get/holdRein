@@ -5,8 +5,10 @@ import { readFileSync } from "node:fs";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { AgentMessageList } from ".";
+import { AgentMessageList, type AgentMessageListProps } from ".";
 import type { WebPlugin } from "@hold-rein/plugin-web";
+
+const MAIN_AGENT_ID = "agent-main";
 
 const agentTasksMock = vi.hoisted(() => ({
   activeTaskId: "task-1",
@@ -65,6 +67,14 @@ vi.mock("../../../app/app-plugin", () => ({
   })
 }));
 
+function renderAgentMessages(
+  messages: WebPlugin.AgentMessage[],
+  props: Omit<AgentMessageListProps, "agentId"> = {}
+) {
+  agentTasksMock.taskMessages = messages;
+  return render(<AgentMessageList agentId={MAIN_AGENT_ID} {...props} />);
+}
+
 describe("AgentMessageList", () => {
   afterEach(() => {
     cleanup();
@@ -77,9 +87,8 @@ describe("AgentMessageList", () => {
   });
 
   it("renders structured user and assistant content", () => {
-    render(
-      <AgentMessageList
-        messages={[
+    renderAgentMessages(
+      [
           { content: [{ text: "Prompt", type: "text" }], id: "1", role: "user", timestamp: 1 },
           {
             api: "openai-responses",
@@ -94,8 +103,7 @@ describe("AgentMessageList", () => {
             stopReason: "stop",
             timestamp: 2
           }
-        ]}
-      />
+      ]
     );
 
     fireEvent.click(screen.getByText("思考"));
@@ -113,9 +121,8 @@ describe("AgentMessageList", () => {
       }
     ];
 
-    render(
-      <AgentMessageList
-        messages={[
+    renderAgentMessages(
+      [
           { content: "First prompt", id: "user-1", role: "user", timestamp: 1 },
           {
             api: "openai-responses",
@@ -138,9 +145,8 @@ describe("AgentMessageList", () => {
             stopReason: "stop",
             timestamp: 4
           }
-        ]}
-        status="completed"
-      />
+      ],
+      { status: "completed" }
     );
 
     expect(screen.getAllByText("turn summary")).toHaveLength(2);
@@ -159,9 +165,8 @@ describe("AgentMessageList", () => {
       }
     ];
 
-    render(
-      <AgentMessageList
-        messages={[
+    renderAgentMessages(
+      [
           { content: "Run command", id: "user-1", role: "user", timestamp: 1 },
           {
             api: "openai-responses",
@@ -189,9 +194,8 @@ describe("AgentMessageList", () => {
             toolCallId: "tool-call-1",
             toolName: "bash"
           }
-        ]}
-        status="completed"
-      />
+      ],
+      { status: "completed" }
     );
 
     expect(screen.getByTestId("turn-summary")).toHaveTextContent(
@@ -211,9 +215,8 @@ describe("AgentMessageList", () => {
       }
     ];
 
-    render(
-      <AgentMessageList
-        messages={[
+    renderAgentMessages(
+      [
           { content: "Prompt", id: "user-1", role: "user", timestamp: 1 },
           {
             api: "openai-responses",
@@ -225,9 +228,8 @@ describe("AgentMessageList", () => {
             stopReason: "stop",
             timestamp: 2
           }
-        ]}
-        status="completed"
-      />
+      ],
+      { status: "completed" }
     );
 
     const footer = screen.getByTestId("agent-turn-footer");
@@ -238,9 +240,8 @@ describe("AgentMessageList", () => {
   });
 
   it("does not render a footer after the running final assistant turn", () => {
-    render(
-      <AgentMessageList
-        messages={[
+    renderAgentMessages(
+      [
           { content: "First prompt", id: "user-1", role: "user", timestamp: 1 },
           {
             api: "openai-responses",
@@ -263,18 +264,16 @@ describe("AgentMessageList", () => {
             stopReason: "stop",
             timestamp: 4
           }
-        ]}
-        status="running"
-      />
+      ],
+      { status: "running" }
     );
 
     expect(screen.queryByTestId("agent-turn-footer")).not.toBeInTheDocument();
   });
 
   it("renders Markdown only for assistant text blocks", () => {
-    render(
-      <AgentMessageList
-        messages={[
+    renderAgentMessages(
+      [
           { content: "## User heading", id: "1", role: "user", timestamp: 1 },
           {
             api: "openai-responses",
@@ -286,8 +285,7 @@ describe("AgentMessageList", () => {
             stopReason: "stop",
             timestamp: 2
           }
-        ]}
-      />
+      ]
     );
 
     expect(screen.getByText("## User heading")).toBeInTheDocument();
@@ -297,9 +295,8 @@ describe("AgentMessageList", () => {
   });
 
   it("does not render the internal empty continue user message", () => {
-    const { container } = render(
-      <AgentMessageList
-        messages={[
+    const { container } = renderAgentMessages(
+      [
           {
             content: "",
             id: "continue-message",
@@ -312,8 +309,7 @@ describe("AgentMessageList", () => {
             role: "user",
             timestamp: 2
           }
-        ]}
-      />
+      ]
     );
 
     expect(screen.getByText("Visible prompt")).toBeInTheDocument();
@@ -360,7 +356,7 @@ describe("AgentMessageList", () => {
       }
     ];
 
-    render(<AgentMessageList messages={messages} />);
+    renderAgentMessages(messages);
 
     expect(screen.getByTestId("custom-tool-render")).toHaveTextContent(
       "/tmp/workspace"
@@ -386,9 +382,8 @@ describe("AgentMessageList", () => {
       argumentsText: string;
     };
 
-    render(
-      <AgentMessageList
-        messages={[
+    renderAgentMessages(
+      [
           {
             api: "openai-responses",
             content: [streamingToolCall],
@@ -399,8 +394,7 @@ describe("AgentMessageList", () => {
             stopReason: "toolUse",
             timestamp: 1
           }
-        ]}
-      />
+      ]
     );
 
     expect(screen.queryByTestId("custom-tool-render")).not.toBeInTheDocument();
@@ -421,9 +415,8 @@ describe("AgentMessageList", () => {
       }
     ];
 
-    render(
-      <AgentMessageList
-        messages={[
+    renderAgentMessages(
+      [
           {
             content: "Subagent is running",
             customType: "callsubagent",
@@ -433,8 +426,7 @@ describe("AgentMessageList", () => {
             role: "custom",
             timestamp: 1
           }
-        ]}
-      />
+      ]
     );
 
     expect(screen.getByText("调用子智能体")).toBeInTheDocument();
@@ -444,9 +436,8 @@ describe("AgentMessageList", () => {
   });
 
   it("keeps generic rendering for malformed callsubagent messages", () => {
-    render(
-      <AgentMessageList
-        messages={[
+    renderAgentMessages(
+      [
           {
             content: "Missing child identifier",
             customType: "callsubagent",
@@ -456,8 +447,7 @@ describe("AgentMessageList", () => {
             role: "custom",
             timestamp: 1
           }
-        ]}
-      />
+      ]
     );
 
     fireEvent.click(screen.getByText("callsubagent"));

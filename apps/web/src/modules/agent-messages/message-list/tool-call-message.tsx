@@ -8,31 +8,6 @@ import { formatToolValue, getText } from "./message-utils";
 import { ToolCallSection } from "./tool-call-section";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
-export function StaticToolCallMessageItem({
-  messages,
-  toolCall,
-  workspacePath
-}: {
-  messages: WebPlugin.AgentMessage[];
-  toolCall: WebPlugin.ToolCall;
-  workspacePath?: string | undefined;
-}) {
-  const toolResult = useMemo(() => {
-    return messages.find(
-      (message): message is WebPlugin.ToolResultMessage =>
-        message.role === "toolResult" && message.toolCallId === toolCall.id
-    );
-  }, [messages, toolCall.id]);
-
-  return (
-    <ToolCallMessageItem
-      toolCall={toolCall}
-      toolResult={toolResult}
-      workspacePath={workspacePath}
-    />
-  );
-}
-
 export function StoredToolCallMessageItem({
   agentId,
   toolCall,

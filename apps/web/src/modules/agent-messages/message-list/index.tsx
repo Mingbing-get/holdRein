@@ -20,98 +20,19 @@ import {
 import type { WebPlugin } from '@hold-rein/plugin-web'
 import { customTypeMap } from "../consts";
 import { getText, isContinueSentinel } from "./message-utils";
-import {
-  StaticToolCallMessageItem,
-  StoredToolCallMessageItem
-} from "./tool-call-message";
-
-const EMPTY_AGENT_MESSAGES: WebPlugin.AgentMessage[] = [];
+import { StoredToolCallMessageItem } from "./tool-call-message";
 
 export interface AgentMessageListProps {
-  messages?: WebPlugin.AgentMessage[];
   onMessageChange?: () => void;
   status?: TurnFooterStatus;
-  agentId?: string;
+  agentId: string;
 }
 
 export function AgentMessageList({
-  messages = EMPTY_AGENT_MESSAGES,
   onMessageChange,
   status,
   agentId
 }: AgentMessageListProps) {
-  if (agentId) {
-    return (
-      <AgentStoredMessageList
-        onMessageChange={onMessageChange}
-        status={status}
-        agentId={agentId}
-      />
-    );
-  }
-
-  return <AgentStaticMessageList messages={messages} status={status} />;
-}
-
-function AgentStaticMessageList({
-  messages,
-  status
-}: {
-  messages: WebPlugin.AgentMessage[];
-  status?: TurnFooterStatus;
-}) {
-  const {
-    state: { activeWorkspaceId, workspaces }
-  } = useAppWorkspace();
-  const workspacePath = useMemo(
-    () =>
-      workspaces.find((workspace) => workspace.id === activeWorkspaceId)?.path,
-    [activeWorkspaceId, workspaces]
-  );
-  const footerSourceMessages = useMemo(
-    () => messages.filter((message) => !isContinueSentinel(message)),
-    [messages]
-  );
-  const visibleMessages = useMemo(
-    () => footerSourceMessages.filter((message) => message.role !== "toolResult"),
-    [footerSourceMessages]
-  );
-  const footerGroups = useTurnFooterMessageGroups(footerSourceMessages, status);
-
-  return (
-    <Flex data-testid="agent-message-list" gap={12} vertical>
-      {visibleMessages.map((message) => {
-        const footerMessages = footerGroups[message.id];
-
-        return (
-          <Fragment key={message.id}>
-            <AgentMessageItem
-              message={message}
-              messages={messages}
-              workspacePath={workspacePath}
-            />
-            {footerMessages ? (
-              <AgentTurnFooter
-                messages={footerMessages}
-                workspacePath={workspacePath}
-              />
-            ) : null}
-          </Fragment>
-        );
-      })}
-    </Flex>
-  );
-}
-
-function AgentStoredMessageList({
-  onMessageChange,
-  status,
-  agentId
-}: {
-  onMessageChange?: (() => void) | undefined;
-  status?: TurnFooterStatus;
-  agentId: string;
-}) {
   const {
     state: { activeWorkspaceId, workspaces }
   } = useAppWorkspace();
@@ -177,7 +98,6 @@ function AgentStoredMessageItem({
   return message ? (
     <AgentMessageItem
       message={message}
-      messages={[]}
       agentId={agentId}
       workspacePath={workspacePath}
     />
@@ -208,13 +128,11 @@ function AgentTurnFooter({
 
 function AgentMessageItem({
   message,
-  messages,
   agentId,
   workspacePath
 }: {
   message: WebPlugin.AgentMessage;
-  messages: WebPlugin.AgentMessage[];
-  agentId?: string | undefined;
+  agentId: string;
   workspacePath?: string | undefined;
 }) {
   if (message.role === "user") {
@@ -238,7 +156,6 @@ function AgentMessageItem({
     return (
       <AssistantMessageItem
         message={message}
-        messages={messages}
         agentId={agentId}
         workspacePath={workspacePath}
       />
@@ -287,13 +204,11 @@ function AgentMessageItem({
 
 function AssistantMessageItem({
   message,
-  messages,
   agentId,
   workspacePath
 }: {
   message: WebPlugin.AssistantMessage;
-  messages: WebPlugin.AgentMessage[];
-  agentId?: string | undefined;
+  agentId: string;
   workspacePath?: string | undefined;
 }) {
   return (
@@ -321,21 +236,12 @@ function AssistantMessageItem({
           );
         }
         return (
-          agentId ? (
-            <StoredToolCallMessageItem
-              key={index}
-              agentId={agentId}
-              toolCall={block}
-              workspacePath={workspacePath}
-            />
-          ) : (
-            <StaticToolCallMessageItem
-              key={index}
-              messages={messages}
-              toolCall={block}
-              workspacePath={workspacePath}
-            />
-          )
+          <StoredToolCallMessageItem
+            key={index}
+            agentId={agentId}
+            toolCall={block}
+            workspacePath={workspacePath}
+          />
         );
       })}
       {message.errorMessage ? <Alert type="error" title="Agent 错误" description={message.errorMessage} /> : null}
