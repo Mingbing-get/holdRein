@@ -35,11 +35,16 @@ export interface AgentMessageStore {
 }
 
 interface TaskMessagesSnapshot {
-  readonly ids: string[];
-  readonly messages: WebPlugin.AgentMessage[];
   readonly messagesById: Map<string, WebPlugin.AgentMessage>;
   readonly toolResultIdByToolCallId: Map<string, string>;
 }
+
+interface TaskMessagesSnapshotView {
+  readonly ids: string[];
+  readonly messages: WebPlugin.AgentMessage[];
+}
+
+const snapshotViews = new WeakMap<TaskMessagesSnapshot, TaskMessagesSnapshotView>();
 
 export function createAgentMessageStore(): AgentMessageStore {
   const taskSnapshots = new Map<string, TaskMessagesSnapshot>();
@@ -55,8 +60,8 @@ export function createAgentMessageStore(): AgentMessageStore {
     taskId: string,
     messages: WebPlugin.AgentMessage[]
   ): void => {
-    const previous = getSnapshot(taskId);
     const next = createSnapshot(messages);
+    const previous = getSnapshot(taskId);
 
     taskSnapshots.set(taskId, next);
     notifyChangedSubscriptions({
@@ -71,23 +76,25 @@ export function createAgentMessageStore(): AgentMessageStore {
 
   return {
     appendOptimisticPrompt: (taskId, prompt) => {
-      const messages = getSnapshot(taskId).messages;
+      const snapshot = getSnapshot(taskId);
+      const message: WebPlugin.AgentMessage = {
+        content: [{ text: prompt, type: "text" }],
+        id: `prompt-${snapshot.messagesById.size}`,
+        role: "user",
+        timestamp: Date.now()
+      };
 
-      setTaskMessages(taskId, [
-        ...messages,
-        {
-          content: [{ text: prompt, type: "text" }],
-          id: `prompt-${messages.length}`,
-          role: "user",
-          timestamp: Date.now()
-        }
-      ]);
+      taskSnapshots.set(taskId, {
+        ...snapshot,
+        messagesById: new Map(snapshot.messagesById).set(message.id, message)
+      });
+      notify(taskIdsListeners, taskId);
     },
     getTaskMessage: (taskId, messageId) =>
       getSnapshot(taskId).messagesById.get(messageId),
-    getTaskMessageIds: (taskId) => getSnapshot(taskId).ids,
+    getTaskMessageIds: (taskId) => getTaskMessageIds(getSnapshot(taskId)),
     getTaskMessages: (taskId) => {
-      return getSnapshot(taskId).messages;
+      return getTaskMessages(getSnapshot(taskId));
     },
     getToolResult: (taskId, toolCallId) => {
       const snapshot = getSnapshot(taskId);
@@ -97,14 +104,14 @@ export function createAgentMessageStore(): AgentMessageStore {
       return message?.role === "toolResult" ? message : undefined;
     },
     reduceTaskEvent: (taskId, event) => {
-      if (!isMessageEvent(event.type)) return;
-      setTaskMessages(
+      reduceTaskEvent({
+        event,
+        messageListeners,
         taskId,
-        reduceAgentMessages(
-          getSnapshot(taskId).messages,
-          event
-        )
-      );
+        taskIdsListeners,
+        taskSnapshots,
+        toolResultListeners
+      });
     },
     replaceTaskMessages: setTaskMessages,
     subscribeTaskMessage: (taskId, messageId, listener) =>
@@ -120,8 +127,6 @@ function createSnapshot(
   messages: WebPlugin.AgentMessage[]
 ): TaskMessagesSnapshot {
   return {
-    ids: messages.map((message) => message.id),
-    messages,
     messagesById: new Map(messages.map((message) => [message.id, message])),
     toolResultIdByToolCallId: new Map(
       messages.flatMap((message) =>
@@ -131,6 +136,239 @@ function createSnapshot(
       )
     )
   };
+}
+
+function getTaskMessageIds(snapshot: TaskMessagesSnapshot): string[] {
+  return getSnapshotView(snapshot).ids;
+}
+
+function getTaskMessages(
+  snapshot: TaskMessagesSnapshot
+): WebPlugin.AgentMessage[] {
+  return getSnapshotView(snapshot).messages;
+}
+
+function getSnapshotView(
+  snapshot: TaskMessagesSnapshot
+): TaskMessagesSnapshotView {
+  const existing = snapshotViews.get(snapshot);
+  if (existing) return existing;
+
+  const view = {
+    ids: Array.from(snapshot.messagesById.keys()),
+    messages: Array.from(snapshot.messagesById.values())
+  };
+
+  snapshotViews.set(snapshot, view);
+  return view;
+}
+
+function reduceTaskEvent(input: {
+  readonly event: AgentEventEnvelope;
+  readonly messageListeners: Map<string, Set<Listener>>;
+  readonly taskId: string;
+  readonly taskIdsListeners: Map<string, Set<Listener>>;
+  readonly taskSnapshots: Map<string, TaskMessagesSnapshot>;
+  readonly toolResultListeners: Map<string, Set<Listener>>;
+}): void {
+  const {
+    event,
+    messageListeners,
+    taskId,
+    taskIdsListeners,
+    taskSnapshots,
+    toolResultListeners
+  } = input;
+
+  if (!isMessageEvent(event.type)) return;
+
+  if (event.type === "message_delta") {
+    reduceMessageDelta({
+      event,
+      messageListeners,
+      taskId,
+      taskSnapshots
+    });
+    return;
+  }
+
+  const message = getEventMessage(event);
+  if (!message) return;
+
+  if (message.role === "toolResult") {
+    storeToolResultMessage({
+      message,
+      taskId,
+      taskSnapshots,
+      toolResultListeners
+    });
+    return;
+  }
+
+  upsertTaskMessage({
+    message,
+    messageListeners,
+    taskId,
+    taskIdsListeners,
+    taskSnapshots
+  });
+}
+
+function reduceMessageDelta(input: {
+  readonly event: AgentEventEnvelope;
+  readonly messageListeners: Map<string, Set<Listener>>;
+  readonly taskId: string;
+  readonly taskSnapshots: Map<string, TaskMessagesSnapshot>;
+}): void {
+  const { event, messageListeners, taskId, taskSnapshots } = input;
+  const payload = getRecord(event.payload);
+  const messageId = payload?.messageId;
+
+  if (typeof messageId !== "string") return;
+
+  const snapshot = taskSnapshots.get(taskId);
+  const message = snapshot?.messagesById.get(messageId);
+  if (!snapshot || !message || message.role !== "assistant") return;
+
+  const nextMessage = reduceAgentMessages([message], event)[0];
+  if (nextMessage === message || !nextMessage) return;
+
+  const next = {
+    ...snapshot,
+    messagesById: new Map(snapshot.messagesById).set(messageId, nextMessage)
+  };
+
+  taskSnapshots.set(taskId, next);
+  notify(messageListeners, messageKey(taskId, messageId));
+}
+
+function storeToolResultMessage(input: {
+  readonly message: WebPlugin.ToolResultMessage;
+  readonly taskId: string;
+  readonly taskSnapshots: Map<string, TaskMessagesSnapshot>;
+  readonly toolResultListeners: Map<string, Set<Listener>>;
+}): void {
+  const { message, taskId, taskSnapshots, toolResultListeners } = input;
+  const snapshot = taskSnapshots.get(taskId) ?? createSnapshot([]);
+  const previousResultId = snapshot.toolResultIdByToolCallId.get(
+    message.toolCallId
+  );
+  const previousMessage = previousResultId
+    ? snapshot.messagesById.get(previousResultId)
+    : undefined;
+
+  if (previousResultId === message.id && previousMessage === message) return;
+
+  const messagesById = new Map(snapshot.messagesById).set(message.id, message);
+  if (previousResultId && previousResultId !== message.id) {
+    messagesById.delete(previousResultId);
+  }
+  const toolResultIdByToolCallId = new Map(
+    snapshot.toolResultIdByToolCallId
+  ).set(message.toolCallId, message.id);
+
+  taskSnapshots.set(taskId, { messagesById, toolResultIdByToolCallId });
+  notify(toolResultListeners, messageKey(taskId, message.toolCallId));
+}
+
+function upsertTaskMessage(input: {
+  readonly message: WebPlugin.AgentMessage;
+  readonly messageListeners: Map<string, Set<Listener>>;
+  readonly taskId: string;
+  readonly taskIdsListeners: Map<string, Set<Listener>>;
+  readonly taskSnapshots: Map<string, TaskMessagesSnapshot>;
+}): void {
+  const {
+    message,
+    messageListeners,
+    taskId,
+    taskIdsListeners,
+    taskSnapshots
+  } = input;
+  const snapshot = taskSnapshots.get(taskId) ?? createSnapshot([]);
+  const existing = snapshot.messagesById.get(message.id);
+
+  if (existing) {
+    if (existing === message) return;
+    taskSnapshots.set(taskId, {
+      ...snapshot,
+      messagesById: new Map(snapshot.messagesById).set(message.id, message)
+    });
+    notify(messageListeners, messageKey(taskId, message.id));
+    return;
+  }
+
+  const optimisticId = getOptimisticPromptId(snapshot, message);
+  const messagesById = optimisticId
+    ? replaceMapKey(snapshot.messagesById, optimisticId, message.id, message)
+    : new Map(snapshot.messagesById).set(message.id, message);
+
+  taskSnapshots.set(taskId, { ...snapshot, messagesById });
+  notify(taskIdsListeners, taskId);
+}
+
+function getOptimisticPromptId(
+  snapshot: TaskMessagesSnapshot,
+  message: WebPlugin.AgentMessage
+): string | undefined {
+  if (message.role !== "user") return undefined;
+
+  for (const candidate of snapshot.messagesById.values()) {
+    if (
+      candidate.role === "user" &&
+      candidate.id.startsWith("prompt-") &&
+      getMessageText(candidate) === getMessageText(message)
+    ) {
+      return candidate.id;
+    }
+  }
+
+  return undefined;
+}
+
+function replaceMapKey<K, V>(
+  map: Map<K, V>,
+  previousKey: K,
+  nextKey: K,
+  nextValue: V
+): Map<K, V> {
+  return new Map(
+    Array.from(map, ([key, value]) =>
+      key === previousKey ? [nextKey, nextValue] : [key, value]
+    )
+  );
+}
+
+function getEventMessage(
+  event: AgentEventEnvelope
+): WebPlugin.AgentMessage | undefined {
+  const message = getRecord(event.payload)?.message;
+
+  return isAgentMessage(message) ? message : undefined;
+}
+
+function isAgentMessage(value: unknown): value is WebPlugin.AgentMessage {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "id" in value &&
+      "role" in value
+  );
+}
+
+function getRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : undefined;
+}
+
+function getMessageText(message: WebPlugin.AgentMessage): string {
+  if (!("content" in message)) return "";
+  if (typeof message.content === "string") return message.content;
+  return message.content
+    .filter((block) => block.type === "text")
+    .map((block) => ("text" in block ? block.text : ""))
+    .join("");
 }
 
 function notifyChangedSubscriptions(input: {
@@ -150,11 +388,14 @@ function notifyChangedSubscriptions(input: {
     toolResultListeners
   } = input;
 
-  if (!areIdsEqual(previous.ids, next.ids)) {
+  const previousIds = getTaskMessageIds(previous);
+  const nextIds = getTaskMessageIds(next);
+
+  if (!areIdsEqual(previousIds, nextIds)) {
     notify(taskIdsListeners, taskId);
   }
 
-  for (const id of new Set([...previous.ids, ...next.ids])) {
+  for (const id of new Set([...previousIds, ...nextIds])) {
     if (previous.messagesById.get(id) !== next.messagesById.get(id)) {
       notify(messageListeners, messageKey(taskId, id));
     }
