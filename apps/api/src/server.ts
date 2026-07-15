@@ -12,7 +12,7 @@ async function main() {
       process.stdout.write(value);
     },
     // devPluginPaths: ['/Users/mingbing/apps/ai-project/holdReinPlugins/binance'],
-    // devPluginPaths: ['/Users/mingbing/apps/ai-project/holdRein/packages/plugins/memory']
+    // devPluginPaths: ['/Users/mingbing/apps/ai-project/holdRein/packages/plugins/xiangqi']
   });
 }
 

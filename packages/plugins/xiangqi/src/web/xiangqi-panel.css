@@ -1,0 +1,193 @@
+.xiangqi-panel {
+  color: var(--app-color-text);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100%;
+  padding: 0 8px 12px;
+}
+
+.xiangqi-empty {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 240px;
+}
+
+.xiangqi-header {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--app-color-border-secondary);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding-bottom: 10px;
+}
+
+.xiangqi-title {
+  align-items: center;
+  display: flex;
+  font-size: 15px;
+  font-weight: 650;
+  gap: 7px;
+}
+
+.xiangqi-subtitle {
+  color: var(--app-color-text-secondary);
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.xiangqi-turn {
+  flex-shrink: 0;
+  margin-inline-end: 0;
+}
+
+.xiangqi-board {
+  aspect-ratio: 9 / 10;
+  background: var(--app-color-bg-container);
+  border: 1px solid var(--app-color-border-secondary);
+  display: grid;
+  flex-shrink: 0;
+  max-width: min(100%, 520px);
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+
+.xiangqi-cell {
+  align-items: center;
+  appearance: none;
+  background:
+    linear-gradient(
+      var(--app-color-border-secondary),
+      var(--app-color-border-secondary)
+    )
+    center / 100% 1px no-repeat,
+    linear-gradient(
+      90deg,
+      var(--app-color-border-secondary),
+      var(--app-color-border-secondary)
+    )
+    center / 1px 100% no-repeat;
+  border: 0;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+  padding: 0;
+  position: relative;
+}
+
+.xiangqi-tool-cell {
+  cursor: default;
+}
+
+.xiangqi-cell:disabled {
+  cursor: default;
+}
+
+button.xiangqi-cell:not(:disabled):hover,
+button.xiangqi-cell:not(:disabled):focus-visible,
+.xiangqi-cell-selected {
+  background-color: var(--app-color-fill-tertiary);
+  outline: 2px solid var(--app-color-primary);
+  outline-offset: -2px;
+}
+
+.xiangqi-cell-last-move::after {
+  border: 2px solid var(--app-color-primary);
+  content: "";
+  height: 82%;
+  opacity: 0;
+  position: absolute;
+  width: 82%;
+  animation: xiangqi-last-move-pulse 1.15s ease-in-out infinite;
+}
+
+.xiangqi-piece {
+  align-items: center;
+  background: var(--app-color-bg-elevated);
+  border: 1px solid var(--app-color-border);
+  border-radius: 999px;
+  box-shadow: 0 1px 4px var(--app-color-shadow);
+  display: flex;
+  font-size: 14px;
+  font-weight: 700;
+  height: 72%;
+  justify-content: center;
+  line-height: 1;
+  width: 72%;
+}
+
+.xiangqi-piece-red {
+  color: var(--app-color-danger);
+}
+
+.xiangqi-piece-black {
+  color: var(--app-color-text);
+}
+
+.xiangqi-piece-last-move {
+  animation: xiangqi-last-piece-blink 1.15s ease-in-out infinite;
+}
+
+.xiangqi-footer {
+  color: var(--app-color-text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 8px 12px;
+}
+
+.xiangqi-error {
+  border: 1px solid var(--app-color-danger);
+  color: var(--app-color-danger);
+  font-size: 12px;
+  padding: 8px;
+}
+
+.xiangqi-tool-render {
+  color: var(--app-color-text);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.xiangqi-tool-board {
+  max-width: min(100%, 234px);
+  width: min(100%, 234px);
+}
+
+.xiangqi-tool-meta,
+.xiangqi-tool-empty {
+  color: var(--app-color-text-secondary);
+  font-size: 12px;
+}
+
+@keyframes xiangqi-last-move-pulse {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+
+  35% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes xiangqi-last-piece-blink {
+  0%,
+  100% {
+    filter: none;
+  }
+
+  45% {
+    filter: drop-shadow(0 0 7px var(--app-color-primary));
+  }
+}
