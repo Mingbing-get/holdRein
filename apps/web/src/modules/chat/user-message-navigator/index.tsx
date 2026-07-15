@@ -1,5 +1,5 @@
 import { Popover } from "antd";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
 import type { WebPlugin } from "@hold-rein/plugin-web";
@@ -21,41 +21,63 @@ export function UserMessageNavigator({
   messages,
   scrollContainerRef
 }: UserMessageNavigatorProps) {
-  const userMessages = useMemo(() => getUserMessages(messages), [messages]);
+  const [cachedUserMessages, setCachedUserMessages] = useState<
+    UserMessageItem[]
+  >(() => getUserMessages(messages));
+  const anchorByMessageIdRef = useRef(new Map<string, HTMLElement>());
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const updateActiveIndex = useCallback(() => {
+  useEffect(() => {
+    const nextUserMessages = getUserMessages(messages);
+
+    setCachedUserMessages((currentUserMessages) =>
+      areUserMessagesEqual(currentUserMessages, nextUserMessages)
+        ? currentUserMessages
+        : nextUserMessages
+    );
+  }, [messages]);
+
+  useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
-    if (!scrollContainer || userMessages.length === 0) {
+    if (!scrollContainer || cachedUserMessages.length === 0) {
+      anchorByMessageIdRef.current = new Map();
       setActiveIndex(0);
       return;
     }
 
-    const observationTop =
-      scrollContainer.getBoundingClientRect().top + OBSERVATION_OFFSET_PX;
-    let nextActiveIndex = 0;
-
-    userMessages.forEach((message, index) => {
-      const anchor = findMessageAnchor(scrollContainer, message.id);
-      if (anchor && anchor.getBoundingClientRect().top <= observationTop) {
-        nextActiveIndex = index;
-      }
-    });
-    setActiveIndex(nextActiveIndex);
-  }, [scrollContainerRef, userMessages]);
-
-  useEffect(() => {
-    const scrollContainer = scrollContainerRef.current;
-    if (!scrollContainer) {
-      return;
-    }
-
-    updateActiveIndex();
-    scrollContainer.addEventListener("scroll", updateActiveIndex);
-    return () => {
-      scrollContainer.removeEventListener("scroll", updateActiveIndex);
+    const messageIndexById = new Map(
+      cachedUserMessages.map((message, index) => [message.id, index] as const)
+    );
+    const anchorByMessageId = collectMessageAnchors(
+      scrollContainer,
+      messageIndexById
+    );
+    anchorByMessageIdRef.current = anchorByMessageId;
+    const updateActiveIndex = () => {
+      setActiveIndex(
+        getActiveIndexAtObservationLine(
+          scrollContainer,
+          cachedUserMessages,
+          anchorByMessageId
+        )
+      );
     };
-  }, [scrollContainerRef, updateActiveIndex]);
+
+    const observer = new IntersectionObserver(
+      updateActiveIndex,
+      {
+        root: scrollContainer,
+        rootMargin: `-${OBSERVATION_OFFSET_PX}px 0px 0px 0px`,
+        threshold: 0
+      }
+    );
+
+    anchorByMessageId.forEach((anchor) => observer.observe(anchor));
+    updateActiveIndex();
+    return () => {
+      observer.disconnect();
+    };
+  }, [cachedUserMessages, scrollContainerRef]);
 
   const scrollToMessage = useCallback(
     (messageId: string) => {
@@ -63,7 +85,9 @@ export function UserMessageNavigator({
       if (!scrollContainer) {
         return;
       }
-      const anchor = findMessageAnchor(scrollContainer, messageId);
+      const anchor =
+        anchorByMessageIdRef.current.get(messageId) ??
+        findMessageAnchor(scrollContainer, messageId);
       if (!anchor) {
         return;
       }
@@ -78,13 +102,13 @@ export function UserMessageNavigator({
     [scrollContainerRef]
   );
 
-  if (userMessages.length === 0) {
+  if (cachedUserMessages.length === 0) {
     return null;
   }
 
   return (
     <nav aria-label="用户消息导航" className="user-message-navigator">
-      {userMessages.map((message, index) => (
+      {cachedUserMessages.map((message, index) => (
         <Popover content={message.text} key={message.id} placement="left">
           <button
             aria-current={index === activeIndex ? "true" : undefined}
@@ -121,6 +145,19 @@ function getText(content: string | { type: string; text?: string }[]): string {
     .join("");
 }
 
+function areUserMessagesEqual(
+  left: UserMessageItem[],
+  right: UserMessageItem[]
+): boolean {
+  return (
+    left.length === right.length &&
+    left.every(
+      (message, index) =>
+        message.id === right[index]?.id && message.text === right[index]?.text
+    )
+  );
+}
+
 function findMessageAnchor(
   scrollContainer: HTMLDivElement,
   messageId: string
@@ -128,4 +165,41 @@ function findMessageAnchor(
   return Array.from(
     scrollContainer.querySelectorAll<HTMLElement>("[data-user-message-id]")
   ).find((element) => element.dataset.userMessageId === messageId);
+}
+
+function collectMessageAnchors(
+  scrollContainer: HTMLDivElement,
+  messageIndexById: Map<string, number>
+): Map<string, HTMLElement> {
+  const anchorByMessageId = new Map<string, HTMLElement>();
+
+  scrollContainer
+    .querySelectorAll<HTMLElement>("[data-user-message-id]")
+    .forEach((element) => {
+      const messageId = element.dataset.userMessageId;
+      if (messageId && messageIndexById.has(messageId)) {
+        anchorByMessageId.set(messageId, element);
+      }
+    });
+
+  return anchorByMessageId;
+}
+
+function getActiveIndexAtObservationLine(
+  scrollContainer: HTMLDivElement,
+  userMessages: UserMessageItem[],
+  anchorByMessageId: Map<string, HTMLElement>
+): number {
+  const observationTop =
+    scrollContainer.getBoundingClientRect().top + OBSERVATION_OFFSET_PX;
+  let activeIndex = 0;
+
+  userMessages.forEach((message, index) => {
+    const anchor = anchorByMessageId.get(message.id);
+    if (anchor && anchor.getBoundingClientRect().top <= observationTop) {
+      activeIndex = index;
+    }
+  });
+
+  return activeIndex;
 }
