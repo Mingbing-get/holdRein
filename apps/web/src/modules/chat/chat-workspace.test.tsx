@@ -26,6 +26,7 @@ const agentTasksMock = vi.hoisted(() => ({
   messages: [
     { content: "Real message", id: "message-1", kind: "assistant" }
   ] as { content: string; id: string; kind: string }[],
+  notifyMessageChange: undefined as (() => void) | undefined,
   pendingApproval: undefined as PendingApproval | undefined,
   taskStatus: "completed" as "running" | "completed" | "error",
   cancelTask: vi.fn(),
@@ -34,11 +35,18 @@ const agentTasksMock = vi.hoisted(() => ({
 
 vi.mock("../agent-messages", () => ({
   ApprovalPanel: () => <div data-testid="approval-panel">Approval</div>,
-  AgentMessageList: () => (
-    <div data-testid="agent-message-list">
-      {agentTasksMock.messages.map((message) => message.content).join(",")}
-    </div>
-  ),
+  AgentMessageList: ({
+    onMessageChange
+  }: {
+    onMessageChange?: () => void;
+  }) => {
+    agentTasksMock.notifyMessageChange = onMessageChange;
+    return (
+      <div data-testid="agent-message-list">
+        {agentTasksMock.messages.map((message) => message.content).join(",")}
+      </div>
+    );
+  },
   useAgentTasks: () => ({
     continueTask: agentTasksMock.continueTask,
     cancelTask: agentTasksMock.cancelTask,
@@ -129,6 +137,7 @@ describe("ChatWorkspace", () => {
     agentTasksMock.messages = [
       { content: "Real message", id: "message-1", kind: "assistant" }
     ];
+    agentTasksMock.notifyMessageChange = undefined;
     scrollIntoView.mockReset();
   });
 
@@ -293,6 +302,7 @@ describe("ChatWorkspace", () => {
       { content: "New message", id: "message-2", kind: "assistant" }
     ];
     view.rerender(getChatWorkspaceElement({ activeTaskId: "task-one" }));
+    notifyMessageChange();
 
     await waitFor(() => {
       expect(scrollIntoView).toHaveBeenCalled();
@@ -314,6 +324,7 @@ describe("ChatWorkspace", () => {
       { content: "Paused message", id: "message-2", kind: "assistant" }
     ];
     view.rerender(getChatWorkspaceElement({ activeTaskId: "task-one" }));
+    notifyMessageChange();
 
     await waitFor(() => {
       expect(screen.getByTestId("agent-message-list")).toHaveTextContent(
@@ -329,6 +340,7 @@ describe("ChatWorkspace", () => {
       { content: "Following message", id: "message-3", kind: "assistant" }
     ];
     view.rerender(getChatWorkspaceElement({ activeTaskId: "task-one" }));
+    notifyMessageChange();
 
     await waitFor(() => {
       expect(scrollIntoView).toHaveBeenCalled();
@@ -376,6 +388,7 @@ describe("ChatWorkspace", () => {
       { content: "Programmatic message", id: "message-2", kind: "assistant" }
     ];
     view.rerender(getChatWorkspaceElement({ activeTaskId: "task-one" }));
+    notifyMessageChange();
 
     await waitFor(() => {
       expect(scrollIntoView).toHaveBeenCalled();
@@ -400,6 +413,12 @@ function getChatWorkspaceElement(options: RenderOptions = {}) {
       <ChatWorkspace activeTaskName="Task One" apiBaseUrl="http://localhost:4000" />
     </AppWorkspaceProvider>
   );
+}
+
+function notifyMessageChange() {
+  act(() => {
+    agentTasksMock.notifyMessageChange?.();
+  });
 }
 
 function dispatchScroll(element: HTMLElement, isTrusted: boolean) {

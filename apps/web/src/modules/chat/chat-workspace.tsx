@@ -5,7 +5,6 @@ import { useAppWorkspace } from "../../app/app-workspace-context";
 import {
   AgentMessageList,
   ApprovalPanel,
-  useAgentMessages,
   useAgentTasks
 } from "../agent-messages";
 import Sender from "./sender";
@@ -49,7 +48,6 @@ export function ChatWorkspace({
   );
   const mainMessageAgentId = activeTaskId;
   const taskState = getTaskState(activeTaskId);
-  const messages = useAgentMessages(mainMessageAgentId);
   const pendingApproval = getPendingApproval(activeTaskId);
   const suggestionGroups = useWorkspaceFileSuggestions(
     apiBaseUrl,
@@ -98,7 +96,7 @@ export function ChatWorkspace({
     }
 
     scrollToBottomIfFollowing();
-  }, [activeTaskId, messages, scrollToBottomIfFollowing]);
+  }, [activeTaskId, scrollToBottomIfFollowing]);
 
   return (
     <Flex
