@@ -1,9 +1,9 @@
 export {
   AgentTasksProvider,
+  useAgentMessage,
+  useAgentMessageIds,
+  useAgentMessages,
   useAgentTasks,
-  useTaskMessage,
-  useTaskMessageIds,
-  useTaskMessages,
   useToolResultMessage
 } from "./tasks-context";
 export { ApprovalPanel } from "./approval-panel";

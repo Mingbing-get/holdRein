@@ -80,7 +80,7 @@ export function useAgentTaskSubscriptions(
 
   useEffect(() => {
     if (!activeTaskId || loadedTaskIds.current.has(activeTaskId)) return;
-    if (messageStore.getTaskMessageIds(activeTaskId).length) {
+    if (messageStore.getAgentMessageIds(activeTaskId).length) {
       loadedTaskIds.current.add(activeTaskId);
       return;
     }
@@ -88,6 +88,10 @@ export function useAgentTaskSubscriptions(
 
     void fetchTaskMessages(apiBaseUrl, activeTaskId, fetcher)
       .then((history) => {
+        messageStore.replaceAgentMessages(activeTaskId, history.messages);
+        for (const subagent of history.subagents) {
+          messageStore.replaceAgentMessages(subagent.agentId, subagent.messages);
+        }
         setSubagentMessagesById((current) =>
           discoverSubagents(
             initializeSubagentsFromHistory(
@@ -99,7 +103,6 @@ export function useAgentTaskSubscriptions(
             activeTaskId
           )
         );
-        messageStore.replaceTaskMessages(activeTaskId, history.messages);
         setTaskStates((current) => ({
           ...current,
           [activeTaskId]: reduceAgentTaskState(
@@ -119,7 +122,8 @@ export function useAgentTaskSubscriptions(
     messageStore,
     setSubagentMessagesById,
     setTaskStates,
-    taskStates
+    taskStates,
+    workspaces
   ]);
 
   useEffect(() => {
@@ -180,6 +184,9 @@ export function useAgentTaskSubscriptions(
         fetcher,
         onError: () => undefined,
         onEvent: (event) => {
+          if (isMessageEvent(event.type)) {
+            messageStore.reduceAgentEvent(agentId, event);
+          }
           setSubagentMessagesById((current) =>
             reduceSubagentEvent(current, agentId, event)
           );
@@ -200,6 +207,7 @@ export function useAgentTaskSubscriptions(
   }, [
     apiBaseUrl,
     fetcher,
+    messageStore,
     setSubagentMessagesById,
     setTaskStates,
     subagentMessagesById,
@@ -211,4 +219,12 @@ function isRunningWorkspaceTask(
   task: WorkspaceTaskSummary
 ): task is RunningWorkspaceTask {
   return task.status === "running" && Boolean(task.activeAgentId);
+}
+
+function isMessageEvent(type: string): boolean {
+  return (
+    type === "message_start" ||
+    type === "message_delta" ||
+    type === "message_end"
+  );
 }

@@ -9,6 +9,9 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import type { WebPlugin } from "@hold-rein/plugin-web";
 import { UserMessageNavigator } from ".";
 
+const useAgentMessagesMock = vi.fn<
+  (agentId: string) => WebPlugin.AgentMessage[]
+>();
 const messages: WebPlugin.AgentMessage[] = [
   { content: "First question", id: "user-1", role: "user", timestamp: 1 },
   { content: "   ", id: "blank", role: "user", timestamp: 2 },
@@ -19,6 +22,10 @@ const messages: WebPlugin.AgentMessage[] = [
     timestamp: 3
   }
 ];
+
+vi.mock("../../agent-messages", () => ({
+  useAgentMessages: (agentId: string) => useAgentMessagesMock(agentId)
+}));
 
 class ResizeObserverMock {
   disconnect() {
@@ -73,19 +80,22 @@ describe("UserMessageNavigator", () => {
   afterEach(() => {
     cleanup();
     intersectionObservers.length = 0;
+    useAgentMessagesMock.mockReset();
   });
 
   it("renders markers for non-empty user messages and previews their text", async () => {
+    useAgentMessagesMock.mockReturnValue(messages);
     const scrollContainerRef = createRef<HTMLDivElement>();
     render(
       <div ref={scrollContainerRef}>
         <UserMessageNavigator
-          messages={messages}
+          agentId="agent-1"
           scrollContainerRef={scrollContainerRef}
         />
       </div>
     );
 
+    expect(useAgentMessagesMock).toHaveBeenCalledWith("agent-1");
     expect(screen.getAllByRole("button")).toHaveLength(2);
     expect(screen.getByRole("button", { name: "用户消息 1" }))
       .toHaveAttribute("aria-current", "true");
@@ -95,6 +105,7 @@ describe("UserMessageNavigator", () => {
   });
 
   it("tracks the intersecting message without subscribing to scroll and scrolls to markers", () => {
+    useAgentMessagesMock.mockReturnValue(messages);
     const scrollContainerRef = createRef<HTMLDivElement>();
     const addEventListener = vi.fn();
     const removeEventListener = vi.fn();
@@ -104,7 +115,7 @@ describe("UserMessageNavigator", () => {
         <div data-user-message-id="user-1" />
         <div data-user-message-id="user-2" />
         <UserMessageNavigator
-          messages={messages}
+          agentId="agent-1"
           scrollContainerRef={scrollContainerRef}
         />
       </div>
@@ -159,6 +170,7 @@ describe("UserMessageNavigator", () => {
   });
 
   it("initializes to the last message that has crossed the observation line", () => {
+    useAgentMessagesMock.mockReturnValue(messages);
     const getBoundingClientRect = vi
       .spyOn(Element.prototype, "getBoundingClientRect")
       .mockImplementation(function getMockRect(this: Element) {
@@ -176,7 +188,7 @@ describe("UserMessageNavigator", () => {
         <div data-user-message-id="user-1" />
         <div data-user-message-id="user-2" />
         <UserMessageNavigator
-          messages={messages}
+          agentId="agent-1"
           scrollContainerRef={scrollContainerRef}
         />
       </div>
@@ -189,13 +201,14 @@ describe("UserMessageNavigator", () => {
   });
 
   it("keeps the previous message active until the next anchor crosses the observation line", () => {
+    useAgentMessagesMock.mockReturnValue(messages);
     const scrollContainerRef = createRef<HTMLDivElement>();
     const { container } = render(
       <div ref={scrollContainerRef}>
         <div data-user-message-id="user-1" />
         <div data-user-message-id="user-2" />
         <UserMessageNavigator
-          messages={messages}
+          agentId="agent-1"
           scrollContainerRef={scrollContainerRef}
         />
       </div>
@@ -264,12 +277,13 @@ describe("UserMessageNavigator", () => {
       stopReason: "stop",
       timestamp: 4
     };
+    useAgentMessagesMock.mockReturnValue([...messages, assistantMessage]);
     const { rerender } = render(
       <div ref={scrollContainerRef}>
         <div data-user-message-id="user-1" />
         <div data-user-message-id="user-2" />
         <UserMessageNavigator
-          messages={[...messages, assistantMessage]}
+          agentId="agent-1"
           scrollContainerRef={scrollContainerRef}
         />
       </div>
@@ -277,18 +291,19 @@ describe("UserMessageNavigator", () => {
 
     expect(intersectionObservers).toHaveLength(1);
 
+    useAgentMessagesMock.mockReturnValue([
+      ...messages,
+      {
+        ...assistantMessage,
+        content: [{ text: "First answer delta", type: "text" }]
+      }
+    ]);
     rerender(
       <div ref={scrollContainerRef}>
         <div data-user-message-id="user-1" />
         <div data-user-message-id="user-2" />
         <UserMessageNavigator
-          messages={[
-            ...messages,
-            {
-              ...assistantMessage,
-              content: [{ text: "First answer delta", type: "text" }]
-            }
-          ]}
+          agentId="agent-1"
           scrollContainerRef={scrollContainerRef}
         />
       </div>

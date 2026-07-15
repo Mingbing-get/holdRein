@@ -2,7 +2,7 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -10,7 +10,7 @@ import {
   useAppWorkspace
 } from "../../../app/app-workspace-context";
 import type { AgentMessageFetcher } from "../api";
-import { AgentTasksProvider, useAgentTasks } from ".";
+import { AgentTasksProvider, useAgentMessages, useAgentTasks } from ".";
 import { createSubagentApprovalFetcher } from "./subagent-test-utils";
 import {
   jsonResponse,
@@ -40,6 +40,9 @@ describe("AgentTasksProvider subagent messages", () => {
       expect(screen.getByTestId("child-messages")).toHaveTextContent(
         "Child answer"
       );
+      expect(screen.getByTestId("child-store-messages")).toHaveTextContent(
+        "Child answer"
+      );
     });
 
     expect(screen.getByTestId("parent-messages")).not.toHaveTextContent(
@@ -67,6 +70,9 @@ describe("AgentTasksProvider subagent messages", () => {
       expect(screen.getByTestId("grandchild-messages")).toHaveTextContent(
         "Grandchild answer"
       );
+      expect(
+        screen.getByTestId("grandchild-store-messages")
+      ).toHaveTextContent("Grandchild answer");
     });
     expect(fetcher).toHaveBeenCalledWith(
       "/api/v1/agents/agent-grandchild/events",
@@ -89,6 +95,9 @@ describe("AgentTasksProvider subagent messages", () => {
       expect(screen.getByTestId("history-child-messages")).toHaveTextContent(
         "Restored child answer"
       );
+      expect(
+        screen.getByTestId("history-child-store-messages")
+      ).toHaveTextContent("Restored child answer");
       expect(screen.getByTestId("history-child-status")).toHaveTextContent(
         "completed"
       );
@@ -115,6 +124,9 @@ describe("AgentTasksProvider subagent messages", () => {
       expect(screen.getByTestId("history-child-messages")).toHaveTextContent(
         "Restored child answer,Live child answer"
       );
+      expect(
+        screen.getByTestId("history-child-store-messages")
+      ).toHaveTextContent("Restored child answer,Live child answer");
       expect(screen.getByTestId("history-child-status")).toHaveTextContent(
         "running"
       );
@@ -157,9 +169,15 @@ describe("AgentTasksProvider subagent messages", () => {
 });
 
 function SubagentProbe() {
-  const { getSubagentMessages, getTaskState, startTask } = useAgentTasks();
+  const { getSubagentMessages, startTask } = useAgentTasks();
+  const parentMessages = useAgentMessages("task-1");
+  const childStoreMessages = useAgentMessages("agent-child");
+  const grandchildStoreMessages = useAgentMessages("agent-grandchild");
+  const didStart = useRef(false);
 
   useEffect(() => {
+    if (didStart.current) return;
+    didStart.current = true;
     void startTask({
       modelId: "gpt-4.1",
       prompt: "Inspect the project",
@@ -168,7 +186,6 @@ function SubagentProbe() {
     });
   }, [startTask]);
 
-  const parentMessages = getTaskState("task-1")?.messages ?? [];
   const childMessages = getSubagentMessages("agent-child");
   const grandchildMessages = getSubagentMessages("agent-grandchild");
 
@@ -192,8 +209,14 @@ function SubagentProbe() {
           )
           .join(",")}
       </span>
+      <span data-testid="child-store-messages">
+        {getAssistantText(childStoreMessages)}
+      </span>
       <span data-testid="grandchild-messages">
         {getAssistantText(grandchildMessages)}
+      </span>
+      <span data-testid="grandchild-store-messages">
+        {getAssistantText(grandchildStoreMessages)}
       </span>
     </>
   );
@@ -203,6 +226,7 @@ function HistoryProbe() {
   const { setActiveTaskId, setActiveWorkspaceId, setWorkspaces } =
     useAppWorkspace();
   const { getSubagentMessages, getSubagentStatus } = useAgentTasks();
+  const historyChildStoreMessages = useAgentMessages("agent-history-child");
 
   useEffect(() => {
     setWorkspaces([
@@ -234,6 +258,9 @@ function HistoryProbe() {
       <span data-testid="history-child-messages">
         {getAssistantText(getSubagentMessages("agent-history-child"))}
       </span>
+      <span data-testid="history-child-store-messages">
+        {getAssistantText(historyChildStoreMessages)}
+      </span>
       <span data-testid="history-child-status">
         {getSubagentStatus("agent-history-child")}
       </span>
@@ -243,8 +270,11 @@ function HistoryProbe() {
 
 function SubagentApprovalProbe() {
   const { decideApproval, getPendingApproval, startTask } = useAgentTasks();
+  const didStart = useRef(false);
 
   useEffect(() => {
+    if (didStart.current) return;
+    didStart.current = true;
     void startTask({
       modelId: "gpt-4.1",
       prompt: "Inspect the project",

@@ -34,15 +34,15 @@ export function StaticToolCallMessageItem({
 }
 
 export function StoredToolCallMessageItem({
-  taskId,
+  agentId,
   toolCall,
   workspacePath
 }: {
-  taskId: string;
+  agentId: string;
   toolCall: WebPlugin.ToolCall;
   workspacePath?: string | undefined;
 }) {
-  const toolResult = useToolResultMessage(taskId, toolCall.id);
+  const toolResult = useToolResultMessage(agentId, toolCall.id);
 
   return (
     <ToolCallMessageItem

@@ -11,17 +11,17 @@ describe("AgentMessageStore", () => {
     const messageListener = vi.fn();
     const toolResultListener = vi.fn();
 
-    store.subscribeTaskMessageIds("task-1", idsListener);
-    store.subscribeTaskMessage("task-1", "prompt-0", messageListener);
-    store.subscribeToolResult("task-1", "tool-call-1", toolResultListener);
+    store.subscribeAgentMessageIds("agent-1", idsListener);
+    store.subscribeAgentMessage("agent-1", "prompt-0", messageListener);
+    store.subscribeToolResult("agent-1", "tool-call-1", toolResultListener);
 
-    store.appendOptimisticPrompt("task-1", "Hello");
+    store.appendOptimisticPrompt("agent-1", "Hello");
 
     expect(idsListener).toHaveBeenCalledTimes(1);
     expect(messageListener).not.toHaveBeenCalled();
     expect(toolResultListener).not.toHaveBeenCalled();
-    expect(store.getTaskMessageIds("task-1")).toEqual(["prompt-0"]);
-    expect(store.getTaskMessage("task-1", "prompt-0")).toMatchObject({
+    expect(store.getAgentMessageIds("agent-1")).toEqual(["prompt-0"]);
+    expect(store.getAgentMessage("agent-1", "prompt-0")).toMatchObject({
       content: [{ text: "Hello", type: "text" }]
     });
   });
@@ -31,7 +31,7 @@ describe("AgentMessageStore", () => {
     const idsListener = vi.fn();
     const messageListener = vi.fn();
 
-    store.replaceTaskMessages("task-1", [
+    store.replaceAgentMessages("agent-1", [
       {
         api: "openai-responses",
         content: [{ text: "Hel", type: "text" }],
@@ -44,15 +44,15 @@ describe("AgentMessageStore", () => {
       }
     ]);
 
-    store.subscribeTaskMessageIds("task-1", idsListener);
-    store.subscribeTaskMessage("task-1", "assistant-1", messageListener);
+    store.subscribeAgentMessageIds("agent-1", idsListener);
+    store.subscribeAgentMessage("agent-1", "assistant-1", messageListener);
 
-    store.reduceTaskEvent("task-1", messageDelta("assistant-1", "lo"));
+    store.reduceAgentEvent("agent-1", messageDelta("assistant-1", "lo"));
 
     expect(idsListener).not.toHaveBeenCalled();
     expect(messageListener).toHaveBeenCalledTimes(1);
-    expect(store.getTaskMessageIds("task-1")).toEqual(["assistant-1"]);
-    expect(store.getTaskMessage("task-1", "assistant-1")).toMatchObject({
+    expect(store.getAgentMessageIds("agent-1")).toEqual(["assistant-1"]);
+    expect(store.getAgentMessage("agent-1", "assistant-1")).toMatchObject({
       content: [{ text: "Hello", type: "text" }]
     });
   });
@@ -62,14 +62,14 @@ describe("AgentMessageStore", () => {
     const idsListener = vi.fn();
     const messageListener = vi.fn();
 
-    store.subscribeTaskMessageIds("task-1", idsListener);
-    store.subscribeTaskMessage("task-1", "assistant-1", messageListener);
+    store.subscribeAgentMessageIds("agent-1", idsListener);
+    store.subscribeAgentMessage("agent-1", "assistant-1", messageListener);
 
-    store.reduceTaskEvent("task-1", messageStart(assistantMessage("assistant-1", "")));
+    store.reduceAgentEvent("agent-1", messageStart(assistantMessage("assistant-1", "")));
 
     expect(idsListener).toHaveBeenCalledTimes(1);
     expect(messageListener).not.toHaveBeenCalled();
-    expect(store.getTaskMessageIds("task-1")).toEqual(["assistant-1"]);
+    expect(store.getAgentMessageIds("agent-1")).toEqual(["assistant-1"]);
   });
 
   it("notifies only tool result subscribers when an event stores a tool result", () => {
@@ -78,20 +78,20 @@ describe("AgentMessageStore", () => {
     const messageListener = vi.fn();
     const toolResultListener = vi.fn();
 
-    store.subscribeTaskMessageIds("task-1", idsListener);
-    store.subscribeTaskMessage("task-1", "tool-result-1", messageListener);
-    store.subscribeToolResult("task-1", "tool-call-1", toolResultListener);
+    store.subscribeAgentMessageIds("agent-1", idsListener);
+    store.subscribeAgentMessage("agent-1", "tool-result-1", messageListener);
+    store.subscribeToolResult("agent-1", "tool-call-1", toolResultListener);
 
-    store.reduceTaskEvent(
-      "task-1",
+    store.reduceAgentEvent(
+      "agent-1",
       messageStart(toolResultMessage("tool-result-1", "tool-call-1", "result"))
     );
 
     expect(idsListener).not.toHaveBeenCalled();
     expect(messageListener).not.toHaveBeenCalled();
     expect(toolResultListener).toHaveBeenCalledTimes(1);
-    expect(store.getTaskMessageIds("task-1")).toEqual(["tool-result-1"]);
-    expect(store.getToolResult("task-1", "tool-call-1")).toMatchObject({
+    expect(store.getAgentMessageIds("agent-1")).toEqual(["tool-result-1"]);
+    expect(store.getToolResult("agent-1", "tool-call-1")).toMatchObject({
       content: [{ text: "result", type: "text" }]
     });
   });

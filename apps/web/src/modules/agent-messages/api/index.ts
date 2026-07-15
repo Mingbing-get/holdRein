@@ -200,6 +200,7 @@ function normalizeTaskMessageHistory(
   }
 
   return {
+    ...(typeof history.agentId === "string" ? { agentId: history.agentId } : {}),
     messages: Array.isArray(history.messages) ? history.messages : [],
     subagents: Array.isArray(history.subagents) ? history.subagents : []
   };

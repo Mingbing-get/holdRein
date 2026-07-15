@@ -1,6 +1,5 @@
 import { BranchesOutlined } from "@ant-design/icons";
 import { Think } from "@ant-design/x";
-import { useMemo } from "react";
 
 import { useAgentTasks } from "../tasks-context";
 import { AgentMessageList } from "../message-list";
@@ -10,14 +9,8 @@ export interface SubagentMessageListProps {
 }
 
 export function SubagentMessageList({ agentId }: SubagentMessageListProps) {
-  const { getSubagentMessages, getSubagentStatus } = useAgentTasks();
-
-  const messages = useMemo(
-    () => getSubagentMessages(agentId),
-    [agentId, getSubagentMessages]
-  );
-
-  const status = useMemo(() => getSubagentStatus(agentId), [agentId, getSubagentStatus]);
+  const { getSubagentStatus } = useAgentTasks();
+  const status = getSubagentStatus(agentId);
 
   return (
     <Think
@@ -27,7 +20,7 @@ export function SubagentMessageList({ agentId }: SubagentMessageListProps) {
       loading={status === "running"}
       blink
     >
-      <AgentMessageList messages={messages} status={status} />
+      <AgentMessageList agentId={agentId} status={status} />
     </Think>
   );
 }

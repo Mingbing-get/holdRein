@@ -36,6 +36,17 @@ vi.mock("../../../app/app-workspace-context", () => ({
 }));
 
 vi.mock("../tasks-context", () => ({
+  useAgentMessage: (agentId: string, messageId: string) =>
+    (agentTasksMock.childMessages[agentId] ?? agentTasksMock.taskMessages).find(
+      (message) => message.id === messageId
+    ),
+  useAgentMessages: (agentId: string) =>
+    agentTasksMock.childMessages[agentId] ?? agentTasksMock.taskMessages,
+  useToolResultMessage: (agentId: string, toolCallId: string) =>
+    (agentTasksMock.childMessages[agentId] ?? agentTasksMock.taskMessages).find(
+      (message): message is WebPlugin.ToolResultMessage =>
+        message.role === "toolResult" && message.toolCallId === toolCallId
+    ),
   useAgentTasks: () => ({
     getSubagentMessages: (agentId: string) =>
       agentTasksMock.childMessages[agentId] ?? [],

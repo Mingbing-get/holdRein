@@ -10,6 +10,7 @@ import { ChatWorkspace } from "./chat-workspace";
 const taskMessages = [
   { content: "Question", id: "user-1", role: "user", timestamp: 1 }
 ];
+let receivedAgentId: string | undefined;
 let receivedScrollContainerRef: RefObject<HTMLDivElement | null> | undefined;
 
 vi.mock("../../app/app-workspace-context", () => ({
@@ -23,7 +24,7 @@ vi.mock("../../app/app-workspace-context", () => ({
         {
           id: "workspace-1",
           path: "/tmp/workspace",
-          tasks: [{ id: "task-1" }]
+          tasks: [{ activeAgentId: "agent-1", id: "task-1" }]
         }
       ]
     }
@@ -41,7 +42,7 @@ vi.mock("../agent-messages", () => ({
     getTaskState: () => ({ messages: taskMessages, status: "completed" }),
     startTask: vi.fn()
   }),
-  useTaskMessages: () => taskMessages
+  useAgentMessages: () => taskMessages
 }));
 
 vi.mock("./sender", () => ({ default: () => <div data-testid="sender" /> }));
@@ -49,17 +50,13 @@ vi.mock("./use-workspace-file-suggestions", () => ({
   useWorkspaceFileSuggestions: () => []
 }));
 vi.mock("./user-message-navigator", () => ({
-  UserMessageNavigator: ({ messages, scrollContainerRef }: {
-    messages: typeof taskMessages;
+  UserMessageNavigator: ({ agentId, scrollContainerRef }: {
+    agentId: string;
     scrollContainerRef: RefObject<HTMLDivElement | null>;
   }) => {
+    receivedAgentId = agentId;
     receivedScrollContainerRef = scrollContainerRef;
-    return (
-      <div
-        data-message-count={messages.length}
-        data-testid="user-message-navigator"
-      />
-    );
+    return <div data-testid="user-message-navigator" />;
   }
 }));
 
@@ -70,7 +67,7 @@ describe("ChatWorkspace user message navigator", () => {
     const scrollViewport = screen.getByTestId("chat-message-scroll");
     const navigator = screen.getByTestId("user-message-navigator");
 
-    expect(navigator).toHaveAttribute("data-message-count", "1");
+    expect(receivedAgentId).toBe("task-1");
     expect(receivedScrollContainerRef?.current).toBe(scrollViewport);
     expect(navigator.parentElement).toBe(scrollViewport.parentElement);
   });

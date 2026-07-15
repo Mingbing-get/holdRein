@@ -29,16 +29,18 @@ vi.mock("@ant-design/x", () => ({
 }));
 
 vi.mock("../tasks-context", () => ({
+  useAgentMessages: (agentId: string) =>
+    agentTasksMock.messages[agentId] ?? [],
   useAgentTasks: () => ({
-    getSubagentMessages: (agentId: string) =>
-      agentTasksMock.messages[agentId] ?? [],
     getSubagentStatus: (agentId: string) => agentTasksMock.statuses[agentId]
   })
 }));
 
 vi.mock("../message-list", () => ({
-  AgentMessageList: ({ messages }: { messages: WebPlugin.AgentMessage[] }) => (
-    <div data-testid="messages">{messages.length}</div>
+  AgentMessageList: ({ agentId }: { agentId: string }) => (
+    <div data-testid="messages">
+      {(agentTasksMock.messages[agentId] ?? []).length}
+    </div>
   )
 }));
 

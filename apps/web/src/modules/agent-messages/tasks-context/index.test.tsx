@@ -2,12 +2,12 @@
 
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { AppWorkspaceProvider, useAppWorkspace } from "../../../app/app-workspace-context";
 import type { AgentMessageFetcher } from "../api";
-import { AgentTasksProvider, useAgentTasks } from ".";
+import { AgentTasksProvider, useAgentMessages, useAgentTasks } from ".";
 import { jsonResponse, startResult, streamResponse } from "./test-utils";
 
 describe("AgentTasksProvider", () => {
@@ -32,6 +32,9 @@ describe("AgentTasksProvider", () => {
       );
       expect(screen.getByTestId("task-message-kinds")).toHaveTextContent(
         "user,assistant"
+      );
+      expect(screen.getByTestId("agent-key-message-count")).toHaveTextContent(
+        "0"
       );
     });
 
@@ -177,9 +180,14 @@ function StartTaskProbe() {
   const {
     state: { activeTaskId, workspaces }
   } = useAppWorkspace();
-  const { getTaskState, startTask } = useAgentTasks();
+  const { startTask } = useAgentTasks();
+  const taskKeyMessages = useAgentMessages("task-1");
+  const agentKeyMessages = useAgentMessages("agent-1");
+  const didStart = useRef(false);
 
   useEffect(() => {
+    if (didStart.current) return;
+    didStart.current = true;
     void startTask({
       modelId: "gpt-4.1",
       prompt: "Inspect the project",
@@ -193,10 +201,9 @@ function StartTaskProbe() {
       <span data-testid="active-task-id">{activeTaskId}</span>
       <span data-testid="task-title">{workspaces[0]?.tasks[0]?.title}</span>
       <span data-testid="task-message-kinds">
-        {getTaskState("task-1")
-          ?.messages.map((message) => message.role)
-          .join(",")}
+        {taskKeyMessages.map((message) => message.role).join(",")}
       </span>
+      <span data-testid="agent-key-message-count">{agentKeyMessages.length}</span>
     </>
   );
 }

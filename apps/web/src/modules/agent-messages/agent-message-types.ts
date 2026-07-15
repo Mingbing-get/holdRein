@@ -85,6 +85,7 @@ export interface TaskSubagentHistory {
 }
 
 export interface TaskMessageHistory {
+  agentId?: string;
   messages: WebPlugin.AgentMessage[];
   subagents: TaskSubagentHistory[];
 }

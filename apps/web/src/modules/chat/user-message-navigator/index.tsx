@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { RefObject } from "react";
 
 import type { WebPlugin } from "@hold-rein/plugin-web";
+import { useAgentMessages } from "../../agent-messages";
 import "./index.css";
 
 const OBSERVATION_OFFSET_PX = 60;
@@ -13,14 +14,15 @@ interface UserMessageItem {
 }
 
 export interface UserMessageNavigatorProps {
-  messages: WebPlugin.AgentMessage[];
+  agentId: string;
   scrollContainerRef: RefObject<HTMLDivElement | null>;
 }
 
 export function UserMessageNavigator({
-  messages,
+  agentId,
   scrollContainerRef
 }: UserMessageNavigatorProps) {
+  const messages = useAgentMessages(agentId);
   const [cachedUserMessages, setCachedUserMessages] = useState<
     UserMessageItem[]
   >(() => getUserMessages(messages));

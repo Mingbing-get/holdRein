@@ -5,7 +5,6 @@ import { useAppWorkspace } from "../../app/app-workspace-context";
 import {
   AgentMessageList,
   ApprovalPanel,
-  useTaskMessages,
   useAgentTasks
 } from "../agent-messages";
 import Sender from "./sender";
@@ -47,8 +46,8 @@ export function ChatWorkspace({
   const activeWorkspaceTask = activeWorkspace?.tasks.find(
     (task) => task.id === activeTaskId
   );
+  const mainMessageAgentId = activeTaskId;
   const taskState = getTaskState(activeTaskId);
-  const taskMessages = useTaskMessages(activeTaskId);
   const pendingApproval = getPendingApproval(activeTaskId);
   const suggestionGroups = useWorkspaceFileSuggestions(
     apiBaseUrl,
@@ -97,7 +96,7 @@ export function ChatWorkspace({
     }
 
     scrollToBottomIfFollowing();
-  }, [activeTaskId, pendingApproval, scrollToBottomIfFollowing, taskMessages.length]);
+  }, [activeTaskId, scrollToBottomIfFollowing]);
 
   return (
     <Flex
@@ -141,9 +140,9 @@ export function ChatWorkspace({
           }}
         >
           <AgentMessageList
+            agentId={mainMessageAgentId}
             onMessageChange={scrollToBottomIfFollowing}
             status={taskState?.status}
-            taskId={activeTaskId}
           />
           {pendingApproval ? (
             <ApprovalPanel
@@ -161,7 +160,7 @@ export function ChatWorkspace({
           <div aria-hidden ref={bottomRef} />
         </Flex>
         <UserMessageNavigator
-          messages={taskMessages}
+          agentId={mainMessageAgentId}
           scrollContainerRef={messageScrollRef}
         />
       </div>

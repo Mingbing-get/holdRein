@@ -10,7 +10,6 @@ import { useOptionalAppPlugins } from "../../../app/app-plugin";
 import { useAppWorkspace } from "../../../app/app-workspace-context";
 import {
   AgentTasksContext,
-  EMPTY_MESSAGES,
   EMPTY_RUNTIME_CONTRIBUTIONS
 } from "./context";
 import type {
@@ -58,9 +57,9 @@ import type { WebPlugin } from "@hold-rein/plugin-web";
 
 export {
   useAgentTasks,
-  useTaskMessage,
-  useTaskMessageIds,
-  useTaskMessages,
+  useAgentMessage,
+  useAgentMessageIds,
+  useAgentMessages,
   useToolResultMessage
 } from "./context";
 
@@ -133,7 +132,7 @@ export function AgentTasksProvider({
   const handleTaskEvent = useCallback(
     (taskId: string, event: AgentEventEnvelope) => {
       if (isMessageEvent(event.type)) {
-        messageStore.current.reduceTaskEvent(taskId, event);
+        messageStore.current.reduceAgentEvent(taskId, event);
       } else {
         setTaskStates((current) => ({
           ...current,
@@ -364,14 +363,12 @@ export function AgentTasksProvider({
       decideApproval,
       getPendingApproval: (taskId) => taskStates[taskId]?.pendingApprovals[0],
       getSubagentMessages: (agentId) =>
-        subagentMessagesById[agentId]?.messages ?? EMPTY_MESSAGES,
+        messageStore.current.getAgentMessages(agentId),
       getSubagentStatus: (agentId) => subagentMessagesById[agentId]?.status,
       getTaskState: (taskId) => {
         const state = taskStates[taskId];
 
-        return state
-          ? { ...state, messages: messageStore.current.getTaskMessages(taskId) }
-          : undefined;
+        return state;
       },
       hasPendingApproval: (taskId) =>
         Boolean(taskStates[taskId]?.pendingApprovals.length),

@@ -57,49 +57,49 @@ export function useAgentTasks(): AgentTasksContextValue {
   return value;
 }
 
-export function useTaskMessage(
-  taskId: string,
+export function useAgentMessage(
+  agentId: string,
   messageId: string
 ): WebPlugin.AgentMessage | undefined {
   const { messageStore } = useAgentTasks();
 
   return useSyncExternalStore(
     (listener) =>
-      messageStore.subscribeTaskMessage(taskId, messageId, listener),
-    () => messageStore.getTaskMessage(taskId, messageId),
+      messageStore.subscribeAgentMessage(agentId, messageId, listener),
+    () => messageStore.getAgentMessage(agentId, messageId),
     () => undefined
   );
 }
 
-export function useTaskMessageIds(taskId: string): string[] {
+export function useAgentMessageIds(agentId: string): string[] {
   const { messageStore } = useAgentTasks();
 
   return useSyncExternalStore(
-    (listener) => messageStore.subscribeTaskMessageIds(taskId, listener),
-    () => messageStore.getTaskMessageIds(taskId),
+    (listener) => messageStore.subscribeAgentMessageIds(agentId, listener),
+    () => messageStore.getAgentMessageIds(agentId),
     () => EMPTY_MESSAGE_IDS
   );
 }
 
-export function useTaskMessages(taskId: string): WebPlugin.AgentMessage[] {
+export function useAgentMessages(agentId: string): WebPlugin.AgentMessage[] {
   const { messageStore } = useAgentTasks();
 
   return useSyncExternalStore(
-    (listener) => messageStore.subscribeTaskMessageIds(taskId, listener),
-    () => messageStore.getTaskMessages(taskId),
+    (listener) => messageStore.subscribeAgentMessageIds(agentId, listener),
+    () => messageStore.getAgentMessages(agentId),
     () => EMPTY_MESSAGES
   );
 }
 
 export function useToolResultMessage(
-  taskId: string,
+  agentId: string,
   toolCallId: string
 ): WebPlugin.ToolResultMessage | undefined {
   const { messageStore } = useAgentTasks();
 
   return useSyncExternalStore(
-    (listener) => messageStore.subscribeToolResult(taskId, toolCallId, listener),
-    () => messageStore.getToolResult(taskId, toolCallId),
+    (listener) => messageStore.subscribeToolResult(agentId, toolCallId, listener),
+    () => messageStore.getToolResult(agentId, toolCallId),
     () => undefined
   );
 }

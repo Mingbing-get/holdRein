@@ -5,8 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import { AgentTasksContext } from "../tasks-context/context";
 import {
-  useTaskMessage,
-  useTaskMessageIds
+  useAgentMessage,
+  useAgentMessageIds
 } from "../tasks-context/context";
 import { createInitialAgentTaskState } from "../reducer";
 import { createAgentMessageStore } from ".";
@@ -23,13 +23,13 @@ describe("agent message store React hooks", () => {
     const firstRender = vi.fn();
     const secondRender = vi.fn();
 
-    store.replaceTaskMessages("task-1", [
+    store.replaceAgentMessages("agent-1", [
       assistantMessage("assistant-1", "One"),
       assistantMessage("assistant-2", "Tw")
     ]);
 
     function Probe() {
-      const ids = useTaskMessageIds("task-1");
+      const ids = useAgentMessageIds("agent-1");
 
       idsRender(ids);
 
@@ -48,7 +48,7 @@ describe("agent message store React hooks", () => {
     );
 
     act(() => {
-      store.reduceTaskEvent("task-1", messageDelta("assistant-2", "o"));
+      store.reduceAgentEvent("agent-1", messageDelta("assistant-2", "o"));
     });
 
     expect(idsRender).toHaveBeenCalledTimes(1);
@@ -65,7 +65,7 @@ function MessageProbe({
   id: string;
   onRender: (text: string) => void;
 }) {
-  const message = useTaskMessage("task-1", id);
+  const message = useAgentMessage("agent-1", id);
   const text =
     message?.role === "assistant" && message.content[0]?.type === "text"
       ? message.content[0].text
@@ -88,7 +88,7 @@ function contextValue(
     getSubagentStatus: () => undefined,
     getTaskState: (taskId) => ({
       ...createInitialAgentTaskState(taskId),
-      messages: messageStore.getTaskMessages(taskId)
+      messages: messageStore.getAgentMessages(taskId)
     }),
     hasPendingApproval: () => false,
     hasUnreadCompletion: () => false,

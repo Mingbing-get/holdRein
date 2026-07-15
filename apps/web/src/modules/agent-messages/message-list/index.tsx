@@ -10,8 +10,8 @@ import { MarkdownContent } from "../markdown-content";
 import { SubagentMessageList } from "../subagent-message";
 import { Fragment, useLayoutEffect, useMemo } from "react";
 import {
-  useTaskMessage,
-  useTaskMessages
+  useAgentMessage,
+  useAgentMessages
 } from "../tasks-context";
 import {
   useTurnFooterMessageGroups,
@@ -31,21 +31,21 @@ export interface AgentMessageListProps {
   messages?: WebPlugin.AgentMessage[];
   onMessageChange?: () => void;
   status?: TurnFooterStatus;
-  taskId?: string;
+  agentId?: string;
 }
 
 export function AgentMessageList({
   messages = EMPTY_AGENT_MESSAGES,
   onMessageChange,
   status,
-  taskId
+  agentId
 }: AgentMessageListProps) {
-  if (taskId) {
+  if (agentId) {
     return (
       <AgentStoredMessageList
         onMessageChange={onMessageChange}
         status={status}
-        taskId={taskId}
+        agentId={agentId}
       />
     );
   }
@@ -106,16 +106,16 @@ function AgentStaticMessageList({
 function AgentStoredMessageList({
   onMessageChange,
   status,
-  taskId
+  agentId
 }: {
   onMessageChange?: (() => void) | undefined;
   status?: TurnFooterStatus;
-  taskId: string;
+  agentId: string;
 }) {
   const {
     state: { activeWorkspaceId, workspaces }
   } = useAppWorkspace();
-  const messages = useTaskMessages(taskId);
+  const messages = useAgentMessages(agentId);
   const workspacePath = useMemo(
     () =>
       workspaces.find((workspace) => workspace.id === activeWorkspaceId)?.path,
@@ -141,7 +141,7 @@ function AgentStoredMessageList({
             <AgentStoredMessageItem
               messageId={message.id}
               onMessageChange={onMessageChange}
-              taskId={taskId}
+              agentId={agentId}
               workspacePath={workspacePath}
             />
             {footerMessages ? (
@@ -160,15 +160,15 @@ function AgentStoredMessageList({
 function AgentStoredMessageItem({
   messageId,
   onMessageChange,
-  taskId,
+  agentId,
   workspacePath
 }: {
   messageId: string;
   onMessageChange?: (() => void) | undefined;
-  taskId: string;
+  agentId: string;
   workspacePath?: string | undefined;
 }) {
-  const message = useTaskMessage(taskId, messageId);
+  const message = useAgentMessage(agentId, messageId);
 
   useLayoutEffect(() => {
     if (message) onMessageChange?.();
@@ -178,7 +178,7 @@ function AgentStoredMessageItem({
     <AgentMessageItem
       message={message}
       messages={[]}
-      taskId={taskId}
+      agentId={agentId}
       workspacePath={workspacePath}
     />
   ) : null;
@@ -209,12 +209,12 @@ function AgentTurnFooter({
 function AgentMessageItem({
   message,
   messages,
-  taskId,
+  agentId,
   workspacePath
 }: {
   message: WebPlugin.AgentMessage;
   messages: WebPlugin.AgentMessage[];
-  taskId?: string | undefined;
+  agentId?: string | undefined;
   workspacePath?: string | undefined;
 }) {
   if (message.role === "user") {
@@ -239,7 +239,7 @@ function AgentMessageItem({
       <AssistantMessageItem
         message={message}
         messages={messages}
-        taskId={taskId}
+        agentId={agentId}
         workspacePath={workspacePath}
       />
     );
@@ -288,12 +288,12 @@ function AgentMessageItem({
 function AssistantMessageItem({
   message,
   messages,
-  taskId,
+  agentId,
   workspacePath
 }: {
   message: WebPlugin.AssistantMessage;
   messages: WebPlugin.AgentMessage[];
-  taskId?: string | undefined;
+  agentId?: string | undefined;
   workspacePath?: string | undefined;
 }) {
   return (
@@ -321,10 +321,10 @@ function AssistantMessageItem({
           );
         }
         return (
-          taskId ? (
+          agentId ? (
             <StoredToolCallMessageItem
               key={index}
-              taskId={taskId}
+              agentId={agentId}
               toolCall={block}
               workspacePath={workspacePath}
             />

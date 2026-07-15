@@ -23,7 +23,7 @@ vi.mock("../agent-messages", () => ({
     getTaskState: () => undefined,
     startTask: vi.fn()
   }),
-  useTaskMessages: () => []
+  useAgentMessages: () => []
 }));
 
 vi.mock("./sender", () => ({

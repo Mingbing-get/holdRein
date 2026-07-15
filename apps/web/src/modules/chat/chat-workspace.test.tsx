@@ -53,7 +53,7 @@ vi.mock("../agent-messages", () => ({
         : undefined,
     startTask: agentTasksMock.startTask
   }),
-  useTaskMessages: () => agentTasksMock.messages
+  useAgentMessages: () => agentTasksMock.messages
 }));
 
 vi.mock("./sender", () => ({
