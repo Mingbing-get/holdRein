@@ -53,7 +53,7 @@ vi.mock("../tasks-context", () => ({
     getSubagentStatus: () => undefined,
     getTaskState: (taskId: string) =>
       taskId === agentTasksMock.activeTaskId
-        ? { messages: agentTasksMock.taskMessages }
+        ? { status: "completed" }
         : undefined
   })
 }));

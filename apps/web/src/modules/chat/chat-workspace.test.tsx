@@ -47,7 +47,6 @@ vi.mock("../agent-messages", () => ({
     getTaskState: (taskId: string) =>
       taskId === "task-one"
         ? {
-            messages: agentTasksMock.messages,
             status: agentTasksMock.taskStatus
           }
         : undefined,

@@ -4,7 +4,10 @@ import type { Dispatch, SetStateAction } from "react";
 import { fetchTaskMessages } from "../api";
 import type { AgentMessageFetcher } from "../api";
 import type { AgentMessageStore } from "../message-store";
-import { startAgentEventSubscription } from "../agent-event-subscription";
+import {
+  getAgentEventMessage,
+  startAgentEventSubscription
+} from "../agent-event-subscription";
 import {
   createInitialAgentTaskState,
   reduceAgentTaskState
@@ -103,13 +106,6 @@ export function useAgentTaskSubscriptions(
             activeTaskId
           )
         );
-        setTaskStates((current) => ({
-          ...current,
-          [activeTaskId]: reduceAgentTaskState(
-            current[activeTaskId] ?? createInitialAgentTaskState(activeTaskId),
-            { messages: history.messages, type: "history_loaded" }
-          )
-        }));
       })
       .catch(() => {
         loadedTaskIds.current.delete(activeTaskId);
@@ -184,11 +180,16 @@ export function useAgentTaskSubscriptions(
         fetcher,
         onError: () => undefined,
         onEvent: (event) => {
+          const message = getAgentEventMessage(event);
           if (isMessageEvent(event.type)) {
             messageStore.reduceAgentEvent(agentId, event);
           }
           setSubagentMessagesById((current) =>
-            reduceSubagentEvent(current, agentId, event)
+            discoverSubagents(
+              reduceSubagentEvent(current, agentId, event),
+              message ? [message] : [],
+              subagent.taskId
+            )
           );
           if (event.type === "approval_requested" && subagent.taskId) {
             setTaskStates((current) => ({

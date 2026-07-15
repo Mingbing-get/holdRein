@@ -3,14 +3,10 @@ import type {
   AgentTaskState,
   PendingApproval
 } from "../agent-message-types";
-import { reduceAgentMessages } from "../collection";
-import type { WebPlugin } from "@hold-rein/plugin-web";
 
 export type AgentTaskAction =
-  | { prompt: string; type: "prompt_submitted" }
   | { approvalId: string; type: "approval_decided" }
   | { event: AgentEventEnvelope; type: "event_received" }
-  | { messages: WebPlugin.AgentMessage[]; type: "history_loaded" }
   | { approval: PendingApproval; type: "local_approval_requested" }
   | { message: string; type: "subscription_failed" };
 
@@ -18,7 +14,6 @@ export function createInitialAgentTaskState(taskId: string): AgentTaskState {
   return {
     error: null,
     lastSequence: 0,
-    messages: [],
     pendingApprovals: [],
     status: "idle",
     taskId
@@ -29,24 +24,6 @@ export function reduceAgentTaskState(
   state: AgentTaskState,
   action: AgentTaskAction
 ): AgentTaskState {
-  if (action.type === "prompt_submitted") {
-    return {
-      ...state,
-      messages: [
-        ...state.messages,
-        {
-          content: [{ text: action.prompt, type: "text" }],
-          id: `prompt-${state.messages.length}`,
-          role: "user",
-          timestamp: Date.now()
-        }
-      ],
-      status: "running"
-    };
-  }
-  if (action.type === "history_loaded") {
-    return { ...state, messages: action.messages };
-  }
   if (action.type === "subscription_failed") {
     return { ...state, error: action.message, status: "error" };
   }
@@ -91,16 +68,6 @@ export function reduceAgentTaskState(
     return {
       ...next,
       pendingApprovals: [...next.pendingApprovals, approval]
-    };
-  }
-  if (
-    action.event.type === "message_start" ||
-    action.event.type === "message_delta" ||
-    action.event.type === "message_end"
-  ) {
-    return {
-      ...next,
-      messages: reduceAgentMessages(state.messages, action.event)
     };
   }
   if (action.event.type === "agent_error") {

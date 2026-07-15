@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppUi } from "../../../app/app-ui-context";
 import { useAppPlugins } from "../../../app/app-plugin";
 import { useAppWorkspace } from "../../../app/app-workspace-context";
-import { useAgentTasks } from "../../agent-messages";
+import { useAgentMessages, useAgentTasks } from "../../agent-messages";
 import { WorkspaceFileTree } from "../file-tree";
 
 export default function RightPanel() {
@@ -23,6 +23,7 @@ export default function RightPanel() {
   const [hoveredPanelId, setHoveredPanelId] = useState<string>("");
 
   const taskState = getTaskState(activeTaskId);
+  const messages = useAgentMessages(activeTaskId);
   const builtinPanels = useMemo<WebPlugin.RightPanel[]>(
     () => [
       {
@@ -54,7 +55,7 @@ export default function RightPanel() {
   const panelProps = useMemo<WebPlugin.RightPanelProps>(
     () => ({
       activeAgent,
-      messages: taskState?.messages ?? [],
+      messages,
       status: taskState?.status ?? "idle",
       ...(activeTaskId ? { taskId: activeTaskId } : {}),
       ...(activeWorkspaceId ? { activeWorkspaceId } : {}),
@@ -66,7 +67,7 @@ export default function RightPanel() {
       activeAgent,
       activeTaskId,
       activeWorkspaceId,
-      taskState?.messages,
+      messages,
       taskState?.status,
       workspaces
     ]

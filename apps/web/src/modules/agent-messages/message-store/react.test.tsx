@@ -86,10 +86,7 @@ function contextValue(
     getPendingApproval: () => undefined,
     getSubagentMessages: () => [],
     getSubagentStatus: () => undefined,
-    getTaskState: (taskId) => ({
-      ...createInitialAgentTaskState(taskId),
-      messages: messageStore.getAgentMessages(taskId)
-    }),
+    getTaskState: (taskId) => createInitialAgentTaskState(taskId),
     hasPendingApproval: () => false,
     hasUnreadCompletion: () => false,
     messageStore,

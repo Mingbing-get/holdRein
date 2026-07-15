@@ -39,7 +39,7 @@ vi.mock("../agent-messages", () => ({
     continueTask: vi.fn(),
     decideApproval: vi.fn(),
     getPendingApproval: () => undefined,
-    getTaskState: () => ({ messages: taskMessages, status: "completed" }),
+    getTaskState: () => ({ status: "completed" }),
     startTask: vi.fn()
   }),
   useAgentMessages: () => taskMessages

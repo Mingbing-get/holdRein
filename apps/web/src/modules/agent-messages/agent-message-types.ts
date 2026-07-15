@@ -70,7 +70,6 @@ export interface ApprovalDecisionInput {
 export interface AgentTaskState {
   error: string | null;
   lastSequence: number;
-  messages: WebPlugin.AgentMessage[];
   pendingApprovals: PendingApproval[];
   status: "idle" | "running" | "completed" | "error";
   taskId: string;
@@ -92,7 +91,6 @@ export interface TaskMessageHistory {
 
 export interface SubagentState {
   agentName: string;
-  messages: WebPlugin.AgentMessage[];
   parentAgentId: string;
   status: "running" | "completed" | "interrupted";
   taskId: string;

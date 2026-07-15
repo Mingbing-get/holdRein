@@ -9,7 +9,7 @@ import {
 import type { TaskSubagentHistory } from "../agent-message-types";
 
 describe("subagent message store", () => {
-  it("initializes restored subagent messages and statuses from task history", () => {
+  it("initializes restored subagent metadata and statuses from task history", () => {
     const history: TaskSubagentHistory[] = [
       {
         agentName: "researcher",
@@ -23,7 +23,6 @@ describe("subagent message store", () => {
     expect(initializeSubagentsFromHistory({}, history, "task-1")).toEqual({
       "agent-child": {
         agentName: "researcher",
-        messages: [assistantMessage("message-child", "Restored child")],
         parentAgentId: "agent-parent",
         status: "completed",
         taskId: "task-1"
@@ -57,7 +56,6 @@ describe("subagent message store", () => {
     ).toEqual({
         "agent-child": {
           agentName: "subagent",
-          messages: [],
           parentAgentId: "",
           status: "running",
           taskId: "task-1"
@@ -82,7 +80,6 @@ describe("subagent message store", () => {
     ).toEqual({
       "agent-child": {
         agentName: "subagent",
-        messages: [],
         parentAgentId: "",
         status: "completed",
         taskId: "task-1"
@@ -90,7 +87,7 @@ describe("subagent message store", () => {
     });
   });
 
-  it("appends resume payload messages and marks the child running", () => {
+  it("marks a resumed child running without storing payload messages", () => {
     const current = initializeSubagentsFromHistory(
       {},
       [
@@ -126,10 +123,6 @@ describe("subagent message store", () => {
     ).toEqual({
       "agent-child": {
         agentName: "analyst",
-        messages: [
-          assistantMessage("message-child", "Finished child"),
-          userMessage("message-resume", "Resume child")
-        ],
         parentAgentId: "agent-parent",
         status: "running",
         taskId: "task-1"
