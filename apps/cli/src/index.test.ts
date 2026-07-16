@@ -72,6 +72,28 @@ describe("runCli", () => {
     expect(output.lines.join("")).toContain("help");
   });
 
+  it("builds help from recursive module command descriptions", async () => {
+    const output = collectOutput();
+    const result = await runCli(["help"], {
+      packageVersion: "1.2.3",
+      write: output.write
+    });
+    const helpText = output.lines.join("");
+    expect(result.exitCode).toBe(0);
+    expect(helpText).toContain(
+      "workspace setting-update <id>  Update workspace settings"
+    );
+    expect(helpText).toContain(
+      "scheduled-task create --name <name> --prompt <prompt> --provider <provider>"
+    );
+    expect(helpText).toContain(
+      "usage tasks --group-by <task|workspace>  Group task usage rows"
+    );
+    expect(helpText).toContain(
+      "plugin install --target <path>  Install into a specific plugin directory"
+    );
+  });
+
   it("starts the bundled service for the start command", async () => {
     const output = collectOutput();
     const calls: unknown[] = [];

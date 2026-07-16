@@ -5,47 +5,64 @@ import {
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-import { createCommand } from "../command-registry";
+import { createCommand, type CommandHandler } from "../command-registry";
 import { formatError, readOptionValue } from "../options";
 
 export function createPluginCommand() {
-  return createCommand("plugin")
-    .use("init", async (args, context) => {
-      try {
-        const result = initPluginPackage(
-          context.options.currentWorkingDirectory ?? process.cwd(),
-          parsePluginInitOptions(args)
-        );
-        context.options.write(`Initialized plugin package ${result.packageName}\n`);
-        return { exitCode: 0 };
-      } catch (error) {
-        context.options.write(
-          `Failed to initialize plugin package: ${formatError(error)}\n`
-        );
-        return { exitCode: 1 };
-      }
-    })
-    .use("install", async (args, context) => {
-      try {
-        const installOptions = parsePluginInstallOptions(args);
-        const installPluginPackage =
-          context.options.installPluginPackage ?? installPluginPackageDefault;
-        const destination = await installPluginPackage({
-          currentWorkingDirectory:
-            context.options.currentWorkingDirectory ?? process.cwd(),
-          pluginRoot:
-            installOptions.target ?? join(homedir(), ".hold-rein", "plugins"),
-          source: installOptions.source,
-          write: context.options.write
-        });
-        context.options.write(`Installed plugin to ${destination}\n`);
-        return { exitCode: 0 };
-      } catch (error) {
-        context.options.write(`Failed to install plugin: ${formatError(error)}\n`);
-        return { exitCode: 1 };
-      }
-    });
+  return createCommand("plugin", { description: "Manage plugin packages" })
+    .use(
+      "init",
+      createCommand("init", { description: "Initialize a plugin package" })
+        .option("--path <path>", "Initialize in a specific path")
+        .option("--name <name>", "Initialize in a child directory")
+        .handle(initPlugin)
+    )
+    .use(
+      "install",
+      createCommand("install", { description: "Install a plugin package" })
+        .option(
+          "--target <path>",
+          "Install into a specific plugin directory"
+        )
+        .handle(installPlugin)
+    );
 }
+
+const initPlugin: CommandHandler = async (args, context) => {
+  try {
+    const result = initPluginPackage(
+      context.options.currentWorkingDirectory ?? process.cwd(),
+      parsePluginInitOptions(args)
+    );
+    context.options.write(`Initialized plugin package ${result.packageName}\n`);
+    return { exitCode: 0 };
+  } catch (error) {
+    context.options.write(
+      `Failed to initialize plugin package: ${formatError(error)}\n`
+    );
+    return { exitCode: 1 };
+  }
+};
+
+const installPlugin: CommandHandler = async (args, context) => {
+  try {
+    const installOptions = parsePluginInstallOptions(args);
+    const installPluginPackage =
+      context.options.installPluginPackage ?? installPluginPackageDefault;
+    const destination = await installPluginPackage({
+      currentWorkingDirectory:
+        context.options.currentWorkingDirectory ?? process.cwd(),
+      pluginRoot: installOptions.target ?? join(homedir(), ".hold-rein", "plugins"),
+      source: installOptions.source,
+      write: context.options.write
+    });
+    context.options.write(`Installed plugin to ${destination}\n`);
+    return { exitCode: 0 };
+  } catch (error) {
+    context.options.write(`Failed to install plugin: ${formatError(error)}\n`);
+    return { exitCode: 1 };
+  }
+};
 
 function parsePluginInstallOptions(
   args: readonly string[]

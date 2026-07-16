@@ -1,4 +1,4 @@
-import { createCommand } from "../command-registry";
+import { createCommand, type CommandHandler } from "../command-registry";
 import { readOptionValue } from "../options";
 import { getDefaultScheduledTasksService } from "../service-loaders";
 import type {
@@ -8,63 +8,152 @@ import type {
 } from "../types";
 
 export function createScheduledTaskCommand() {
-  return createCommand("scheduled-task")
-    .use("list", async (args, context) => {
-      const service = await getService(context.options.services?.scheduledTasks);
-      const workspacePath = readOptionValue(args, "--workspace");
-      const tasks = service.listScheduledTasks(
-        workspacePath === undefined ? undefined : { workspacePath }
-      );
-
-      if (tasks.length === 0) {
-        context.options.write("No scheduled tasks found\n");
-        return { exitCode: 0 };
-      }
-
-      for (const task of tasks) writeTask(context.options.write, task);
-      return { exitCode: 0 };
-    })
-    .use("show", async (args, context) => {
-      const id = readId(args);
-      const task = (await getService(context.options.services?.scheduledTasks))
-        .findScheduledTask(id);
-
-      if (!task) return notFound(context.options.write, id);
-      writeTask(context.options.write, task);
-      return { exitCode: 0 };
-    })
-    .use("create", async (args, context) => {
-      const task = (await getService(context.options.services?.scheduledTasks))
-        .createScheduledTask(parseCreateInput(args));
-
-      writeTask(context.options.write, task);
-      return { exitCode: 0 };
-    })
-    .use("update", async (args, context) => {
-      const id = readId(args);
-      const task = (await getService(context.options.services?.scheduledTasks))
-        .updateScheduledTask(id, parseUpdateInput(args.slice(1)));
-
-      if (!task) return notFound(context.options.write, id);
-      writeTask(context.options.write, task);
-      return { exitCode: 0 };
-    })
-    .use("delete", async (args, context) => {
-      const id = readId(args);
-      const deleted = (await getService(context.options.services?.scheduledTasks))
-        .deleteScheduledTask(id);
-
-      if (!deleted) return notFound(context.options.write, id);
-      context.options.write(`Deleted scheduled task ${id}\n`);
-      return { exitCode: 0 };
-    })
-    .use("enable", async (args, context) =>
-      setEnabled(args, context.options.services?.scheduledTasks, true, context.options.write)
+  return createCommand("scheduled-task", { description: "Manage scheduled tasks" })
+    .use(
+      "list",
+      createCommand("list", { description: "List scheduled tasks" })
+        .option("--workspace <path>", "Filter scheduled tasks by workspace")
+        .handle(listScheduledTasks)
     )
-    .use("disable", async (args, context) =>
-      setEnabled(args, context.options.services?.scheduledTasks, false, context.options.write)
+    .use(
+      "show",
+      createCommand("show", {
+        description: "Show a scheduled task",
+        usage: "show <id>"
+      }).handle(showScheduledTask)
+    )
+    .use(
+      "create",
+      createCommand("create", { description: "Create a scheduled task" })
+        .option(
+          "--name <name> --prompt <prompt> --provider <provider>",
+          "Set the scheduled task name, prompt, and provider"
+        )
+        .option(
+          "--model <model> --workspace <path> --cron <expr>",
+          "Set the model, workspace, and cron expression"
+        )
+        .option(
+          "--timezone <tz> --thinking <level> [--allow-concurrent]",
+          "Set runtime options"
+        )
+        .handle(createScheduledTask)
+    )
+    .use(
+      "update",
+      createCommand("update", {
+        description: "Update a scheduled task",
+        usage: "update <id>"
+      })
+        .option(
+          "--name <name> --prompt <prompt> --provider <provider>",
+          "Update the scheduled task name, prompt, and provider"
+        )
+        .option(
+          "--model <model> --workspace <path> --cron <expr>",
+          "Update the model, workspace, and cron expression"
+        )
+        .option(
+          "--timezone <tz> --thinking <level>",
+          "Update runtime options"
+        )
+        .option("--enabled <true|false>", "Set whether the task is enabled")
+        .option(
+          "[--allow-concurrent|--no-allow-concurrent]",
+          "Set whether runs may overlap"
+        )
+        .handle(updateScheduledTask)
+    )
+    .use(
+      "delete",
+      createCommand("delete", {
+        description: "Delete a scheduled task",
+        usage: "delete <id>"
+      }).handle(deleteScheduledTask)
+    )
+    .use(
+      "enable",
+      createCommand("enable", {
+        description: "Enable a scheduled task",
+        usage: "enable <id>"
+      }).handle(async (args, context) =>
+        setEnabled(
+          args,
+          context.options.services?.scheduledTasks,
+          true,
+          context.options.write
+        )
+      )
+    )
+    .use(
+      "disable",
+      createCommand("disable", {
+        description: "Disable a scheduled task",
+        usage: "disable <id>"
+      }).handle(async (args, context) =>
+        setEnabled(
+          args,
+          context.options.services?.scheduledTasks,
+          false,
+          context.options.write
+        )
+      )
     );
 }
+
+const listScheduledTasks: CommandHandler = async (args, context) => {
+  const service = await getService(context.options.services?.scheduledTasks);
+  const workspacePath = readOptionValue(args, "--workspace");
+  const tasks = service.listScheduledTasks(
+    workspacePath === undefined ? undefined : { workspacePath }
+  );
+
+  if (tasks.length === 0) {
+    context.options.write("No scheduled tasks found\n");
+    return { exitCode: 0 };
+  }
+
+  for (const task of tasks) writeTask(context.options.write, task);
+  return { exitCode: 0 };
+};
+
+const showScheduledTask: CommandHandler = async (args, context) => {
+  const id = readId(args);
+  const task = (await getService(context.options.services?.scheduledTasks))
+    .findScheduledTask(id);
+
+  if (!task) return notFound(context.options.write, id);
+  writeTask(context.options.write, task);
+  return { exitCode: 0 };
+};
+
+const createScheduledTask: CommandHandler = async (args, context) => {
+  const task = (await getService(context.options.services?.scheduledTasks))
+    .createScheduledTask(parseCreateInput(args));
+
+  writeTask(context.options.write, task);
+  return { exitCode: 0 };
+};
+
+const updateScheduledTask: CommandHandler = async (args, context) => {
+  const id = readId(args);
+  const task = (await getService(context.options.services?.scheduledTasks))
+    .updateScheduledTask(id, parseUpdateInput(args.slice(1)));
+
+  if (!task) return notFound(context.options.write, id);
+  writeTask(context.options.write, task);
+  return { exitCode: 0 };
+};
+
+const deleteScheduledTask: CommandHandler = async (args, context) => {
+  const id = readId(args);
+  const deleted = (await getService(context.options.services?.scheduledTasks))
+    .deleteScheduledTask(id);
+
+  if (!deleted) return notFound(context.options.write, id);
+  context.options.write(`Deleted scheduled task ${id}\n`);
+  return { exitCode: 0 };
+};
 
 async function getService(
   service: ScheduledTasksService | undefined

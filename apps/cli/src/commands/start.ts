@@ -8,7 +8,15 @@ const DEFAULT_RUN_HOST = "127.0.0.1";
 const DEFAULT_RUN_PORT = 3001;
 
 export function createStartCommand() {
-  const command = createCommand("start");
+  const command = createCommand("start", {
+    description: "Start the bundled Hold Rein service"
+  })
+    .option("--host <host>", "Bind to a specific host (default: 127.0.0.1)")
+    .option("--port <port>", "Bind to a specific port (default: 3001)")
+    .option(
+      "--plugin-dev <path>",
+      "Load a local plugin source in development mode"
+    );
 
   command.run = async (args, context) => {
     try {
