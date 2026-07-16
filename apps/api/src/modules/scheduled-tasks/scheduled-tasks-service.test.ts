@@ -101,6 +101,21 @@ describe("scheduled tasks service", () => {
     service.start();
     service.stop();
   });
+
+  it("creates a default SQLite-backed management service without an agents service", () => {
+    process.env.SQLITE_DB_PATH = join(
+      mkdtempSync(join(tmpdir(), "hold-rein-default-scheduled-management-")),
+      "test.sqlite"
+    );
+    const service = getDefaultScheduledTasksService();
+
+    expect("start" in service).toBe(false);
+    expect("stop" in service).toBe(false);
+
+    const task = service.createScheduledTask(createInput());
+
+    expect(service.findScheduledTask(task.id)).toEqual(task);
+  });
 });
 
 function createTestService() {

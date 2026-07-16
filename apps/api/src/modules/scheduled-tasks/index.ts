@@ -15,6 +15,7 @@ export {
 export {
   createScheduledTasksService,
   getDefaultScheduledTasksService,
+  type RunnableScheduledTasksService,
   type ScheduledTasksService
 } from "./scheduled-tasks-service";
 export type {

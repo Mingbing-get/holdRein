@@ -5,7 +5,7 @@ import { DB_FILE } from "../../config/const";
 import { loadApiEnv } from "../../config/env";
 import { createDatabase, migrateDatabase } from "../../db";
 import type { AgentsService } from "../agents/service";
-import { createSqliteWorkspaceRepository } from "../workspaces";
+import { createSqliteWorkspaceRepository } from "../workspaces/workspace-repository";
 import { getNextRunAt, isValidCronExpression } from "./cron";
 import {
   createScheduledTaskScheduler,
@@ -38,15 +38,19 @@ export interface ScheduledTasksService {
   ) => ScheduledAgentTaskRow | undefined;
 }
 
+export interface RunnableScheduledTasksService extends ScheduledTasksService {
+  start: () => void;
+  stop: () => void;
+}
+
 export interface CreateScheduledTasksServiceOptions {
   now?: () => Date;
   repository: ScheduledTasksRepository;
-  scheduler: ScheduledTaskScheduler;
+  scheduler?: ScheduledTaskScheduler;
 }
 
-let defaultService:
-  | (ScheduledTasksService & { start: () => void; stop: () => void })
-  | undefined;
+let defaultManagementService: ScheduledTasksService | undefined;
+let defaultRunnableService: RunnableScheduledTasksService | undefined;
 
 const THINKING_LEVELS = new Set<ScheduledTaskThinkingLevel>([
   "off",
@@ -79,14 +83,14 @@ export function createScheduledTasksService(
         }),
         updatedAt: createdAt
       });
-      options.scheduler.reloadTask(task.id);
+      options.scheduler?.reloadTask(task.id);
       return task;
     },
     deleteScheduledTask: (id) => {
       const existing = options.repository.findScheduledTaskById(id);
       if (!existing) return false;
       options.repository.deleteScheduledTaskById(id);
-      options.scheduler.reloadTask(id);
+      options.scheduler?.reloadTask(id);
       return true;
     },
     disableScheduledTask: (id) => updateEnabled(options, id, false),
@@ -120,20 +124,30 @@ export function createScheduledTasksService(
         }),
         updatedAt
       });
-      options.scheduler.reloadTask(id);
+      options.scheduler?.reloadTask(id);
       return updated;
     }
   };
 }
 
+export function getDefaultScheduledTasksService(): ScheduledTasksService;
 export function getDefaultScheduledTasksService(options: {
   agentsService: Pick<AgentsService, "startAgent">;
-}): ScheduledTasksService & { start: () => void; stop: () => void } {
-  if (!defaultService) {
-    loadApiEnv();
-    const database = createDatabase(process.env.SQLITE_DB_PATH ?? DB_FILE);
-    migrateDatabase(database.sqlite);
-    const repository = createSqliteScheduledTasksRepository(database);
+}): RunnableScheduledTasksService;
+export function getDefaultScheduledTasksService(options?: {
+  agentsService?: Pick<AgentsService, "startAgent">;
+}): ScheduledTasksService | RunnableScheduledTasksService {
+  if (options?.agentsService === undefined) {
+    if (!defaultManagementService) {
+      const { repository } = createDefaultScheduledTasksRepository();
+      defaultManagementService = createScheduledTasksService({ repository });
+    }
+
+    return defaultManagementService;
+  }
+
+  if (!defaultRunnableService) {
+    const { database, repository } = createDefaultScheduledTasksRepository();
     const workspaceRepository = createSqliteWorkspaceRepository(database);
     const scheduler = createScheduledTaskScheduler({
       agentsService: options.agentsService,
@@ -142,14 +156,28 @@ export function getDefaultScheduledTasksService(options: {
     });
     const service = createScheduledTasksService({ repository, scheduler });
 
-    defaultService = {
+    defaultRunnableService = {
       ...service,
       start: scheduler.start,
       stop: scheduler.stop
     };
   }
 
-  return defaultService;
+  return defaultRunnableService;
+}
+
+function createDefaultScheduledTasksRepository(): {
+  database: ReturnType<typeof createDatabase>;
+  repository: ScheduledTasksRepository;
+} {
+  loadApiEnv();
+  const database = createDatabase(process.env.SQLITE_DB_PATH ?? DB_FILE);
+  migrateDatabase(database.sqlite);
+
+  return {
+    database,
+    repository: createSqliteScheduledTasksRepository(database)
+  };
 }
 
 function updateEnabled(
@@ -163,7 +191,7 @@ function updateEnabled(
     enabled,
     updatedAt: (options.now ?? (() => new Date()))().toISOString()
   });
-  options.scheduler.reloadTask(id);
+  options.scheduler?.reloadTask(id);
   return updated;
 }
 

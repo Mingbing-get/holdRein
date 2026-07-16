@@ -1,4 +1,7 @@
 export {
+  getDefaultUsageStatsService
+} from "./default-usage-stats-service";
+export {
   createInMemoryUsageStatsRepository,
   createSqliteUsageStatsRepository,
   createUsageStatsService,

@@ -133,6 +133,113 @@ describe("runCli", () => {
     ]);
   });
 
+  it("routes workspace commands through registered workspace handlers", async () => {
+    const output = collectOutput();
+
+    const result = await runCli(["workspace", "list"], {
+      packageVersion: "1.2.3",
+      services: {
+        workspaces: {
+          deleteWorkspace: async () => ({ status: "not_found", workspaceId: "" }),
+          getWorkspaceSetting: async () => undefined,
+          listRecentWorkspaceTasks: () => ({
+            workspaces: [
+              {
+                hasMore: false,
+                id: "workspace-1",
+                name: "Hold Rein",
+                path: "/repo",
+                tasks: []
+              }
+            ]
+          }),
+          listWorkspaceTasksAfter: () => undefined,
+          updateWorkspaceSetting: async () => undefined
+        }
+      },
+      write: output.write
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(output.lines.join("")).toContain("workspace-1");
+    expect(output.lines.join("")).toContain("/repo");
+  });
+
+  it("routes scheduled task commands through registered scheduled task handlers", async () => {
+    const output = collectOutput();
+
+    const result = await runCli(["scheduled-task", "list"], {
+      packageVersion: "1.2.3",
+      services: {
+        scheduledTasks: {
+          createScheduledTask: () => {
+            throw new Error("not used");
+          },
+          deleteScheduledTask: () => false,
+          disableScheduledTask: () => undefined,
+          enableScheduledTask: () => undefined,
+          findScheduledTask: () => undefined,
+          listScheduledTasks: () => [
+            {
+              allowConcurrentRuns: false,
+              createdAt: "2026-07-02T00:00:00.000Z",
+              cronExpression: "*/5 * * * *",
+              enabled: true,
+              id: "scheduled_1",
+              lastRunAt: null,
+              modelId: "gpt-4.1",
+              name: "Check",
+              nextRunAt: "2026-07-02T00:05:00.000Z",
+              prompt: "Check status",
+              provider: "openai",
+              thinkingLevel: "medium",
+              timezone: "Asia/Shanghai",
+              updatedAt: "2026-07-02T00:00:00.000Z",
+              workspacePath: "/repo"
+            }
+          ],
+          updateScheduledTask: () => undefined
+        }
+      },
+      write: output.write
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(output.lines.join("")).toContain("scheduled_1");
+    expect(output.lines.join("")).toContain("Check");
+  });
+
+  it("routes usage commands through registered usage handlers", async () => {
+    const output = collectOutput();
+
+    const result = await runCli(["usage", "models"], {
+      packageVersion: "1.2.3",
+      services: {
+        usageStats: {
+          getModelTokenUsage: () => ({
+            bucket: "hour",
+            points: [
+              {
+                inputToken: 10,
+                modelName: "gpt-4.1",
+                outputToken: 20,
+                period: "2026-07-02T00:00:00.000Z",
+                provider: "openai"
+              }
+            ],
+            range: "24h"
+          }),
+          getTaskTokenUsage: () => ({ groupBy: "task", range: "7d", rows: [] })
+        }
+      },
+      write: output.write
+    });
+
+    expect(result.exitCode).toBe(0);
+    expect(output.lines.join("")).toContain("gpt-4.1");
+    expect(output.lines.join("")).toContain("30");
+  });
+
   it("prints help for the help flag", async () => {
     const output = collectOutput();
 
