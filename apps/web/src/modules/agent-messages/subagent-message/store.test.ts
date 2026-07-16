@@ -87,6 +87,58 @@ describe("subagent message store", () => {
     });
   });
 
+  it("marks child records running on matching start events", () => {
+    const current = {
+      "agent-child": {
+        agentName: "subagent",
+        parentAgentId: "",
+        status: "completed" as const,
+        taskId: "task-1"
+      }
+    };
+
+    expect(
+      reduceSubagentEvent(current, "agent-child", {
+        agentId: "agent-child",
+        sequence: 2,
+        timestamp: "now",
+        type: "agent_start"
+      })
+    ).toEqual({
+      "agent-child": {
+        agentName: "subagent",
+        parentAgentId: "",
+        status: "running",
+        taskId: "task-1"
+      }
+    });
+  });
+
+  it("ignores events for other agents and non-lifecycle events", () => {
+    const current = discoverSubagents(
+      {},
+      [callSubagentMessage("agent-child")],
+      "task-1"
+    );
+
+    expect(
+      reduceSubagentEvent(current, "agent-child", {
+        agentId: "agent-other",
+        sequence: 1,
+        timestamp: "now",
+        type: "agent_end"
+      })
+    ).toBe(current);
+    expect(
+      reduceSubagentEvent(current, "agent-child", {
+        agentId: "agent-child",
+        sequence: 2,
+        timestamp: "now",
+        type: "message_start"
+      })
+    ).toBe(current);
+  });
+
   it("marks a resumed child running without storing payload messages", () => {
     const current = initializeSubagentsFromHistory(
       {},

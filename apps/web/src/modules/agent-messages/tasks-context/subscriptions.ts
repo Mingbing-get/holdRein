@@ -14,7 +14,9 @@ import {
 } from "../reducer";
 import {
   discoverSubagents,
+  hasCalledSubagents,
   initializeSubagentsFromHistory,
+  isSubagentLifecycleEvent,
   reduceSubagentEvent
 } from "../subagent-message/store";
 import type {
@@ -95,17 +97,19 @@ export function useAgentTaskSubscriptions(
         for (const subagent of history.subagents) {
           messageStore.replaceAgentMessages(subagent.agentId, subagent.messages);
         }
-        setSubagentMessagesById((current) =>
-          discoverSubagents(
-            initializeSubagentsFromHistory(
-              current,
-              history.subagents,
+        if (history.subagents.length || hasCalledSubagents(history.messages)) {
+          setSubagentMessagesById((current) =>
+            discoverSubagents(
+              initializeSubagentsFromHistory(
+                current,
+                history.subagents,
+                activeTaskId
+              ),
+              history.messages,
               activeTaskId
-            ),
-            history.messages,
-            activeTaskId
-          )
-        );
+            )
+          );
+        }
       })
       .catch(() => {
         loadedTaskIds.current.delete(activeTaskId);
@@ -181,16 +185,24 @@ export function useAgentTaskSubscriptions(
         onError: () => undefined,
         onEvent: (event) => {
           const message = getAgentEventMessage(event);
+          const shouldDiscoverSubagents =
+            message ? hasCalledSubagents([message]) : false;
+          const shouldReduceSubagentStatus =
+            event.agentId === agentId && isSubagentLifecycleEvent(event.type);
+
           if (isMessageEvent(event.type)) {
             messageStore.reduceAgentEvent(agentId, event);
           }
-          setSubagentMessagesById((current) =>
-            discoverSubagents(
-              reduceSubagentEvent(current, agentId, event),
-              message ? [message] : [],
-              subagent.taskId
-            )
-          );
+          if (shouldDiscoverSubagents || shouldReduceSubagentStatus) {
+            setSubagentMessagesById((current) => {
+              const next = shouldReduceSubagentStatus
+                ? reduceSubagentEvent(current, agentId, event)
+                : current;
+              return shouldDiscoverSubagents && message
+                ? discoverSubagents(next, [message], subagent.taskId)
+                : next;
+            });
+          }
           if (event.type === "approval_requested" && subagent.taskId) {
             setTaskStates((current) => ({
               ...current,

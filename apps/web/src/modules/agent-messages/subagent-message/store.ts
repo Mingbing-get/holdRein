@@ -47,23 +47,38 @@ export function discoverSubagents(
   return next;
 }
 
+export function hasCalledSubagents(messages: WebPlugin.AgentMessage[]): boolean {
+  return getCalledSubagentIds(messages).length > 0;
+}
+
 export function reduceSubagentEvent(
   current: SubagentStatesById,
   agentId: string,
   event: AgentEventEnvelope
 ): SubagentStatesById {
+  if (event.agentId !== agentId || !isSubagentLifecycleEvent(event.type)) {
+    return current;
+  }
+
   const existing = current[agentId] ?? {
     agentName: "subagent",
     parentAgentId: "",
     status: "running" as const,
     taskId: ""
   };
+  const status = event.type === "agent_start" ? "running" : "completed";
+  if (existing.status === status) return current;
+
   const nextState = {
     ...existing,
-    status: event.type === "agent_end" ? "completed" as const : existing.status
+    status
   };
 
   return { ...current, [agentId]: nextState };
+}
+
+export function isSubagentLifecycleEvent(type: string): boolean {
+  return type === "agent_start" || type === "agent_end";
 }
 
 export function reduceSubagentResumeEvent(

@@ -43,7 +43,11 @@ import {
 } from "./local-browser-approval";
 import type { LocalApprovalResolver } from "./local-browser-approval";
 import { useAgentTaskSubscriptions } from "./subscriptions";
-import { discoverSubagents, reduceSubagentResumeEvent } from "../subagent-message/store";
+import {
+  discoverSubagents,
+  hasCalledSubagents,
+  reduceSubagentResumeEvent
+} from "../subagent-message/store";
 import { createAgentMessageStore } from "../message-store";
 import type {
   AgentEventEnvelope,
@@ -143,7 +147,7 @@ export function AgentTasksProvider({
         }));
       }
       const message = getAgentEventMessage(event);
-      if (message) {
+      if (message && hasCalledSubagents([message])) {
         setSubagentMessagesById((current) =>
           discoverSubagents(current, [message], taskId)
         );
