@@ -16,6 +16,11 @@ describe("self-manager web plugin", () => {
         })
       })
     ]);
+    expect(contribution.toolRenders).toEqual([
+      expect.objectContaining({
+        toolName: "requestSelfApi"
+      })
+    ]);
   });
 
   it("requests normalized self API paths with query and JSON body", async () => {
