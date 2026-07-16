@@ -1,0 +1,78 @@
+{
+  "name": "@hold-rein/plugins-self-manager",
+  "version": "0.0.0",
+  "private": false,
+  "type": "module",
+  "main": "./src/server.ts",
+  "module": "./src/server.ts",
+  "types": "./src/server.ts",
+  "exports": {
+    "./server": {
+      "types": "./src/server.ts",
+      "import": "./src/server.ts",
+      "require": "./src/server.ts"
+    },
+    "./web": {
+      "types": "./src/web.ts",
+      "style": "./dist/style.css",
+      "import": "./src/web.ts",
+      "require": "./src/web.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "main": "./dist/server.cjs",
+    "module": "./dist/server.js",
+    "types": "./dist/server.d.ts",
+    "exports": {
+      "./server": {
+        "types": "./dist/server.d.ts",
+        "import": "./dist/server.js",
+        "require": "./dist/server.cjs"
+      },
+      "./web": {
+        "types": "./dist/web.d.ts",
+        "style": "./dist/style.css",
+        "default": "./dist/web.umd.cjs",
+        "require": "./dist/web.umd.cjs"
+      }
+    }
+  },
+  "scripts": {
+    "build": "vite build --config vite.config.ts && vite build --config vite.web.config.ts && tsc -p tsconfig.json --emitDeclarationOnly",
+    "dev": "vite --host 127.0.0.1 --config vite.web.config.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-agent-core": "0.75.4",
+    "@earendil-works/pi-ai": "0.76.0",
+    "@hold-rein/plugin-server": "workspace:^",
+    "express": "5.2.1",
+    "@ant-design/icons": "6.2.5",
+    "@hold-rein/plugin-web": "workspace:^",
+    "@monaco-editor/react": "4.7.0",
+    "antd": "6.4.3",
+    "monaco-editor": "0.55.1",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-agent-core": "0.75.4",
+    "@earendil-works/pi-ai": "0.76.0",
+    "@hold-rein/plugin-server": "workspace:^",
+    "express": "5.2.1",
+    "vite": "6.3.5",
+    "@ant-design/icons": "6.2.5",
+    "@hold-rein/plugin-web": "workspace:^",
+    "@monaco-editor/react": "4.7.0",
+    "@types/react": "19.2.15",
+    "antd": "6.4.3",
+    "monaco-editor": "0.55.1",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  }
+}
