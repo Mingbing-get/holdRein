@@ -72,7 +72,7 @@ export function reduceSubagentEvent(
   const nextState = {
     ...existing,
     status
-  };
+  } as const;
 
   return { ...current, [agentId]: nextState };
 }
