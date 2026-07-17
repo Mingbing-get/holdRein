@@ -50,9 +50,9 @@ vi.mock("../tasks-context", () => ({
         message.role === "toolResult" && message.toolCallId === toolCallId
     ),
   useAgentTasks: () => ({
+    getSubagent: () => undefined,
     getSubagentMessages: (agentId: string) =>
       agentTasksMock.childMessages[agentId] ?? [],
-    getSubagentStatus: () => undefined,
     getTaskState: (taskId: string) =>
       taskId === agentTasksMock.activeTaskId
         ? { status: "completed" }

@@ -9,7 +9,7 @@ import type {
   ContinueTaskInput,
   PendingApproval,
   StartTaskInput,
-  SubagentStatesById
+  SubagentState
 } from "../agent-message-types";
 
 export const EMPTY_MESSAGES: WebPlugin.AgentMessage[] = [];
@@ -26,10 +26,8 @@ export interface AgentTasksContextValue {
     approved: boolean,
     reason?: string
   ) => Promise<void>;
+  getSubagent: (agentId: string) => SubagentState | undefined;
   getSubagentMessages: (agentId: string) => WebPlugin.AgentMessage[];
-  getSubagentStatus: (
-    agentId: string
-  ) => SubagentStatesById[string]["status"] | undefined;
   getPendingApproval: (taskId: string) => PendingApproval | undefined;
   getTaskState: (taskId: string) => AgentTaskState | undefined;
   hasPendingApproval: (taskId: string) => boolean;

@@ -10,6 +10,7 @@ import type { WebPlugin } from "@hold-rein/plugin-web";
 
 const agentTasksMock = vi.hoisted(() => ({
   messages: {} as Record<string, WebPlugin.AgentMessage[]>,
+  names: {} as Record<string, string | undefined>,
   statuses: {} as Record<string, "running" | "completed" | undefined>
 }));
 
@@ -20,9 +21,14 @@ vi.mock("@ant-design/icons", () => ({
 vi.mock("@ant-design/x", () => ({
   Think: ({
     children,
-    loading
-  }: PropsWithChildren<{ loading?: boolean }>) => (
-    <section data-loading={String(Boolean(loading))} data-testid="think">
+    loading,
+    title
+  }: PropsWithChildren<{ loading?: boolean; title?: string }>) => (
+    <section
+      data-loading={String(Boolean(loading))}
+      data-testid="think"
+      data-title={title}
+    >
       {children}
     </section>
   )
@@ -32,7 +38,13 @@ vi.mock("../tasks-context", () => ({
   useAgentMessages: (agentId: string) =>
     agentTasksMock.messages[agentId] ?? [],
   useAgentTasks: () => ({
-    getSubagentStatus: (agentId: string) => agentTasksMock.statuses[agentId]
+    getSubagent: (agentId: string) =>
+      agentTasksMock.statuses[agentId] === undefined
+        ? undefined
+        : {
+            agentName: agentTasksMock.names[agentId],
+            status: agentTasksMock.statuses[agentId]
+          }
   })
 }));
 
@@ -48,7 +60,20 @@ describe("SubagentMessageList", () => {
   afterEach(() => {
     cleanup();
     agentTasksMock.messages = {};
+    agentTasksMock.names = {};
     agentTasksMock.statuses = {};
+  });
+
+  it("renders the subagent name in the title", () => {
+    agentTasksMock.names["agent-child"] = "Code Reviewer";
+    agentTasksMock.statuses["agent-child"] = "running";
+
+    render(<SubagentMessageList agentId="agent-child" />);
+
+    expect(screen.getByTestId("think")).toHaveAttribute(
+      "data-title",
+      "调用子智能体：Code Reviewer"
+    );
   });
 
   it("sets Think loading while the subagent is running", () => {

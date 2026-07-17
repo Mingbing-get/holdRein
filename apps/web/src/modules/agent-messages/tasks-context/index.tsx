@@ -366,9 +366,9 @@ export function AgentTasksProvider({
       continueTask,
       decideApproval,
       getPendingApproval: (taskId) => taskStates[taskId]?.pendingApprovals[0],
+      getSubagent: (agentId) => subagentMessagesById[agentId],
       getSubagentMessages: (agentId) =>
         messageStore.current.getAgentMessages(agentId),
-      getSubagentStatus: (agentId) => subagentMessagesById[agentId]?.status,
       getTaskState: (taskId) => {
         const state = taskStates[taskId];
 

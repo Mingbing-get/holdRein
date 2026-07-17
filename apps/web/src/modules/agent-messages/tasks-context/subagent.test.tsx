@@ -225,8 +225,9 @@ function SubagentProbe() {
 function HistoryProbe() {
   const { setActiveTaskId, setActiveWorkspaceId, setWorkspaces } =
     useAppWorkspace();
-  const { getSubagentMessages, getSubagentStatus } = useAgentTasks();
+  const { getSubagent, getSubagentMessages } = useAgentTasks();
   const historyChildStoreMessages = useAgentMessages("agent-history-child");
+  const historyChildSubAgent = getSubagent("agent-history-child");
 
   useEffect(() => {
     setWorkspaces([
@@ -262,7 +263,7 @@ function HistoryProbe() {
         {getAssistantText(historyChildStoreMessages)}
       </span>
       <span data-testid="history-child-status">
-        {getSubagentStatus("agent-history-child")}
+        {historyChildSubAgent?.status}
       </span>
     </>
   );

@@ -1,3 +1,5 @@
+import { useMemo } from "react";
+
 import { BranchesOutlined } from "@ant-design/icons";
 import { Think } from "@ant-design/x";
 
@@ -9,12 +11,23 @@ export interface SubagentMessageListProps {
 }
 
 export function SubagentMessageList({ agentId }: SubagentMessageListProps) {
-  const { getSubagentStatus } = useAgentTasks();
-  const status = getSubagentStatus(agentId);
+  const { getSubagent } = useAgentTasks();
+
+  const subAgent = getSubagent(agentId);
+
+  const status = useMemo(() => subAgent?.status, [subAgent?.status]);
+  
+  const title = useMemo(
+    () =>
+      subAgent?.agentName
+        ? `调用子智能体：${subAgent.agentName}`
+        : "调用子智能体",
+    [subAgent?.agentName]
+  );
 
   return (
     <Think
-      title="调用子智能体"
+      title={title}
       icon={<BranchesOutlined />}
       defaultExpanded={false}
       loading={status === "running"}
