@@ -1,5 +1,13 @@
 # @hold-rein/cli
 
+## 0.0.14
+
+### Patch Changes
+
+- 支持静默执行子智能体
+- Updated dependencies
+  - @hold-rein/plugin-server@0.0.6
+
 ## 0.0.13
 
 ### Patch Changes

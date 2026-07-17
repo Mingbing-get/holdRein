@@ -1,5 +1,12 @@
 # @hold-rein/plugins-ts-standards
 
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies
+  - @hold-rein/plugin-server@0.0.6
+
 ## 0.0.8
 
 ### Patch Changes

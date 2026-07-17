@@ -1,5 +1,11 @@
 # @hold-rein/plugin-server
 
+## 0.0.6
+
+### Patch Changes
+
+- 支持静默执行子智能体
+
 ## 0.0.5
 
 ### Patch Changes

@@ -49,7 +49,7 @@
   "peerDependencies": {
     "@earendil-works/pi-agent-core": "0.75.4",
     "@earendil-works/pi-ai": "0.76.0",
-    "@hold-rein/plugin-server": "^0.0.5",
+    "@hold-rein/plugin-server": "^0.0.6",
     "express": "5.2.1",
     "@ant-design/icons": "6.2.5",
     "@hold-rein/plugin-web": "^0.0.2",
@@ -62,7 +62,7 @@
   "devDependencies": {
     "@earendil-works/pi-agent-core": "0.75.4",
     "@earendil-works/pi-ai": "0.76.0",
-    "@hold-rein/plugin-server": "^0.0.5",
+    "@hold-rein/plugin-server": "^0.0.6",
     "express": "5.2.1",
     "vite": "6.3.5",
     "@ant-design/icons": "6.2.5",
