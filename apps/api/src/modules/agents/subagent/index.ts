@@ -9,6 +9,7 @@ export interface SubagentRun<ParentSession> {
   agentSession: ParentSession;
   consumed: boolean;
   depth: number;
+  independent?: boolean;
   lastAssistantText: string;
   parentAgentId: string;
   parentAgentName?: string;
@@ -199,7 +200,8 @@ export function getNextCompletedSubagent<ParentSession>(
     (subagent) =>
       subagent.parentAgentId === parentAgentId &&
       subagent.status === "completed" &&
-      !subagent.consumed
+      !subagent.consumed &&
+      subagent.independent !== true
   );
 }
 

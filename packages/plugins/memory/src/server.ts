@@ -32,7 +32,8 @@ const serverPlugin: ServerPlugin.Plugin = {
             pluginFilter: filterMemoryWriterPlugins,
             prompt: createMemoryOrganizerPrompt(memoryCandidateSummary),
             skillFilter: emptySkillFilter,
-            useSubagent: true
+            useSubagent: true,
+            independent: true,
           };
         },
         systemPrompts: []
@@ -63,7 +64,8 @@ const serverPlugin: ServerPlugin.Plugin = {
           prompt: createMemoryExtractorPrompt(simplifyMessagesForMemory(messages)),
           skillFilter: emptySkillFilter,
           toolFilter: emptyToolFilter,
-          useSubagent: true
+          useSubagent: true,
+          independent: true,
         };
       },
       systemPrompts

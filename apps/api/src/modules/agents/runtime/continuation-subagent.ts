@@ -28,6 +28,7 @@ export async function startContinuationSubagent(input: {
   agentName?: string;
   continuationSubagentFilters?: ContinuationSubagentFilters;
   eventBus: AgentEventBus;
+  independent?: boolean;
   parentAgentId: string;
   parentAgentName: string | undefined;
   parentDepth: number;
@@ -87,6 +88,7 @@ export async function startContinuationSubagent(input: {
     agentSession: started.harnessSession,
     consumed: false,
     depth,
+    ...(input.independent === true ? { independent: true } : {}),
     lastAssistantText: "",
     parentAgentId: input.parentAgentId,
     ...(input.parentAgentName === undefined

@@ -235,6 +235,24 @@ export function createAgentRuntime(
 
         subagent.status = "completed";
         subagentRepository.updateStatus(subagent.agentId, "completed", new Date().toISOString());
+        if (subagent.independent === true) {
+          subagent.consumed = true;
+          subagents.delete(subagent.agentId);
+          const continued = await continueOrEndTask(
+            subagent.parentAgentId,
+            subagent.parentAgentName,
+            subagent.parentSession,
+            undefined,
+            { deferIfRunning: true }
+          );
+          if (!continued) {
+            options.eventBus.emit({
+              agentId: findRootAgentId(subagents, subagent.parentAgentId),
+              type: "task_end"
+            });
+          }
+          return;
+        }
         await addRevokeToolToHarness(subagent.parentAgentId);
         await continueOrEndTask(
           subagent.parentAgentId,
@@ -336,6 +354,9 @@ export function createAgentRuntime(
               ? {}
               : { continuationSubagentFilters }),
             eventBus: options.eventBus,
+            ...(continuation.independent === true
+              ? { independent: true }
+              : {}),
             parentAgentId: harnessAgentId,
             parentAgentName: harnessAgentName,
             parentDepth: currentSubagent?.depth ?? 0,
@@ -431,4 +452,19 @@ export function createAgentRuntime(
       };
     }
   };
+}
+
+function findRootAgentId(
+  subagents: Map<string, SubagentRun<HarnessSession>>,
+  agentId: string
+): string {
+  let currentAgentId = agentId;
+  let currentSubagent = subagents.get(currentAgentId);
+
+  while (currentSubagent) {
+    currentAgentId = currentSubagent.parentAgentId;
+    currentSubagent = subagents.get(currentAgentId);
+  }
+
+  return currentAgentId;
 }

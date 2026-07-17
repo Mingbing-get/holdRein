@@ -68,6 +68,11 @@ export namespace ServerPlugin {
   export interface AgentContinuation {
     readonly agentName?: string;
     readonly details?: unknown;
+    /**
+     * Only applies when useSubagent is true. When true, the subagent runs to
+     * completion without appending its result back to the parent agent context.
+     */
+    readonly independent?: boolean;
     readonly pluginFilter?: AgentContinuationPluginFilter;
     readonly prompt: string;
     readonly skillFilter?: AgentContinuationSkillFilter;
