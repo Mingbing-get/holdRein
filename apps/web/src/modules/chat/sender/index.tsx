@@ -173,6 +173,7 @@ export default function Sender({
               <ASender
                 {...senderProps}
                 loading={loading}
+                disabled={running}
                 classNames={{
                   input: "chat-workspace-sender-input"
                 }}
