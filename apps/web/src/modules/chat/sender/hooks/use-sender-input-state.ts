@@ -6,6 +6,7 @@ import {
   clampCursorIndex,
   getCurrentCursorCharacterIndex
 } from "../utils";
+import type { SenderImageAttachmentItem } from "../image-attachments";
 import { useSenderDraft } from "./use-sender-draft";
 
 type SenderInstance = React.ElementRef<typeof ASender>;
@@ -24,12 +25,14 @@ export interface UseSenderInputStateOptions {
 }
 
 export interface UseSenderInputStateResult {
+  draftImageAttachments: SenderImageAttachmentItem[];
   draftMessage: string;
   loading: boolean;
   senderRef: RefObject<SenderInstance | null>;
   handleChangeMessage: (message: string) => void;
   handleSubmit: (message: string, images?: ImageContent[]) => Promise<void>;
   insertText: (insertedText: string, overwriteLength?: number) => void;
+  setDraftImageAttachments: (items: SenderImageAttachmentItem[]) => void;
 }
 
 export function useSenderInputState({
@@ -43,7 +46,9 @@ export function useSenderInputState({
   const senderRef = useRef<SenderInstance>(null);
   const {
     clearDraft,
+    draftImageAttachments,
     draftMessage,
+    setDraftImageAttachments,
     setDraftMessage
   } = useSenderDraft({
     draftKey,
@@ -106,11 +111,13 @@ export function useSenderInputState({
   }, [clearDraft, onSubmit]);
 
   return {
+    draftImageAttachments,
     draftMessage,
     handleChangeMessage,
     handleSubmit,
     insertText,
     senderRef,
-    loading
+    loading,
+    setDraftImageAttachments
   };
 }

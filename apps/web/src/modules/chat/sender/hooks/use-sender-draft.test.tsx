@@ -36,6 +36,49 @@ describe("useSenderDraft", () => {
     expect(result.current.draftMessage).toBe("first draft");
   });
 
+  it("stores image attachments by task id and restores them when the task changes", () => {
+    const imageAttachment = {
+      cardType: "image" as const,
+      imageContent: {
+        data: "cGljdHVyZQ==",
+        mimeType: "image/png",
+        type: "image" as const
+      },
+      name: "screen.png",
+      status: "done" as const,
+      thumbUrl: "data:image/png;base64,cGljdHVyZQ==",
+      type: "image/png",
+      uid: "screen.png-0",
+      url: "data:image/png;base64,cGljdHVyZQ=="
+    };
+    const { rerender, result } = renderHook(
+      ({ taskId }) =>
+        useSenderDraft({
+          draftKey: "chat-images",
+          taskId,
+          workspacePath: "/workspace"
+        }),
+      {
+        initialProps: { taskId: "task-one" }
+      }
+    );
+
+    act(() => {
+      result.current.setDraftImageAttachments([imageAttachment]);
+    });
+
+    rerender({ taskId: "task-two" });
+
+    expect(result.current.draftImageAttachments).toEqual([]);
+
+    act(() => {
+      result.current.setDraftMessage("second draft");
+    });
+    rerender({ taskId: "task-one" });
+
+    expect(result.current.draftImageAttachments).toEqual([imageAttachment]);
+  });
+
   it("uses the workspace path while there is no active task id", () => {
     const { rerender, result } = renderHook(
       ({ taskId, workspacePath }) =>

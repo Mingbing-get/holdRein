@@ -1,6 +1,17 @@
 import { useCallback, useMemo, useState } from "react";
+import type { SenderImageAttachmentItem } from "../image-attachments";
 
-const senderDrafts = new Map<string, Map<string, string>>();
+interface SenderDraft {
+  imageAttachments: SenderImageAttachmentItem[];
+  message: string;
+}
+
+const emptyDraft: SenderDraft = {
+  imageAttachments: [],
+  message: ""
+};
+
+const senderDrafts = new Map<string, Map<string, SenderDraft>>();
 
 export interface UseSenderDraftOptions {
   draftKey?: string | undefined;
@@ -9,13 +20,15 @@ export interface UseSenderDraftOptions {
 }
 
 export interface UseSenderDraftResult {
+  draftImageAttachments: SenderImageAttachmentItem[];
   draftMessage: string;
   clearDraft: () => void;
+  setDraftImageAttachments: (items: SenderImageAttachmentItem[]) => void;
   setDraftMessage: (message: string) => void;
 }
 
 interface SenderDraftState {
-  draftMessage: string;
+  draft: SenderDraft;
   draftSlotKey: string;
 }
 
@@ -29,21 +42,54 @@ export function useSenderDraft({
     [taskId, workspacePath]
   );
   const [draftState, setDraftState] = useState<SenderDraftState>(() => ({
-    draftMessage: readDraft(draftKey, draftSlotKey),
+    draft: readDraft(draftKey, draftSlotKey),
     draftSlotKey
   }));
-  const draftMessage =
+  const draft =
     draftState.draftSlotKey === draftSlotKey
-      ? draftState.draftMessage
+      ? draftState.draft
       : readDraft(draftKey, draftSlotKey);
 
   const setDraftMessage = useCallback(
     (message: string) => {
-      setDraftState({
-        draftMessage: message,
-        draftSlotKey
+      setDraftState((currentState) => {
+        const currentDraft = currentState.draftSlotKey === draftSlotKey
+          ? currentState.draft
+          : readDraft(draftKey, draftSlotKey);
+        const nextDraft = {
+          ...currentDraft,
+          message
+        };
+
+        writeDraft(draftKey, draftSlotKey, nextDraft);
+
+        return {
+          draft: nextDraft,
+          draftSlotKey
+        };
       });
-      writeDraft(draftKey, draftSlotKey, message);
+    },
+    [draftKey, draftSlotKey]
+  );
+
+  const setDraftImageAttachments = useCallback(
+    (imageAttachments: SenderImageAttachmentItem[]) => {
+      setDraftState((currentState) => {
+        const currentDraft = currentState.draftSlotKey === draftSlotKey
+          ? currentState.draft
+          : readDraft(draftKey, draftSlotKey);
+        const nextDraft = {
+          ...currentDraft,
+          imageAttachments
+        };
+
+        writeDraft(draftKey, draftSlotKey, nextDraft);
+
+        return {
+          draft: nextDraft,
+          draftSlotKey
+        };
+      });
     },
     [draftKey, draftSlotKey]
   );
@@ -51,14 +97,16 @@ export function useSenderDraft({
   const clearDraft = useCallback(() => {
     deleteDraft(draftKey, draftSlotKey);
     setDraftState({
-      draftMessage: "",
+      draft: emptyDraft,
       draftSlotKey
     });
   }, [draftKey, draftSlotKey]);
 
   return {
     clearDraft,
-    draftMessage,
+    draftImageAttachments: draft.imageAttachments,
+    draftMessage: draft.message,
+    setDraftImageAttachments,
     setDraftMessage
   };
 }
@@ -73,30 +121,31 @@ function getDraftSlotKey(
 function readDraft(
   draftKey: string | undefined,
   draftSlotKey: string
-): string {
+): SenderDraft {
   if (!draftKey || !draftSlotKey) {
-    return "";
+    return emptyDraft;
   }
 
-  return senderDrafts.get(draftKey)?.get(draftSlotKey) ?? "";
+  return senderDrafts.get(draftKey)?.get(draftSlotKey) ?? emptyDraft;
 }
 
 function writeDraft(
   draftKey: string | undefined,
   draftSlotKey: string,
-  message: string
+  draft: SenderDraft
 ): void {
   if (!draftKey || !draftSlotKey) {
     return;
   }
 
-  if (!message) {
+  if (!draft.message && !draft.imageAttachments.length) {
     deleteDraft(draftKey, draftSlotKey);
     return;
   }
 
-  const draftsBySlot = senderDrafts.get(draftKey) ?? new Map<string, string>();
-  draftsBySlot.set(draftSlotKey, message);
+  const draftsBySlot =
+    senderDrafts.get(draftKey) ?? new Map<string, SenderDraft>();
+  draftsBySlot.set(draftSlotKey, draft);
   senderDrafts.set(draftKey, draftsBySlot);
 }
 

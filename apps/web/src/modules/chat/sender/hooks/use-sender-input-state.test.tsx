@@ -114,6 +114,44 @@ describe("useSenderInputState", () => {
     expect(result.current.draftMessage).toBe("first draft");
   });
 
+  it("restores previous draft images after changing another task draft", () => {
+    const imageAttachment = {
+      cardType: "image" as const,
+      imageContent: {
+        data: "cGljdHVyZQ==",
+        mimeType: "image/png",
+        type: "image" as const
+      },
+      name: "screen.png",
+      status: "done" as const,
+      thumbUrl: "data:image/png;base64,cGljdHVyZQ==",
+      type: "image/png",
+      uid: "screen.png-0",
+      url: "data:image/png;base64,cGljdHVyZQ=="
+    };
+    const { rerender, result } = renderHook(
+      ({ taskId }) =>
+        useSenderInputState({
+          draftKey: "input-image-switch-restore",
+          taskId,
+          workspacePath: "/workspace"
+        }),
+      {
+        initialProps: { taskId: "task-one" }
+      }
+    );
+
+    act(() => {
+      result.current.setDraftImageAttachments([imageAttachment]);
+    });
+    rerender({ taskId: "task-two" });
+    expect(result.current.draftImageAttachments).toEqual([]);
+
+    rerender({ taskId: "task-one" });
+
+    expect(result.current.draftImageAttachments).toEqual([imageAttachment]);
+  });
+
   it("stops loading when submit rejects and keeps the draft message", async () => {
     const onSubmit = vi.fn().mockRejectedValue(new Error("failed"));
     const { result } = renderHook(() =>

@@ -104,12 +104,14 @@ export default function Sender({
 }: Props) {
   const { senderActions, senderSuggestions } = useAppPlugins();
   const {
+    draftImageAttachments,
     draftMessage,
     handleChangeMessage,
     handleSubmit,
     insertText,
     loading,
-    senderRef
+    senderRef,
+    setDraftImageAttachments
   } = useSenderInputState({
     draftKey,
     onMessageChange,
@@ -147,8 +149,9 @@ export default function Sender({
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
   const [imageAttachments, setImageAttachments] = useState<
     SenderImageAttachmentItem[]
-  >([]);
+  >(() => draftImageAttachments);
   const [imageAttachmentsOpen, setImageAttachmentsOpen] = useState(false);
+  const hasKnownInputCapabilities = activeAgent?.input !== undefined;
   const supportsImages = activeAgent?.input?.includes("image") === true;
   const disabled = useMemo(
     () =>
@@ -162,13 +165,34 @@ export default function Sender({
   }, [draftMessage, suggestionOpen]);
 
   useEffect(() => {
-    if (!supportsImages && imageAttachments.length) {
-      setImageAttachments([]);
+    setImageAttachments(draftImageAttachments);
+  }, [draftImageAttachments]);
+
+  const handleChangeImageAttachments = useCallback((
+    items: SenderImageAttachmentItem[]
+  ) => {
+    setImageAttachments(items);
+    setDraftImageAttachments(items);
+  }, [setDraftImageAttachments]);
+
+  useEffect(() => {
+    if (
+      hasKnownInputCapabilities &&
+      !supportsImages &&
+      imageAttachments.length
+    ) {
+      handleChangeImageAttachments([]);
     }
     if (!supportsImages && imageAttachmentsOpen) {
       setImageAttachmentsOpen(false);
     }
-  }, [imageAttachments.length, imageAttachmentsOpen, supportsImages]);
+  }, [
+    hasKnownInputCapabilities,
+    handleChangeImageAttachments,
+    imageAttachments.length,
+    imageAttachmentsOpen,
+    supportsImages
+  ]);
 
   const selectSuggestionValue = useCallback((value: string) => {
     const activeTrigger = currentTrigger.current;
@@ -184,9 +208,9 @@ export default function Sender({
     const images = getImageContents(imageAttachments);
 
     await handleSubmit(message, images.length ? images : undefined);
-    setImageAttachments([]);
+    handleChangeImageAttachments([]);
     setImageAttachmentsOpen(false);
-  }, [handleSubmit, imageAttachments]);
+  }, [handleChangeImageAttachments, handleSubmit, imageAttachments]);
 
   return (
     <Flex
@@ -267,7 +291,7 @@ export default function Sender({
                           senderRef.current?.nativeElement
                         }
                         items={imageAttachments}
-                        onItemsChange={setImageAttachments}
+                        onItemsChange={handleChangeImageAttachments}
                       />
                     </ASender.Header>
                   ) : null
