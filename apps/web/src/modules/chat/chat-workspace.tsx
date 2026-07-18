@@ -14,6 +14,7 @@ import {
   normalizeApprovalPolicy,
   normalizeThinkingLevel
 } from "./sender/task-options";
+import { fetchCachedProviderModels } from "../model-providers/model-provider-api";
 import { useWorkspaceFileSuggestions } from "./use-workspace-file-suggestions";
 import { UserMessageNavigator } from "./user-message-navigator";
 
@@ -70,6 +71,7 @@ export function ChatWorkspace({
   }, []);
 
   useEffect(() => {
+    let isCurrent = true;
     setThinkingLevel(normalizeThinkingLevel(activeWorkspaceTask?.thinkingLevel));
     setApprovalPolicy(
       normalizeApprovalPolicy(activeWorkspaceTask?.approvalPolicy)
@@ -79,13 +81,38 @@ export function ChatWorkspace({
         modelId: activeWorkspaceTaskModelId,
         providerId: activeWorkspaceTaskProvider
       });
+      void fetchCachedProviderModels(apiBaseUrl, activeWorkspaceTaskProvider)
+        .then((models) => {
+          if (!isCurrent) return;
+
+          const activeModel = models.find(
+            (model) => model.id === activeWorkspaceTaskModelId
+          );
+
+          if (!activeModel) return;
+
+          setActiveAgent({
+            input: activeModel.input,
+            modelId: activeWorkspaceTaskModelId,
+            providerId: activeWorkspaceTaskProvider,
+            reasoning: activeModel.reasoning
+          });
+        })
+        .catch(() => {
+          // Keep the restored provider/model selection even if capability lookup fails.
+        });
     }
+
+    return () => {
+      isCurrent = false;
+    };
   }, [
     activeTaskId,
     activeWorkspaceTask?.approvalPolicy,
     activeWorkspaceTask?.thinkingLevel,
     activeWorkspaceTaskModelId,
     activeWorkspaceTaskProvider,
+    apiBaseUrl,
     setActiveAgent
   ]);
 

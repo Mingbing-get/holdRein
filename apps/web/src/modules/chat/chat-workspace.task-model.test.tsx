@@ -29,10 +29,30 @@ vi.mock("../agent-messages", () => ({
 vi.mock("./sender", () => ({
   default: ({ activeAgent }: { activeAgent?: SelectedModel | null }) => (
     <div
+      data-input={(activeAgent?.input ?? []).join(",")}
       data-model-id={activeAgent?.modelId ?? ""}
       data-provider-id={activeAgent?.providerId ?? ""}
       data-testid="sender-model"
     />
+  )
+}));
+
+vi.mock("../model-providers/model-provider-api", () => ({
+  fetchCachedProviderModels: vi.fn(async (_apiBaseUrl: string, providerId: string) =>
+    providerId === "local"
+      ? [
+          {
+            api: "openai",
+            contextWindow: 128000,
+            id: "coding-agent",
+            input: ["text", "image"],
+            maxTokens: 4096,
+            name: "Coding Agent",
+            provider: "local",
+            reasoning: true
+          }
+        ]
+      : []
   )
 }));
 
@@ -63,6 +83,22 @@ describe("ChatWorkspace task model restoration", () => {
       "data-model-id",
       "coding-agent"
     );
+  });
+
+  it("restores selected task model input capabilities for the sender", async () => {
+    render(
+      <AppWorkspaceProvider>
+        <WorkspaceStateSetup />
+        <ChatWorkspace activeTaskName="Task Two" apiBaseUrl="http://localhost:4000" />
+      </AppWorkspaceProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("sender-model")).toHaveAttribute(
+        "data-input",
+        "text,image"
+      );
+    });
   });
 });
 
