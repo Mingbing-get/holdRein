@@ -1,4 +1,4 @@
-import { readFile, readdir, stat } from "node:fs/promises";
+import { mkdir, readFile, readdir, stat } from "node:fs/promises";
 import { extname, isAbsolute, parse, relative, resolve } from "node:path";
 
 export type FileSystemEntryKind = "file" | "folder";
@@ -19,6 +19,12 @@ export interface FileSystemDirectoryListing {
 export interface FileSystemFileContent {
   content: string;
   filePath: string;
+}
+
+export interface CreateFolderOptions {
+  name: string;
+  parentPath?: string;
+  rootPath?: string;
 }
 
 export interface ListDirectoryOptions {
@@ -102,6 +108,42 @@ export async function readFileContent(
   };
 }
 
+export async function createFolder(
+  options: CreateFolderOptions
+): Promise<FileSystemEntry> {
+  const rootPath = normalizeRootPath(options.rootPath);
+  const parentPath = normalizeParentPath(rootPath, options.parentPath);
+  const parentStat = await stat(parentPath);
+
+  if (!parentStat.isDirectory()) {
+    throw new Error("parentPath must be a directory");
+  }
+
+  const folderName = normalizeFolderName(options.name);
+  const folderPath = resolve(parentPath, folderName);
+
+  if (!isPathInsideRoot(rootPath, folderPath)) {
+    throw new Error("folder path must be inside the root directory");
+  }
+
+  try {
+    await mkdir(folderPath);
+  } catch (error) {
+    if (isNodeError(error) && error.code === "EEXIST") {
+      throw new Error("folder name already exists");
+    }
+
+    throw error;
+  }
+
+  return {
+    extension: "",
+    kind: "folder",
+    name: folderName,
+    path: folderPath
+  };
+}
+
 function normalizeRootPath(rootPath?: string): string {
   return rootPath ? resolve(rootPath) : parse(process.cwd()).root;
 }
@@ -126,6 +168,25 @@ function normalizeFilePath(rootPath: string, filePath: string): string {
   }
 
   return resolvedFilePath;
+}
+
+function normalizeFolderName(name: string): string {
+  const folderName = name.trim();
+
+  if (!folderName) {
+    throw new Error("folder name is required");
+  }
+
+  if (
+    folderName === "." ||
+    folderName === ".." ||
+    folderName.includes("/") ||
+    folderName.includes("\\")
+  ) {
+    throw new Error("folder name must be a single path segment");
+  }
+
+  return folderName;
 }
 
 function isPathInsideRoot(rootPath: string, targetPath: string): boolean {

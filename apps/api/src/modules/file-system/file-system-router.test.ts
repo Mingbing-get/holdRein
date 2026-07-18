@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -90,6 +90,49 @@ describe("GET /api/v1/file-system/entries", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.msg).toBe("parentPath must be inside the root directory");
+  });
+});
+
+describe("POST /api/v1/file-system/folders", () => {
+  beforeEach(async () => {
+    rootPath = await mkdtemp(join(tmpdir(), "hold-rein-files-"));
+    await mkdir(join(rootPath, "src"));
+  });
+
+  afterEach(async () => {
+    await rm(rootPath, { force: true, recursive: true });
+  });
+
+  it("creates a folder below the provided parentPath", async () => {
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
+      .post("/api/v1/file-system/folders")
+      .send({
+        name: "components",
+        parentPath: join(rootPath, "src")
+      });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({
+      extension: "",
+      kind: "folder",
+      name: "components",
+      path: join(rootPath, "src", "components")
+    });
+    await expect(stat(join(rootPath, "src", "components"))).resolves.toMatchObject({
+      isDirectory: expect.any(Function)
+    });
+  });
+
+  it("rejects duplicate folder names in the same parentPath", async () => {
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
+      .post("/api/v1/file-system/folders")
+      .send({
+        name: "src",
+        parentPath: rootPath
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.msg).toBe("folder name already exists");
   });
 });
 

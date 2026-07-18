@@ -1,5 +1,6 @@
 import type {
   ApiResponse,
+  FileSystemEntry,
   FileSystemDirectoryListing
 } from "./file-selector-types";
 
@@ -18,6 +19,28 @@ export async function fetchFileSystemEntries(
   return payload.data;
 }
 
+export async function createFileSystemFolder(
+  apiBaseUrl: string,
+  parentPath: string,
+  name: string
+): Promise<FileSystemEntry> {
+  const response = await fetch(createFileSystemFolderUrl(apiBaseUrl), {
+    body: JSON.stringify({ name, parentPath }),
+    headers: {
+      "Content-Type": "application/json"
+    },
+    method: "POST"
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create folder");
+  }
+
+  const payload = (await response.json()) as ApiResponse<FileSystemEntry>;
+
+  return payload.data;
+}
+
 export function createFileSystemEntriesUrl(
   apiBaseUrl: string,
   parentPath?: string
@@ -29,4 +52,8 @@ export function createFileSystemEntriesUrl(
   }
 
   return `${url}?parentPath=${encodeURIComponent(parentPath)}`;
+}
+
+export function createFileSystemFolderUrl(apiBaseUrl: string): string {
+  return `${apiBaseUrl.replace(/\/$/, "")}/api/v1/file-system/folders`;
 }

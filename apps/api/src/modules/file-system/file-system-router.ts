@@ -3,6 +3,7 @@ import { Router, type Request, type Response } from "express";
 import { sendError, sendSuccess } from "../../response";
 import { RESPONSE_CODE_DEFINITIONS } from "../../response/response-codes";
 import {
+  createFolder,
   listDirectoryEntries,
   listDirectoryEntriesRecursive,
   readFileContent
@@ -49,6 +50,52 @@ export function createFileSystemRouter(
             error instanceof Error
               ? error.message
               : "Failed to list directory entries"
+          );
+        });
+    }
+  );
+
+  router.post(
+    "/file-system/folders",
+    (request: Request, response: Response): void => {
+      const parentPath = getOptionalBodyString(request.body?.parentPath);
+      const name = getRequiredBodyString(request.body?.name);
+
+      if (parentPath === null) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "parentPath must be a string"
+        );
+        return;
+      }
+
+      if (name === null) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "name must be a string"
+        );
+        return;
+      }
+
+      const createOptions = {
+        name,
+        ...(parentPath === undefined ? {} : { parentPath }),
+        ...(options.fileSystemRootPath === undefined
+          ? {}
+          : { rootPath: options.fileSystemRootPath })
+      };
+
+      void createFolder(createOptions)
+        .then((entry) => {
+          sendSuccess(response, entry);
+        })
+        .catch((error) => {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.badRequest,
+            error instanceof Error ? error.message : "Failed to create folder"
           );
         });
     }
@@ -162,6 +209,18 @@ function getParentPath(parentPath: Request["query"][string]): string | undefined
 }
 
 function getRequiredQueryString(value: Request["query"][string]): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function getRequiredBodyString(value: unknown): string | null {
+  return typeof value === "string" ? value : null;
+}
+
+function getOptionalBodyString(value: unknown): string | undefined | null {
+  if (value === undefined) {
+    return undefined;
+  }
+
   return typeof value === "string" ? value : null;
 }
 

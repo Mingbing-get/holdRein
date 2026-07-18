@@ -175,6 +175,118 @@ describe("FileSelector", () => {
     expect(await screen.findByText("App.tsx")).toBeInTheDocument();
   });
 
+  it("creates a folder in the current directory and reloads that directory", async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: {
+            parentPath: "/workspace/src",
+            entries: [
+              {
+                extension: "",
+                kind: "folder",
+                name: "existing",
+                path: "/workspace/src/existing"
+              }
+            ]
+          },
+          msg: "ok"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: {
+            extension: "",
+            kind: "folder",
+            name: "components",
+            path: "/workspace/src/components"
+          },
+          msg: "ok"
+        }),
+        ok: true
+      } as Response)
+      .mockResolvedValueOnce({
+        json: async () => ({
+          code: 0,
+          data: {
+            parentPath: "/workspace/src",
+            entries: [
+              {
+                extension: "",
+                kind: "folder",
+                name: "components",
+                path: "/workspace/src/components"
+              },
+              {
+                extension: "",
+                kind: "folder",
+                name: "existing",
+                path: "/workspace/src/existing"
+              }
+            ]
+          },
+          msg: "ok"
+        }),
+        ok: true
+      } as Response);
+
+    render(
+      <FileSelector
+        apiBaseUrl=""
+        open
+        parentPath="/workspace/src"
+        selectableTypes={["folder"]}
+        onConfirm={vi.fn()}
+      />
+    );
+
+    expect(await screen.findByText("existing")).toBeInTheDocument();
+
+    const selectorDialog = screen.getByRole("dialog", { name: "选择文件" });
+    const selectorFooter = selectorDialog.querySelector(".ant-modal-footer");
+    expect(selectorFooter).not.toBeNull();
+    const createFolderButton = within(selectorFooter as HTMLElement).getByRole(
+      "button",
+      { name: "新建文件夹" }
+    );
+
+    fireEvent.click(createFolderButton);
+    const createDialog = await screen.findByRole("dialog", { name: "新建文件夹" });
+    const input = within(createDialog).getByLabelText("文件夹名称");
+
+    fireEvent.change(input, { target: { value: "existing" } });
+    fireEvent.click(within(createDialog).getByRole("button", { name: "确定" }));
+
+    expect(await within(createDialog).findByText("当前目录已存在同名文件夹")).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(input, { target: { value: "components" } });
+    fireEvent.click(within(createDialog).getByRole("button", { name: "确定" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenNthCalledWith(2, "/api/v1/file-system/folders", {
+        body: JSON.stringify({
+          name: "components",
+          parentPath: "/workspace/src"
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        },
+        method: "POST"
+      });
+    });
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        3,
+        "/api/v1/file-system/entries?parentPath=%2Fworkspace%2Fsrc"
+      );
+    });
+    expect(await screen.findByText("components")).toBeInTheDocument();
+  });
+
   it("allows folders to be opened even when they cannot be selected", async () => {
     const onConfirm = vi.fn();
     fetchMock.mockResolvedValueOnce({

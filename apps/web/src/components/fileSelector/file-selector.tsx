@@ -2,12 +2,24 @@ import {
   CheckOutlined,
   FileOutlined,
   FolderOpenOutlined,
-  FolderOutlined
+  FolderOutlined,
+  PlusOutlined
 } from "@ant-design/icons";
-import { Breadcrumb, Button, Flex, Modal, Spin, Tooltip, Typography } from "antd";
+import {
+  Breadcrumb,
+  Button,
+  Flex,
+  Modal,
+  Spin,
+  Tooltip
+} from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { fetchFileSystemEntries } from "./file-selector-api";
+import { CreateFolderDialog } from "./create-folder-dialog";
+import {
+  createFileSystemFolder,
+  fetchFileSystemEntries
+} from "./file-selector-api";
 import type {
   FileSelectorSelectableType,
   FileSystemDirectoryListing,
@@ -50,6 +62,9 @@ export function FileSelector(props: FileSelectorProps) {
     zIndex
   } = props;
   const [selectedPaths, setSelectedPaths] = useState<string[]>([]);
+  const [openCreateFolderDialog, setOpenCreateFolderDialog] = useState<
+    (() => void) | null
+  >(null);
   const hasSelection = selectedPaths.length > 0;
   const multiple = props.multiple === true;
 
@@ -90,12 +105,18 @@ export function FileSelector(props: FileSelectorProps) {
       props.onConfirm(selectedPath);
     }
   }, [props, selectedPaths]);
+  const handleCreateFolderActionChange = useCallback(
+    (action: (() => void) | null) => {
+      setOpenCreateFolderDialog(() => action);
+    },
+    []
+  );
+  const handleCancel = useCallback(() => {
+    props.onCancel?.();
+  }, [props]);
 
   return (
     <Modal
-      cancelText="取消"
-      okButtonProps={{ "aria-label": "确定", disabled: !hasSelection }}
-      okText="确定"
       onOk={handleConfirm}
       open={open}
       title={title}
@@ -107,6 +128,31 @@ export function FileSelector(props: FileSelectorProps) {
           overflowY: "auto"
         }
       }}
+      footer={
+        <Flex align="center" justify="space-between">
+          <Button
+            aria-label="新建文件夹"
+            disabled={openCreateFolderDialog === null}
+            icon={<PlusOutlined />}
+            onClick={() => {
+              openCreateFolderDialog?.();
+            }}
+          >
+            新建文件夹
+          </Button>
+          <Flex gap={8}>
+            <Button onClick={handleCancel}>取消</Button>
+            <Button
+              aria-label="确定"
+              disabled={!hasSelection}
+              onClick={handleConfirm}
+              type="primary"
+            >
+              确定
+            </Button>
+          </Flex>
+        </Flex>
+      }
       {...(props.onCancel ? { onCancel: props.onCancel } : {})}
     >
       <FileSelectorBrowser
@@ -114,6 +160,7 @@ export function FileSelector(props: FileSelectorProps) {
         open={open}
         selectableTypes={selectableTypes}
         selectedPaths={selectedPaths}
+        onCreateFolderActionChange={handleCreateFolderActionChange}
         onToggleSelection={handleToggleSelection}
         {...(props.className ? { className: props.className } : {})}
         {...(props.parentPath ? { parentPath: props.parentPath } : {})}
@@ -125,6 +172,7 @@ export function FileSelector(props: FileSelectorProps) {
 interface FileSelectorBrowserProps {
   apiBaseUrl: string;
   className?: string;
+  onCreateFolderActionChange: (action: (() => void) | null) => void;
   onToggleSelection: (entry: FileSystemEntry) => void;
   open: boolean;
   parentPath?: string;
@@ -135,6 +183,7 @@ interface FileSelectorBrowserProps {
 function FileSelectorBrowser({
   apiBaseUrl,
   className,
+  onCreateFolderActionChange,
   onToggleSelection,
   open,
   parentPath,
@@ -144,6 +193,10 @@ function FileSelectorBrowser({
   const [listing, setListing] = useState<FileSystemDirectoryListing | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [createFolderName, setCreateFolderName] = useState("");
+  const [createFolderError, setCreateFolderError] = useState<string | null>(null);
+  const [creatingFolder, setCreatingFolder] = useState(false);
 
   const normalizedSelectableTypes = useMemo(
     () => normalizeSelectableTypes(selectableTypes),
@@ -173,6 +226,9 @@ function FileSelectorBrowser({
     if (!open) {
       setListing(null);
       setError(null);
+      setCreateFolderOpen(false);
+      setCreateFolderName("");
+      setCreateFolderError(null);
       return;
     }
 
@@ -181,40 +237,110 @@ function FileSelectorBrowser({
 
   const rootPath = listing?.parentPath ?? parentPath ?? "";
   const classNames = ["file-selector", className].filter(Boolean).join(" ");
+  const handleOpenCreateFolder = useCallback(() => {
+    setCreateFolderName("");
+    setCreateFolderError(null);
+    setCreateFolderOpen(true);
+  }, []);
+
+  useEffect(() => {
+    onCreateFolderActionChange(handleOpenCreateFolder);
+
+    return () => {
+      onCreateFolderActionChange(null);
+    };
+  }, [handleOpenCreateFolder, onCreateFolderActionChange]);
+
+  const handleCloseCreateFolder = useCallback(() => {
+    if (creatingFolder) {
+      return;
+    }
+
+    setCreateFolderOpen(false);
+    setCreateFolderName("");
+    setCreateFolderError(null);
+  }, [creatingFolder]);
+  const handleChangeCreateFolderName = useCallback((name: string) => {
+    setCreateFolderName(name);
+    setCreateFolderError(null);
+  }, []);
+  const handleCreateFolder = useCallback(() => {
+    const folderName = createFolderName.trim();
+
+    if (!folderName) {
+      setCreateFolderError("请输入文件夹名称");
+      return;
+    }
+
+    const hasDuplicateFolder = listing?.entries.some(
+      (entry) => entry.kind === "folder" && entry.name === folderName
+    ) ?? false;
+
+    if (hasDuplicateFolder) {
+      setCreateFolderError("当前目录已存在同名文件夹");
+      return;
+    }
+
+    setCreatingFolder(true);
+    setCreateFolderError(null);
+
+    void createFileSystemFolder(apiBaseUrl, rootPath, folderName)
+      .then(() => {
+        setCreateFolderOpen(false);
+        setCreateFolderName("");
+        loadDirectory(rootPath);
+      })
+      .catch(() => {
+        setCreateFolderError("文件夹创建失败");
+      })
+      .finally(() => {
+        setCreatingFolder(false);
+      });
+  }, [apiBaseUrl, createFolderName, listing?.entries, loadDirectory, rootPath]);
 
   return (
-    <section className={classNames}>
-      <div className="file-selector__header">
-        <Breadcrumb
-          items={createBreadcrumbItems(rootPath, loadDirectory)}
+    <>
+      <section className={classNames}>
+        <div className="file-selector__header">
+          <Breadcrumb items={createBreadcrumbItems(rootPath, loadDirectory)} />
+        </div>
+        <div className="file-selector__content">
+          {loading ? (
+            <Flex align="center" justify="center" style={{ minHeight: 180 }}>
+              <Spin />
+            </Flex>
+          ) : null}
+          {!loading && error ? (
+            <div className="file-selector__error">{error}</div>
+          ) : null}
+          {!loading && !error && listing?.entries.length === 0 ? (
+            <div className="file-selector__empty">当前目录为空</div>
+          ) : null}
+          {!loading && !error
+            ? listing?.entries.map((entry) => (
+                <FileSelectorEntry
+                  entry={entry}
+                  isSelectable={isEntrySelectable(entry, normalizedSelectableTypes)}
+                  isSelected={selectedPaths.includes(entry.path)}
+                  key={entry.path}
+                  onOpenFolder={loadDirectory}
+                  onToggleSelection={onToggleSelection}
+                />
+              ))
+            : null}
+        </div>
+      </section>
+      {createFolderOpen ? (
+        <CreateFolderDialog
+          creating={creatingFolder}
+          error={createFolderError}
+          name={createFolderName}
+          onCancel={handleCloseCreateFolder}
+          onChangeName={handleChangeCreateFolderName}
+          onConfirm={handleCreateFolder}
         />
-      </div>
-      <div className="file-selector__content">
-        {loading ? (
-          <Flex align="center" justify="center" style={{ minHeight: 180 }}>
-            <Spin />
-          </Flex>
-        ) : null}
-        {!loading && error ? (
-          <div className="file-selector__error">{error}</div>
-        ) : null}
-        {!loading && !error && listing?.entries.length === 0 ? (
-          <div className="file-selector__empty">当前目录为空</div>
-        ) : null}
-        {!loading && !error
-          ? listing?.entries.map((entry) => (
-              <FileSelectorEntry
-                entry={entry}
-                isSelectable={isEntrySelectable(entry, normalizedSelectableTypes)}
-                isSelected={selectedPaths.includes(entry.path)}
-                key={entry.path}
-                onOpenFolder={loadDirectory}
-                onToggleSelection={onToggleSelection}
-              />
-            ))
-          : null}
-      </div>
-    </section>
+      ) : null}
+    </>
   );
 }
 
@@ -348,7 +474,7 @@ function createBreadcrumbItems(
           size="small"
           type="text"
         >
-          <Typography.Text>{part}</Typography.Text>
+          <span>{part}</span>
         </Button>
       )
     });
