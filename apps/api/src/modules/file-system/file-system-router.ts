@@ -4,6 +4,7 @@ import { sendError, sendSuccess } from "../../response";
 import { RESPONSE_CODE_DEFINITIONS } from "../../response/response-codes";
 import {
   createFolder,
+  deleteEntry,
   listDirectoryEntries,
   listDirectoryEntriesRecursive,
   readFileContent
@@ -96,6 +97,43 @@ export function createFileSystemRouter(
             response,
             RESPONSE_CODE_DEFINITIONS.badRequest,
             error instanceof Error ? error.message : "Failed to create folder"
+          );
+        });
+    }
+  );
+
+  router.delete(
+    "/file-system/entries",
+    (request: Request, response: Response): void => {
+      const entryPath = getRequiredQueryString(request.query.entryPath);
+
+      if (entryPath === null) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "entryPath must be a string"
+        );
+        return;
+      }
+
+      const deleteOptions = {
+        entryPath,
+        ...(options.fileSystemRootPath === undefined
+          ? {}
+          : { rootPath: options.fileSystemRootPath })
+      };
+
+      void deleteEntry(deleteOptions)
+        .then((entry) => {
+          sendSuccess(response, entry);
+        })
+        .catch((error) => {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.badRequest,
+            error instanceof Error
+              ? error.message
+              : "Failed to delete file-system entry"
           );
         });
     }

@@ -1,23 +1,12 @@
-import {
-  CheckOutlined,
-  FileOutlined,
-  FolderOpenOutlined,
-  FolderOutlined,
-  PlusOutlined
-} from "@ant-design/icons";
-import {
-  Breadcrumb,
-  Button,
-  Flex,
-  Modal,
-  Spin,
-  Tooltip
-} from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import { Breadcrumb, Button, Flex, Modal, Spin } from "antd";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { CreateFolderDialog } from "./create-folder-dialog";
+import { FileSelectorEntry } from "./file-selector-entry";
 import {
   createFileSystemFolder,
+  deleteFileSystemEntry,
   fetchFileSystemEntries
 } from "./file-selector-api";
 import type {
@@ -105,6 +94,11 @@ export function FileSelector(props: FileSelectorProps) {
       props.onConfirm(selectedPath);
     }
   }, [props, selectedPaths]);
+  const handleRemoveSelectedPath = useCallback((path: string) => {
+    setSelectedPaths((currentPaths) =>
+      currentPaths.filter((currentPath) => currentPath !== path)
+    );
+  }, []);
   const handleCreateFolderActionChange = useCallback(
     (action: (() => void) | null) => {
       setOpenCreateFolderDialog(() => action);
@@ -161,6 +155,7 @@ export function FileSelector(props: FileSelectorProps) {
         selectableTypes={selectableTypes}
         selectedPaths={selectedPaths}
         onCreateFolderActionChange={handleCreateFolderActionChange}
+        onRemoveSelectedPath={handleRemoveSelectedPath}
         onToggleSelection={handleToggleSelection}
         {...(props.className ? { className: props.className } : {})}
         {...(props.parentPath ? { parentPath: props.parentPath } : {})}
@@ -173,6 +168,7 @@ interface FileSelectorBrowserProps {
   apiBaseUrl: string;
   className?: string;
   onCreateFolderActionChange: (action: (() => void) | null) => void;
+  onRemoveSelectedPath: (path: string) => void;
   onToggleSelection: (entry: FileSystemEntry) => void;
   open: boolean;
   parentPath?: string;
@@ -184,6 +180,7 @@ function FileSelectorBrowser({
   apiBaseUrl,
   className,
   onCreateFolderActionChange,
+  onRemoveSelectedPath,
   onToggleSelection,
   open,
   parentPath,
@@ -197,6 +194,7 @@ function FileSelectorBrowser({
   const [createFolderName, setCreateFolderName] = useState("");
   const [createFolderError, setCreateFolderError] = useState<string | null>(null);
   const [creatingFolder, setCreatingFolder] = useState(false);
+  const [deletingPath, setDeletingPath] = useState<string | null>(null);
 
   const normalizedSelectableTypes = useMemo(
     () => normalizeSelectableTypes(selectableTypes),
@@ -229,6 +227,7 @@ function FileSelectorBrowser({
       setCreateFolderOpen(false);
       setCreateFolderName("");
       setCreateFolderError(null);
+      setDeletingPath(null);
       return;
     }
 
@@ -297,6 +296,25 @@ function FileSelectorBrowser({
         setCreatingFolder(false);
       });
   }, [apiBaseUrl, createFolderName, listing?.entries, loadDirectory, rootPath]);
+  const handleDeleteEntry = useCallback(
+    (entry: FileSystemEntry) => {
+      setDeletingPath(entry.path);
+      setError(null);
+
+      void deleteFileSystemEntry(apiBaseUrl, entry.path)
+        .then(() => {
+          onRemoveSelectedPath(entry.path);
+          loadDirectory(rootPath);
+        })
+        .catch(() => {
+          setError("删除失败");
+        })
+        .finally(() => {
+          setDeletingPath(null);
+        });
+    },
+    [apiBaseUrl, loadDirectory, onRemoveSelectedPath, rootPath]
+  );
 
   return (
     <>
@@ -319,10 +337,12 @@ function FileSelectorBrowser({
           {!loading && !error
             ? listing?.entries.map((entry) => (
                 <FileSelectorEntry
+                  deleting={deletingPath === entry.path}
                   entry={entry}
                   isSelectable={isEntrySelectable(entry, normalizedSelectableTypes)}
                   isSelected={selectedPaths.includes(entry.path)}
                   key={entry.path}
+                  onDelete={handleDeleteEntry}
                   onOpenFolder={loadDirectory}
                   onToggleSelection={onToggleSelection}
                 />
@@ -341,82 +361,6 @@ function FileSelectorBrowser({
         />
       ) : null}
     </>
-  );
-}
-
-interface FileSelectorEntryProps {
-  entry: FileSystemEntry;
-  isSelectable: boolean;
-  isSelected: boolean;
-  onOpenFolder: (path: string) => void;
-  onToggleSelection: (entry: FileSystemEntry) => void;
-}
-
-function FileSelectorEntry({
-  entry,
-  isSelectable,
-  isSelected,
-  onOpenFolder,
-  onToggleSelection
-}: FileSelectorEntryProps) {
-  const isFolder = entry.kind === "folder";
-  const entryLabel = `${entry.name} ${entry.kind} ${
-    isFolder ? "open" : isSelectable ? "selectable" : "unavailable"
-  }`;
-
-  return (
-    <div
-      aria-disabled={!isSelectable}
-      aria-selected={isSelected}
-      className="file-selector__entry"
-      data-testid={`file-selector-entry-${entry.name}`}
-    >
-      <Button
-        aria-label={entryLabel}
-        className="file-selector__entry-main"
-        disabled={!isFolder && !isSelectable}
-        icon={isFolder ? <FolderOutlined /> : <FileOutlined />}
-        onClick={() => {
-          if (isFolder) {
-            onOpenFolder(entry.path);
-            return;
-          }
-
-          if (isSelectable) {
-            onToggleSelection(entry);
-          }
-        }}
-        type="text"
-      >
-        <span className="file-selector__entry-name">{entry.name}</span>
-      </Button>
-      {isFolder && isSelectable ? (
-        <Tooltip title="选择文件夹">
-          <Button
-            aria-label={`${entry.name} folder selectable`}
-            className={[
-              "file-selector__select-folder-button",
-              isSelected
-                ? "file-selector__select-folder-button--selected"
-                : undefined
-            ].filter(Boolean).join(" ")}
-            icon={<CheckOutlined />}
-            onClick={() => {
-              onToggleSelection(entry);
-            }}
-            shape="circle"
-            size="small"
-            type="text"
-          />
-        </Tooltip>
-      ) : null}
-      {isFolder && !isSelectable ? (
-        <FolderOpenOutlined aria-hidden="true" />
-      ) : null}
-      {!isFolder && isSelected ? (
-        <CheckOutlined aria-hidden="true" />
-      ) : null}
-    </div>
   );
 }
 

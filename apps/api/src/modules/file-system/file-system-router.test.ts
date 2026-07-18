@@ -136,6 +136,62 @@ describe("POST /api/v1/file-system/folders", () => {
   });
 });
 
+describe("DELETE /api/v1/file-system/entries", () => {
+  beforeEach(async () => {
+    rootPath = await mkdtemp(join(tmpdir(), "hold-rein-files-"));
+    await mkdir(join(rootPath, "src", "components"), { recursive: true });
+    await writeFile(join(rootPath, "src", "old.ts"), "export {};");
+    await writeFile(join(rootPath, "src", "components", "button.ts"), "export {};");
+  });
+
+  afterEach(async () => {
+    await rm(rootPath, { force: true, recursive: true });
+  });
+
+  it("deletes files below the configured root", async () => {
+    const filePath = join(rootPath, "src", "old.ts");
+
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
+      .delete("/api/v1/file-system/entries")
+      .query({ entryPath: filePath });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({
+      extension: ".ts",
+      kind: "file",
+      name: "old.ts",
+      path: filePath
+    });
+    await expect(stat(filePath)).rejects.toThrow();
+  });
+
+  it("deletes folders recursively below the configured root", async () => {
+    const folderPath = join(rootPath, "src", "components");
+
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
+      .delete("/api/v1/file-system/entries")
+      .query({ entryPath: folderPath });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({
+      extension: "",
+      kind: "folder",
+      name: "components",
+      path: folderPath
+    });
+    await expect(stat(folderPath)).rejects.toThrow();
+  });
+
+  it("rejects entryPath values outside the configured root", async () => {
+    const response = await request(await createApp({ fileSystemRootPath: rootPath }))
+      .delete("/api/v1/file-system/entries")
+      .query({ entryPath: tmpdir() });
+
+    expect(response.status).toBe(400);
+    expect(response.body.msg).toBe("entryPath must be inside the root directory");
+  });
+});
+
 describe("GET /api/v1/file-system/entries/recursive", () => {
   beforeEach(async () => {
     rootPath = await mkdtemp(join(tmpdir(), "hold-rein-files-"));

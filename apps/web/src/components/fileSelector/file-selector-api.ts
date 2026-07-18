@@ -41,6 +41,23 @@ export async function createFileSystemFolder(
   return payload.data;
 }
 
+export async function deleteFileSystemEntry(
+  apiBaseUrl: string,
+  entryPath: string
+): Promise<FileSystemEntry> {
+  const response = await fetch(createFileSystemEntryUrl(apiBaseUrl, entryPath), {
+    method: "DELETE"
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete file-system entry");
+  }
+
+  const payload = (await response.json()) as ApiResponse<FileSystemEntry>;
+
+  return payload.data;
+}
+
 export function createFileSystemEntriesUrl(
   apiBaseUrl: string,
   parentPath?: string
@@ -56,4 +73,13 @@ export function createFileSystemEntriesUrl(
 
 export function createFileSystemFolderUrl(apiBaseUrl: string): string {
   return `${apiBaseUrl.replace(/\/$/, "")}/api/v1/file-system/folders`;
+}
+
+export function createFileSystemEntryUrl(
+  apiBaseUrl: string,
+  entryPath: string
+): string {
+  const url = `${apiBaseUrl.replace(/\/$/, "")}/api/v1/file-system/entries`;
+
+  return `${url}?entryPath=${encodeURIComponent(entryPath)}`;
 }

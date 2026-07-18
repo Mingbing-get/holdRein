@@ -73,6 +73,15 @@
   text-align: left;
 }
 
+.file-selector__entry-actions {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: nowrap;
+  gap: 4px;
+  justify-content: flex-end;
+  min-width: max-content;
+}
+
 .file-selector__entry-name {
   overflow: hidden;
   text-overflow: ellipsis;

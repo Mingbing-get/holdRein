@@ -1,5 +1,5 @@
-import { mkdir, readFile, readdir, stat } from "node:fs/promises";
-import { extname, isAbsolute, parse, relative, resolve } from "node:path";
+import { mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
+import { basename, extname, isAbsolute, parse, relative, resolve } from "node:path";
 
 export type FileSystemEntryKind = "file" | "folder";
 
@@ -36,6 +36,11 @@ export interface ListDirectoryOptions {
 
 export interface ReadFileContentOptions {
   filePath: string;
+  rootPath?: string;
+}
+
+export interface DeleteEntryOptions {
+  entryPath: string;
   rootPath?: string;
 }
 
@@ -144,6 +149,28 @@ export async function createFolder(
   };
 }
 
+export async function deleteEntry(
+  options: DeleteEntryOptions
+): Promise<FileSystemEntry> {
+  const rootPath = normalizeRootPath(options.rootPath);
+  const entryPath = normalizeEntryPath(rootPath, options.entryPath);
+  const entryStat = await stat(entryPath);
+  const isDirectory = entryStat.isDirectory();
+
+  if (!isDirectory && !entryStat.isFile()) {
+    throw new Error("entryPath must be a file or directory");
+  }
+
+  await rm(entryPath, { recursive: isDirectory });
+
+  return {
+    extension: isDirectory ? "" : extname(entryPath),
+    kind: isDirectory ? "folder" : "file",
+    name: basename(entryPath),
+    path: entryPath
+  };
+}
+
 function normalizeRootPath(rootPath?: string): string {
   return rootPath ? resolve(rootPath) : parse(process.cwd()).root;
 }
@@ -168,6 +195,20 @@ function normalizeFilePath(rootPath: string, filePath: string): string {
   }
 
   return resolvedFilePath;
+}
+
+function normalizeEntryPath(rootPath: string, entryPath: string): string {
+  const resolvedEntryPath = resolve(entryPath);
+
+  if (!isPathInsideRoot(rootPath, resolvedEntryPath)) {
+    throw new Error("entryPath must be inside the root directory");
+  }
+
+  if (resolvedEntryPath === rootPath) {
+    throw new Error("entryPath must be below the root directory");
+  }
+
+  return resolvedEntryPath;
 }
 
 function normalizeFolderName(name: string): string {
