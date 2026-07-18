@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within
+} from "@testing-library/react";
 import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -200,6 +207,232 @@ describe("WorkspaceFileTree", () => {
       "data-theme",
       "vs-dark"
     );
+  });
+
+  it("creates child folders from a folder action and refreshes that folder", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          entries: [
+            {
+              extension: "",
+              kind: "folder",
+              name: "src",
+              path: "/workspace/src"
+            }
+          ],
+          parentPath: "/workspace"
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          entries: [],
+          parentPath: "/workspace/src"
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          extension: "",
+          kind: "folder",
+          name: "components",
+          path: "/workspace/src/components"
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          entries: [
+            {
+              extension: "",
+              kind: "folder",
+              name: "components",
+              path: "/workspace/src/components"
+            }
+          ],
+          parentPath: "/workspace/src"
+        })
+      );
+    renderWorkspaceFileTree();
+    fireEvent.click(await screen.findByRole("treeitem", { name: "src" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "在 src 下新建文件夹" })
+    );
+    const dialog = await screen.findByRole("dialog", { name: "新建文件夹" });
+    fireEvent.change(within(dialog).getByLabelText("文件夹名称"), {
+      target: { value: "components" }
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "确定" }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenNthCalledWith(3, "/api/v1/file-system/folders", {
+        body: JSON.stringify({
+          name: "components",
+          parentPath: "/workspace/src"
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        },
+        method: "POST"
+      });
+    });
+    expect(await screen.findByRole("treeitem", { name: "components" })).toBeVisible();
+  });
+
+  it("uploads multiple files into a folder and refreshes that folder", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          entries: [
+            {
+              extension: "",
+              kind: "folder",
+              name: "docs",
+              path: "/workspace/docs"
+            }
+          ],
+          parentPath: "/workspace"
+        })
+      )
+      .mockResolvedValueOnce(jsonResponse({ entries: [], parentPath: "/workspace/docs" }))
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            extension: ".md",
+            kind: "file",
+            name: "a.md",
+            path: "/workspace/docs/a.md"
+          },
+          {
+            extension: ".txt",
+            kind: "file",
+            name: "b.txt",
+            path: "/workspace/docs/b.txt"
+          }
+        ])
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          entries: [
+            {
+              extension: ".md",
+              kind: "file",
+              name: "a.md",
+              path: "/workspace/docs/a.md"
+            },
+            {
+              extension: ".txt",
+              kind: "file",
+              name: "b.txt",
+              path: "/workspace/docs/b.txt"
+            }
+          ],
+          parentPath: "/workspace/docs"
+        })
+      );
+
+    renderWorkspaceFileTree();
+    fireEvent.click(await screen.findByRole("treeitem", { name: "docs" }));
+    const input = await screen.findByLabelText("上传文件到 docs");
+    const files = [
+      new File(["# A"], "a.md", { type: "text/markdown" }),
+      new File(["B"], "b.txt", { type: "text/plain" })
+    ];
+    fireEvent.change(input, { target: { files } });
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        3,
+        "/api/v1/file-system/files?parentPath=%2Fworkspace%2Fdocs",
+        expect.objectContaining({
+          body: expect.any(FormData),
+          method: "POST"
+        })
+      );
+    });
+    expect(await screen.findByRole("treeitem", { name: "a.md" })).toBeVisible();
+    expect(await screen.findByRole("treeitem", { name: "b.txt" })).toBeVisible();
+  });
+
+  it("downloads files through the file action", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        entries: [
+          {
+            extension: ".txt",
+            kind: "file",
+            name: "notes.txt",
+            path: "/workspace/notes.txt"
+          }
+        ],
+        parentPath: "/workspace"
+      })
+    );
+    renderWorkspaceFileTree();
+    fireEvent.click(await screen.findByRole("button", { name: "下载 notes.txt" }));
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/file-system/files/download?filePath=%2Fworkspace%2Fnotes.txt",
+      {
+        body: undefined,
+        headers: undefined,
+        method: "GET"
+      }
+    );
+  });
+
+  it("deletes files and folders after confirmation and refreshes the parent folder", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          entries: [
+            {
+              extension: "",
+              kind: "folder",
+              name: "src",
+              path: "/workspace/src"
+            }
+          ],
+          parentPath: "/workspace"
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          entries: [
+            {
+              extension: ".ts",
+              kind: "file",
+              name: "old.ts",
+              path: "/workspace/src/old.ts"
+            }
+          ],
+          parentPath: "/workspace/src"
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          extension: ".ts",
+          kind: "file",
+          name: "old.ts",
+          path: "/workspace/src/old.ts"
+        })
+      )
+      .mockResolvedValueOnce(jsonResponse({ entries: [], parentPath: "/workspace/src" }));
+    renderWorkspaceFileTree();
+    fireEvent.click(await screen.findByRole("treeitem", { name: "src" }));
+    fireEvent.click(await screen.findByRole("button", { name: "删除 old.ts" }));
+    const dialog = await screen.findByRole("dialog", { name: "删除确认" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "确定" }));
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenNthCalledWith(
+        3,
+        "/api/v1/file-system/entries?entryPath=%2Fworkspace%2Fsrc%2Fold.ts",
+        {
+          body: undefined,
+          headers: undefined,
+          method: "DELETE"
+        }
+      );
+    });
+    await waitFor(() => {
+      expect(screen.queryByRole("treeitem", { name: "old.ts" })).not.toBeInTheDocument();
+    });
   });
 });
 

@@ -59,6 +59,59 @@
   white-space: nowrap;
 }
 
+.workspace-file-tree__row-actions {
+  align-items: center;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  opacity: 0;
+}
+
+.workspace-file-tree__row:focus-within .workspace-file-tree__row-actions,
+.workspace-file-tree__row:hover .workspace-file-tree__row-actions {
+  opacity: 1;
+}
+
+.workspace-file-tree__upload {
+  align-items: center;
+  border-radius: 5px;
+  color: var(--app-color-text);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 14px;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.workspace-file-tree__upload:hover {
+  background: var(--app-color-fill-secondary);
+}
+
+.workspace-file-tree__row-actions .workspace-file-tree__action--normal.ant-btn:hover,
+.workspace-file-tree__upload.workspace-file-tree__action--normal:hover {
+  color: var(--app-color-primary);
+}
+
+.workspace-file-tree__row-actions .workspace-file-tree__action--danger.ant-btn {
+  color: var(--app-color-danger);
+}
+
+.workspace-file-tree__row-actions .workspace-file-tree__action--danger.ant-btn:hover {
+  background: color-mix(in srgb, var(--app-color-danger) 12%, transparent);
+  color: var(--app-color-danger);
+}
+
+.workspace-file-tree__upload input {
+  display: none;
+}
+
+.workspace-file-tree__field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .workspace-file-tree__editor {
   border-bottom: 1px solid var(--app-color-border-secondary);
   border-top: 1px solid var(--app-color-border-secondary);

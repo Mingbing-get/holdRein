@@ -1,13 +1,16 @@
-import { Router, type Request, type Response } from "express";
+import express, { Router, type Request, type Response } from "express";
 
 import { sendError, sendSuccess } from "../../response";
 import { RESPONSE_CODE_DEFINITIONS } from "../../response/response-codes";
 import {
   createFolder,
   deleteEntry,
+  getFileDownload,
   listDirectoryEntries,
   listDirectoryEntriesRecursive,
-  readFileContent
+  readFileContent,
+  uploadFiles,
+  type UploadFileInput
 } from "./file-system-service";
 
 export interface CreateFileSystemRouterOptions {
@@ -97,6 +100,56 @@ export function createFileSystemRouter(
             response,
             RESPONSE_CODE_DEFINITIONS.badRequest,
             error instanceof Error ? error.message : "Failed to create folder"
+          );
+        });
+    }
+  );
+
+  router.post(
+    "/file-system/files",
+    expressRawBody,
+    (request: Request, response: Response): void => {
+      const parentPath = getParentPath(request.query.parentPath);
+
+      if (parentPath === null) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "parentPath must be a string"
+        );
+        return;
+      }
+
+      let files: UploadFileInput[];
+
+      try {
+        files = parseMultipartFiles(request.headers["content-type"], request.body);
+      } catch (error) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          error instanceof Error ? error.message : "Failed to parse uploaded files"
+        );
+        return;
+      }
+
+      const uploadOptions = {
+        files,
+        ...(parentPath === undefined ? {} : { parentPath }),
+        ...(options.fileSystemRootPath === undefined
+          ? {}
+          : { rootPath: options.fileSystemRootPath })
+      };
+
+      void uploadFiles(uploadOptions)
+        .then((entries) => {
+          sendSuccess(response, entries);
+        })
+        .catch((error) => {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.badRequest,
+            error instanceof Error ? error.message : "Failed to upload files"
           );
         });
     }
@@ -199,6 +252,41 @@ export function createFileSystemRouter(
   );
 
   router.get(
+    "/file-system/files/download",
+    (request: Request, response: Response): void => {
+      const filePath = getRequiredQueryString(request.query.filePath);
+
+      if (filePath === null) {
+        sendError(
+          response,
+          RESPONSE_CODE_DEFINITIONS.badRequest,
+          "filePath must be a string"
+        );
+        return;
+      }
+
+      const downloadOptions = {
+        filePath,
+        ...(options.fileSystemRootPath === undefined
+          ? {}
+          : { rootPath: options.fileSystemRootPath })
+      };
+
+      void getFileDownload(downloadOptions)
+        .then((fileDownload) => {
+          response.download(fileDownload.filePath, fileDownload.name);
+        })
+        .catch((error) => {
+          sendError(
+            response,
+            RESPONSE_CODE_DEFINITIONS.badRequest,
+            error instanceof Error ? error.message : "Failed to download file"
+          );
+        });
+    }
+  );
+
+  router.get(
     "/file-system/file-content",
     (request: Request, response: Response): void => {
       const filePath = getRequiredQueryString(request.query.filePath);
@@ -236,6 +324,108 @@ export function createFileSystemRouter(
   );
 
   return router;
+}
+
+const expressRawBody = express.raw({
+  limit: "100mb",
+  type: () => true
+});
+
+function parseMultipartFiles(
+  contentType: string | string[] | undefined,
+  body: unknown
+): UploadFileInput[] {
+  const header = Array.isArray(contentType) ? contentType[0] : contentType;
+  const boundary = getMultipartBoundary(header);
+
+  if (!boundary) {
+    throw new Error("multipart boundary is required");
+  }
+
+  if (!Buffer.isBuffer(body)) {
+    throw new Error("multipart body is required");
+  }
+
+  return splitBuffer(body, Buffer.from(`--${boundary}`))
+    .map(parseMultipartFilePart)
+    .filter((file): file is UploadFileInput => file !== null);
+}
+
+function getMultipartBoundary(contentType: string | undefined): string | null {
+  if (!contentType?.startsWith("multipart/form-data")) {
+    return null;
+  }
+
+  const boundary = contentType
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("boundary="));
+
+  return boundary ? boundary.slice("boundary=".length) : null;
+}
+
+function parseMultipartFilePart(part: Buffer): UploadFileInput | null {
+  const trimmedPart = trimMultipartBoundaryPart(part);
+
+  if (trimmedPart.length === 0 || trimmedPart.equals(Buffer.from("--"))) {
+    return null;
+  }
+
+  const headerSeparatorIndex = trimmedPart.indexOf("\r\n\r\n");
+
+  if (headerSeparatorIndex === -1) {
+    return null;
+  }
+
+  const header = trimmedPart.subarray(0, headerSeparatorIndex).toString("utf8");
+  const name = getMultipartFilename(header);
+
+  if (!name) {
+    return null;
+  }
+
+  return {
+    content: trimTrailingCrLf(trimmedPart.subarray(headerSeparatorIndex + 4)),
+    name
+  };
+}
+
+function getMultipartFilename(header: string): string | null {
+  const match = /filename="([^"]+)"/u.exec(header);
+
+  return match?.[1] ?? null;
+}
+
+function trimMultipartBoundaryPart(part: Buffer): Buffer {
+  let trimmedPart = part;
+
+  if (trimmedPart.subarray(0, 2).equals(Buffer.from("\r\n"))) {
+    trimmedPart = trimmedPart.subarray(2);
+  }
+
+  return trimTrailingCrLf(trimmedPart);
+}
+
+function trimTrailingCrLf(buffer: Buffer): Buffer {
+  return buffer.subarray(-2).equals(Buffer.from("\r\n"))
+    ? buffer.subarray(0, -2)
+    : buffer;
+}
+
+function splitBuffer(buffer: Buffer, delimiter: Buffer): Buffer[] {
+  const parts: Buffer[] = [];
+  let startIndex = 0;
+  let delimiterIndex = buffer.indexOf(delimiter, startIndex);
+
+  while (delimiterIndex !== -1) {
+    parts.push(buffer.subarray(startIndex, delimiterIndex));
+    startIndex = delimiterIndex + delimiter.length;
+    delimiterIndex = buffer.indexOf(delimiter, startIndex);
+  }
+
+  parts.push(buffer.subarray(startIndex));
+
+  return parts;
 }
 
 function getParentPath(parentPath: Request["query"][string]): string | undefined | null {

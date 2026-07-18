@@ -1,4 +1,4 @@
-import { mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { basename, extname, isAbsolute, parse, relative, resolve } from "node:path";
 
 export type FileSystemEntryKind = "file" | "folder";
@@ -21,6 +21,8 @@ export interface FileSystemFileContent {
   filePath: string;
 }
 
+export interface FileSystemFileDownload { filePath: string; name: string; }
+
 export interface CreateFolderOptions {
   name: string;
   parentPath?: string;
@@ -41,6 +43,14 @@ export interface ReadFileContentOptions {
 
 export interface DeleteEntryOptions {
   entryPath: string;
+  rootPath?: string;
+}
+
+export interface UploadFileInput { content: Buffer; name: string; }
+
+export interface UploadFilesOptions {
+  files: UploadFileInput[];
+  parentPath?: string;
   rootPath?: string;
 }
 
@@ -113,6 +123,18 @@ export async function readFileContent(
   };
 }
 
+export async function getFileDownload(options: ReadFileContentOptions): Promise<FileSystemFileDownload> {
+  const rootPath = normalizeRootPath(options.rootPath);
+  const filePath = normalizeFilePath(rootPath, options.filePath);
+  const fileStat = await stat(filePath);
+
+  if (!fileStat.isFile()) {
+    throw new Error("filePath must be a file");
+  }
+
+  return { filePath, name: basename(filePath) };
+}
+
 export async function createFolder(
   options: CreateFolderOptions
 ): Promise<FileSystemEntry> {
@@ -147,6 +169,36 @@ export async function createFolder(
     name: folderName,
     path: folderPath
   };
+}
+
+export async function uploadFiles(options: UploadFilesOptions): Promise<FileSystemEntry[]> {
+  const rootPath = normalizeRootPath(options.rootPath);
+  const parentPath = normalizeParentPath(rootPath, options.parentPath);
+  const parentStat = await stat(parentPath);
+
+  if (!parentStat.isDirectory()) {
+    throw new Error("parentPath must be a directory");
+  }
+
+  if (options.files.length === 0) {
+    throw new Error("files are required");
+  }
+
+  const writtenEntries: FileSystemEntry[] = [];
+
+  for (const file of options.files) {
+    const fileName = normalizeFileName(file.name);
+    const filePath = resolve(parentPath, fileName);
+
+    if (!isPathInsideRoot(rootPath, filePath)) {
+      throw new Error("file path must be inside the root directory");
+    }
+
+    await writeFile(filePath, file.content);
+    writtenEntries.push({ extension: extname(fileName), kind: "file", name: fileName, path: filePath });
+  }
+
+  return writtenEntries;
 }
 
 export async function deleteEntry(
@@ -218,16 +270,25 @@ function normalizeFolderName(name: string): string {
     throw new Error("folder name is required");
   }
 
-  if (
-    folderName === "." ||
-    folderName === ".." ||
-    folderName.includes("/") ||
-    folderName.includes("\\")
-  ) {
+  if (folderName === "." || folderName === ".." || folderName.includes("/") || folderName.includes("\\")) {
     throw new Error("folder name must be a single path segment");
   }
 
   return folderName;
+}
+
+function normalizeFileName(name: string): string {
+  const fileName = name.trim();
+
+  if (!fileName) {
+    throw new Error("file name is required");
+  }
+
+  if (fileName === "." || fileName === ".." || fileName.includes("/") || fileName.includes("\\")) {
+    throw new Error("file name must be a single path segment");
+  }
+
+  return fileName;
 }
 
 function isPathInsideRoot(rootPath: string, targetPath: string): boolean {
