@@ -1,4 +1,4 @@
-import { readFileSync, realpathSync } from "node:fs";
+import { realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -46,9 +46,8 @@ export async function reloadServerPlugins(
   const pluginsService = createPluginsService({ pluginRoot });
   const loaded = await loadInstalledServerPlugins({
     disabledPluginIds: await pluginsService.listDisabledPluginIds(),
-    hostNodeModules: join(process.cwd(), "node_modules"),
-    pluginRoot,
-    resolvePackageTarget: resolveRuntimePackageTarget
+    hostNodeModules: resolveRuntimeNodeModules(),
+    pluginRoot
   });
   const devLoaded = await loadDevServerPlugins({
     entries: activeDevPluginManager?.getServerPluginEntries() ?? [],
@@ -151,44 +150,24 @@ function toDevImportUrl(entryPath: string, importVersion: number): string {
   return url.href;
 }
 
-function resolveRuntimePackageTarget(packageName: string): string {
+function resolveRuntimeNodeModules(): string {
   let directory = runtimeModuleDirectory;
 
   while (true) {
-    const packageDirectory = join(
-      directory,
-      "node_modules",
-      ...packageName.split("/")
-    );
+    const nodeModulesDirectory = join(directory, "node_modules");
 
     try {
-      const resolvedDirectory = realpathSync(packageDirectory);
-
-      if (hasPackageName(resolvedDirectory, packageName)) {
-        return resolvedDirectory;
-      }
+      return realpathSync(nodeModulesDirectory);
     } catch {
-      // Continue walking parent directories until the runtime package is found.
+      // Continue walking parent directories until runtime dependencies are found.
     }
 
     const parent = dirname(directory);
 
     if (parent === directory) {
-      throw new Error(`Unable to resolve package root for "${packageName}".`);
+      throw new Error("Unable to resolve runtime node_modules directory.");
     }
 
     directory = parent;
-  }
-}
-
-function hasPackageName(directory: string, packageName: string): boolean {
-  try {
-    const packageJson = JSON.parse(
-      readFileSync(join(directory, "package.json"), "utf8")
-    ) as { readonly name?: unknown };
-
-    return packageJson.name === packageName;
-  } catch {
-    return false;
   }
 }

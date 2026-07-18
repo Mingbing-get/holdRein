@@ -65,6 +65,10 @@ const basePackageJson = {
     "@earendil-works/pi-ai": "0.76.0",
     "@hold-rein/plugin-server": `^${pluginServerPackageJson.version}`,
     express: "5.2.1",
+    "better-sqlite3": "12.10.0",
+    "cron-parser": "^5.6.1",
+    "drizzle-orm": "0.45.2",
+    "node-cron": "^4.6.0",
     "@ant-design/icons": "6.2.5",
     "@hold-rein/plugin-web": `^${pluginWebPackageJson.version}`,
     "@monaco-editor/react": "4.7.0",
@@ -79,6 +83,10 @@ const basePackageJson = {
     "@hold-rein/plugin-server": `^${pluginServerPackageJson.version}`,
     express: "5.2.1",
     vite: "6.3.5",
+    "better-sqlite3": "12.10.0",
+    "cron-parser": "^5.6.1",
+    "drizzle-orm": "0.45.2",
+    "node-cron": "^4.6.0",
     "@ant-design/icons": "6.2.5",
     "@hold-rein/plugin-web": `^${pluginWebPackageJson.version}`,
     "@monaco-editor/react": "4.7.0",
@@ -141,7 +149,11 @@ export default defineConfig({
         "@hold-rein/plugin-server",
         "@earendil-works/pi-agent-core",
         "@earendil-works/pi-ai",
-        "express"
+        "express",
+        "better-sqlite3",
+        "cron-parser",
+        "drizzle-orm",
+        "node-cron"
       ]
     },
     sourcemap: true

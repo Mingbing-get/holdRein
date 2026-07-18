@@ -32,9 +32,14 @@ export {
   discoverServerPluginManifests,
   parseServerPluginManifest
 } from "./runtime/manifest";
-export { SERVER_PLUGIN_SHARED_PACKAGES } from "./runtime/shared/packages";
-export { linkServerPluginSharedPackages } from "./runtime/shared/symlinks";
-export type { LinkServerPluginSharedPackagesOptions } from "./runtime/shared/symlinks";
+export {
+  linkServerPluginNodeModules,
+  linkServerPluginSharedPackages
+} from "./runtime/shared/symlinks";
+export type {
+  LinkServerPluginNodeModulesOptions,
+  LinkServerPluginSharedPackagesOptions
+} from "./runtime/shared/symlinks";
 export { startDevPluginManager } from "./runtime/dev";
 export type {
   DevPluginManager,

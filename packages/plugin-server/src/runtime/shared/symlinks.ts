@@ -1,30 +1,22 @@
 import { mkdir, rm, symlink } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 
-import { SERVER_PLUGIN_SHARED_PACKAGES } from "./packages";
-
-export interface LinkServerPluginSharedPackagesOptions {
+export interface LinkServerPluginNodeModulesOptions {
   readonly hostNodeModules: string;
-  readonly packages?: readonly string[];
   readonly pluginRoot: string;
-  readonly resolvePackageTarget?: (packageName: string) => string;
 }
 
-export async function linkServerPluginSharedPackages(
-  options: LinkServerPluginSharedPackagesOptions
+export async function linkServerPluginNodeModules(
+  options: LinkServerPluginNodeModulesOptions
 ): Promise<void> {
-  for (const packageName of options.packages ?? SERVER_PLUGIN_SHARED_PACKAGES) {
-    const linkPath = join(
-      options.pluginRoot,
-      "node_modules",
-      ...packageName.split("/")
-    );
-    const targetPath =
-      options.resolvePackageTarget?.(packageName) ??
-      join(options.hostNodeModules, ...packageName.split("/"));
+  const linkPath = join(options.pluginRoot, "node_modules");
 
-    await mkdir(dirname(linkPath), { recursive: true });
-    await rm(linkPath, { force: true, recursive: true });
-    await symlink(targetPath, linkPath, "junction");
-  }
+  await mkdir(options.pluginRoot, { recursive: true });
+  await rm(linkPath, { force: true, recursive: true });
+  await symlink(options.hostNodeModules, linkPath, "junction");
 }
+
+export type LinkServerPluginSharedPackagesOptions =
+  LinkServerPluginNodeModulesOptions;
+
+export const linkServerPluginSharedPackages = linkServerPluginNodeModules;

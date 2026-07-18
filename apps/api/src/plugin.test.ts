@@ -1,8 +1,4 @@
 import { join } from "node:path";
-import {
-  readFileSync as nodeReadFileSync,
-  realpathSync as nodeRealpathSync
-} from "node:fs";
 
 import express, { Router } from "express";
 import request from "supertest";
@@ -14,27 +10,20 @@ import type {
 
 const mocks = vi.hoisted(() => ({
   installPluginPackage: vi.fn(),
-  readFileSync: vi.fn(),
   realpathSync: vi.fn(),
   loadInstalledServerPlugins: vi.fn(),
   replaceAll: vi.fn(),
   registerRoutes: vi.fn()
 }));
+const DEFAULT_RUNTIME_NODE_MODULES = "/runtime-root/node_modules";
 
-type NodeFsMockModule = {
-  readFileSync: typeof nodeReadFileSync;
-  realpathSync: typeof nodeRealpathSync;
-} & Record<string, unknown>;
+type NodeFsMockModule = typeof import("node:fs") & Record<string, unknown>;
 
 vi.mock("node:fs", async (importOriginal) => {
   const actual = (await importOriginal()) as NodeFsMockModule;
 
-  mocks.readFileSync.mockImplementation(actual.readFileSync);
-  mocks.realpathSync.mockImplementation(actual.realpathSync);
-
   return {
     ...actual,
-    readFileSync: mocks.readFileSync,
     realpathSync: mocks.realpathSync
   };
 });
@@ -60,13 +49,11 @@ const {
 beforeEach(async () => {
   clearRuntimePluginsForTests();
   mocks.installPluginPackage.mockReset();
-  mocks.readFileSync.mockReset();
   mocks.realpathSync.mockReset();
   mocks.loadInstalledServerPlugins.mockReset();
   mocks.replaceAll.mockReset();
   mocks.registerRoutes.mockReset();
-  mocks.readFileSync.mockImplementation(nodeReadFileSync);
-  mocks.realpathSync.mockImplementation(nodeRealpathSync);
+  mocks.realpathSync.mockImplementation(resolveDefaultRuntimeNodeModules);
   mocks.loadInstalledServerPlugins.mockResolvedValue({
     plugins: [],
     webPlugins: []
@@ -88,11 +75,9 @@ it("replaces the active server plugins when plugins are reloaded", async () => {
   expect(mocks.replaceAll).toHaveBeenCalledWith(plugins);
 });
 
-it("resolves shared plugin packages from the API runtime module", async () => {
+it("resolves host node_modules from the API runtime module", async () => {
   const pluginRoot = "/tmp/hold-rein-plugins";
-  const expressRoot = mockRuntimePackage("express");
-  const agentCoreRoot = mockRuntimePackage("@earendil-works/pi-agent-core");
-  const piAiRoot = mockRuntimePackage("@earendil-works/pi-ai");
+  const runtimeNodeModules = mockRuntimeNodeModules();
 
   await bootstrapServerPlugins(pluginRoot);
 
@@ -100,31 +85,19 @@ it("resolves shared plugin packages from the API runtime module", async () => {
 
   expect(options).toMatchObject({
     disabledPluginIds: [],
-    hostNodeModules: join(process.cwd(), "node_modules"),
+    hostNodeModules: runtimeNodeModules,
     pluginRoot
   });
-  expect(options.resolvePackageTarget("express")).toBe(expressRoot);
-  expect(options.resolvePackageTarget("@earendil-works/pi-agent-core")).toBe(
-    agentCoreRoot
-  );
-  expect(options.resolvePackageTarget("@earendil-works/pi-ai")).toBe(piAiRoot);
+  expect(options.resolvePackageTarget).toBeUndefined();
 });
 
-it("resolves shared plugin packages from the CLI runtime root", async () => {
-  const packageName = "shared-runtime-package";
-  const packageRoot = "/runtime-root/node_modules/shared-runtime-package";
+it("resolves host node_modules from the CLI runtime root", async () => {
   const pluginRoot = "/tmp/hold-rein-plugins";
+  const runtimeNodeModules = "/runtime-root/node_modules";
 
   mocks.realpathSync.mockImplementation((path) => {
-    if (path.toString().endsWith(join("apps", "node_modules", packageName))) {
-      return packageRoot;
-    }
-
-    throw new Error(`ENOENT: ${path.toString()}`);
-  });
-  mocks.readFileSync.mockImplementation((path) => {
-    if (path.toString() === join(packageRoot, "package.json")) {
-      return JSON.stringify({ name: packageName });
+    if (path.toString().endsWith(join("apps", "node_modules"))) {
+      return runtimeNodeModules;
     }
 
     throw new Error(`ENOENT: ${path.toString()}`);
@@ -134,7 +107,7 @@ it("resolves shared plugin packages from the CLI runtime root", async () => {
 
   const options = mocks.loadInstalledServerPlugins.mock.calls[0]?.[0];
 
-  expect(options.resolvePackageTarget(packageName)).toBe(packageRoot);
+  expect(options.hostNodeModules).toBe(runtimeNodeModules);
 });
 
 it("disposes replaced development plugin instances before registry replacement", async () => {
@@ -197,18 +170,13 @@ it("rebuilds the stable plugin request handler with replacement routes", async (
   expect(response.text).toBe("new");
 });
 
-function mockRuntimePackage(packageName: string): string {
-  const packageRoot = join(
-    "/runtime-root",
-    "node_modules",
-    ...packageName.split("/")
-  );
+function mockRuntimeNodeModules(): string {
+  const runtimeNodeModules = DEFAULT_RUNTIME_NODE_MODULES;
   const previousRealpathSync = mocks.realpathSync.getMockImplementation();
-  const previousReadFileSync = mocks.readFileSync.getMockImplementation();
 
   mocks.realpathSync.mockImplementation((path) => {
-    if (path.toString().endsWith(join("node_modules", ...packageName.split("/")))) {
-      return packageRoot;
+    if (path.toString().endsWith("node_modules")) {
+      return runtimeNodeModules;
     }
 
     if (previousRealpathSync) {
@@ -217,17 +185,14 @@ function mockRuntimePackage(packageName: string): string {
 
     throw new Error(`ENOENT: ${path.toString()}`);
   });
-  mocks.readFileSync.mockImplementation((path) => {
-    if (path.toString() === join(packageRoot, "package.json")) {
-      return JSON.stringify({ name: packageName });
-    }
 
-    if (previousReadFileSync) {
-      return previousReadFileSync(path);
-    }
+  return runtimeNodeModules;
+}
 
-    throw new Error(`ENOENT: ${path.toString()}`);
-  });
+function resolveDefaultRuntimeNodeModules(path: unknown): string {
+  if (path?.toString().endsWith("node_modules")) {
+    return DEFAULT_RUNTIME_NODE_MODULES;
+  }
 
-  return packageRoot;
+  throw new Error(`ENOENT: ${path?.toString()}`);
 }

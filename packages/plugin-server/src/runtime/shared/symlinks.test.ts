@@ -1,40 +1,37 @@
-import { lstat, mkdtemp, readlink } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 
-import { linkServerPluginSharedPackages } from "./symlinks";
+import { linkServerPluginNodeModules } from "./symlinks";
 
-it("creates shared package symlinks in plugin node_modules", async () => {
+it("links the plugin node_modules directory to the host node_modules", async () => {
   const root = await mkdtemp(join(tmpdir(), "hold-rein-link-"));
+  const hostNodeModules = join(root, "host", "node_modules");
+  const pluginRoot = join(root, "plugins");
 
-  await linkServerPluginSharedPackages({
-    hostNodeModules: join(root, "host", "node_modules"),
-    packages: ["@scope/shared", "express"],
-    pluginRoot: join(root, "plugins")
+  await linkServerPluginNodeModules({
+    hostNodeModules,
+    pluginRoot
   });
 
-  expect(
-    (await lstat(join(root, "plugins", "node_modules", "@scope", "shared")))
-      .isSymbolicLink()
-  ).toBe(true);
-  expect(await readlink(join(root, "plugins", "node_modules", "express"))).toBe(
-    join(root, "host", "node_modules", "express")
+  expect((await lstat(join(pluginRoot, "node_modules"))).isSymbolicLink()).toBe(
+    true
   );
+  expect(await readlink(join(pluginRoot, "node_modules"))).toBe(hostNodeModules);
 });
 
-it("links shared packages to resolved package targets when provided", async () => {
+it("replaces an existing plugin node_modules directory", async () => {
   const root = await mkdtemp(join(tmpdir(), "hold-rein-link-"));
+  const hostNodeModules = join(root, "host", "node_modules");
+  const pluginRoot = join(root, "plugins");
 
-  await linkServerPluginSharedPackages({
-    hostNodeModules: join(root, "host", "node_modules"),
-    packages: ["express"],
-    pluginRoot: join(root, "plugins"),
-    resolvePackageTarget: (packageName) =>
-      join(root, "resolved", "node_modules", packageName)
+  await mkdir(join(pluginRoot, "node_modules", "stale"), { recursive: true });
+
+  await linkServerPluginNodeModules({
+    hostNodeModules,
+    pluginRoot
   });
 
-  expect(await readlink(join(root, "plugins", "node_modules", "express"))).toBe(
-    join(root, "resolved", "node_modules", "express")
-  );
+  expect(await readlink(join(pluginRoot, "node_modules"))).toBe(hostNodeModules);
 });

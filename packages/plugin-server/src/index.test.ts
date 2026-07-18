@@ -1,20 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-  createServerPluginRegistry,
-  SERVER_PLUGIN_SHARED_PACKAGES
-} from "./index";
+import { createServerPluginRegistry } from "./index";
 import type { ServerPlugin } from "./index";
 
 describe("createServerPluginRegistry", () => {
-  it("exports server shared packages", () => {
-    expect(SERVER_PLUGIN_SHARED_PACKAGES).toEqual([
-      "@hold-rein/plugin-server",
-      "@earendil-works/pi-agent-core",
-      "@earendil-works/pi-ai",
-      "express"
-    ]);
-  });
-
   it("types server plugins with optional disposal hooks", () => {
     const disposed: string[] = [];
     const plugin: ServerPlugin.Plugin = {

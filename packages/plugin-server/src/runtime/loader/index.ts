@@ -7,14 +7,13 @@ import {
   discoverServerPluginManifests,
   parseServerPluginManifest
 } from "../manifest";
-import { linkServerPluginSharedPackages } from "../shared/symlinks";
+import { linkServerPluginNodeModules } from "../shared/symlinks";
 
 export interface LoadInstalledServerPluginsOptions {
   readonly disabledPluginIds?: readonly string[];
   readonly hostNodeModules: string;
   readonly importVersion?: number | string;
   readonly pluginRoot: string;
-  readonly resolvePackageTarget?: (packageName: string) => string;
   readonly toImportUrl?: (
     path: string,
     importVersion?: number | string
@@ -29,12 +28,9 @@ export interface LoadedServerPlugins {
 export async function loadInstalledServerPlugins(
   options: LoadInstalledServerPluginsOptions
 ): Promise<LoadedServerPlugins> {
-  await linkServerPluginSharedPackages({
+  await linkServerPluginNodeModules({
     hostNodeModules: options.hostNodeModules,
-    pluginRoot: options.pluginRoot,
-    ...(options.resolvePackageTarget === undefined
-      ? {}
-      : { resolvePackageTarget: options.resolvePackageTarget })
+    pluginRoot: options.pluginRoot
   });
 
   const manifests = await discoverServerPluginManifests(options.pluginRoot);
