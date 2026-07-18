@@ -137,6 +137,10 @@ function AgentMessageItem({
 }) {
   if (message.role === "user") {
     const content = getText(message.content);
+    const images =
+      typeof message.content === "string"
+        ? []
+        : message.content.filter((block) => block.type === "image");
 
     return (
       <div
@@ -146,7 +150,28 @@ function AgentMessageItem({
           styles={{
             content: { padding: '8px 12px', minHeight: 'unset', maxHeight: '240px', overflowY: 'auto', borderRadius: 8 }
           }}
-          content={content}
+          content={
+            <Flex gap={8} vertical>
+              {content ? <span>{content}</span> : null}
+              {images.length ? (
+                <Flex gap={6} wrap="wrap">
+                  {images.map((image, index) => (
+                    <img
+                      alt={`用户图片 ${index + 1}`}
+                      key={index}
+                      src={`data:${image.mimeType};base64,${image.data}`}
+                      style={{
+                        borderRadius: 6,
+                        maxHeight: 120,
+                        maxWidth: 160,
+                        objectFit: "cover"
+                      }}
+                    />
+                  ))}
+                </Flex>
+              ) : null}
+            </Flex>
+          }
           placement="end"
         />
       </div>

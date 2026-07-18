@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState, type RefObject } from "react";
-import type { Sender as ASender, SenderProps } from "@ant-design/x";
+import type { Sender as ASender } from "@ant-design/x";
+import type { ImageContent } from "../../../agent-messages/agent-message-types";
 
 import {
   clampCursorIndex,
@@ -7,16 +8,17 @@ import {
 } from "../utils";
 import { useSenderDraft } from "./use-sender-draft";
 
-type SenderSubmitHandler = Required<SenderProps>["onSubmit"];
 type SenderInstance = React.ElementRef<typeof ASender>;
 type InputElement = HTMLTextAreaElement | null;
+type SenderSubmitHandler = (
+  message: string,
+  images?: ImageContent[]
+) => Promise<void> | void;
 
 export interface UseSenderInputStateOptions {
   draftKey?: string | undefined;
   onMessageChange?: ((message: string) => void) | undefined;
-  onSubmit?:
-    | ((...args: Parameters<SenderSubmitHandler>) => Promise<void> | void)
-    | undefined;
+  onSubmit?: SenderSubmitHandler | undefined;
   taskId?: string | undefined;
   workspacePath?: string | undefined;
 }
@@ -26,7 +28,7 @@ export interface UseSenderInputStateResult {
   loading: boolean;
   senderRef: RefObject<SenderInstance | null>;
   handleChangeMessage: (message: string) => void;
-  handleSubmit: (...args: Parameters<SenderSubmitHandler>) => Promise<void>;
+  handleSubmit: (message: string, images?: ImageContent[]) => Promise<void>;
   insertText: (insertedText: string, overwriteLength?: number) => void;
 }
 
@@ -86,12 +88,17 @@ export function useSenderInputState({
   }, [draftMessage, focusCursorAt, handleChangeMessage]);
 
   const handleSubmit = useCallback(async (
-    ...args: Parameters<SenderSubmitHandler>
+    message: string,
+    images?: ImageContent[]
   ) => {
     setLoading(true);
 
     try {
-      await onSubmit?.(...args);
+      if (images === undefined) {
+        await onSubmit?.(message);
+      } else {
+        await onSubmit?.(message, images);
+      }
       clearDraft();
     } finally {
       setLoading(false);

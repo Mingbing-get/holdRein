@@ -5,6 +5,7 @@ import type {
   AgentRunResult,
   AgentSessionMetadata,
   BrowserToolResultInput,
+  StoredImageContent,
   StoredAgentMessage,
   RunAgentInput
 } from "../agent-types";
@@ -54,6 +55,7 @@ export interface StartHarnessOptions {
   continuationSubagentFilters?: ContinuationSubagentFilters;
   depth: number;
   isContinue: boolean;
+  images?: StoredImageContent[];
   parentAgentId?: string;
   pluginPrompt: string;
   session?: HarnessSession;

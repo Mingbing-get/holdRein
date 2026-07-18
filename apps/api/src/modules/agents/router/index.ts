@@ -53,7 +53,7 @@ export function createAgentsRouter(
         sendError(
           response,
           RESPONSE_CODE_DEFINITIONS.badRequest,
-          "workspacePath, provider, modelId and prompt must be strings; runtimeContributions must be valid when provided"
+          "workspacePath, provider, modelId and prompt must be strings; images and runtimeContributions must be valid when provided"
         );
         return;
       }
@@ -196,7 +196,7 @@ export function createAgentsRouter(
         sendError(
           response,
           RESPONSE_CODE_DEFINITIONS.badRequest,
-          "prompt must be a string, provider and modelId must both be strings when provided, and runtimeContributions must be valid when provided"
+          "prompt must be a string, provider and modelId must both be strings when provided, and images and runtimeContributions must be valid when provided"
         );
         return;
       }

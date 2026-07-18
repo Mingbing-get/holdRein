@@ -187,14 +187,20 @@ export function ChatWorkspace({
           await cancelTask(activeTaskId);
         }}
         onThinkingLevelChange={setThinkingLevel}
-        onSubmit={async (message) => {
-          if (!activeAgent || !activeWorkspace || !message.trim()) {
+        onSubmit={async (message, images) => {
+          const attachedImages = images ?? [];
+          if (
+            !activeAgent ||
+            !activeWorkspace ||
+            (!message.trim() && !attachedImages.length)
+          ) {
             return;
           }
 
           if (activeTaskId) {
             await continueTask(activeTaskId, {
               approvalPolicy,
+              ...(attachedImages.length ? { images: attachedImages } : {}),
               modelId: activeAgent.modelId,
               prompt: message,
               provider: activeAgent.providerId,
@@ -205,6 +211,7 @@ export function ChatWorkspace({
 
           await startTask({
             approvalPolicy,
+            ...(attachedImages.length ? { images: attachedImages } : {}),
             modelId: activeAgent.modelId,
             prompt: message,
             provider: activeAgent.providerId,

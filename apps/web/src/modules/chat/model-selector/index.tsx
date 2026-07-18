@@ -15,6 +15,7 @@ import type {
 
 interface ModelCascaderOption {
   children?: ModelCascaderOption[];
+  input?: string[];
   isLeaf?: boolean;
   label: string;
   loading?: boolean;
@@ -28,6 +29,7 @@ interface ProviderOption extends ModelCascaderOption {
 }
 
 export interface SelectedModel {
+  input?: string[];
   modelId: string;
   providerId: string;
   reasoning?: boolean;
@@ -80,6 +82,7 @@ export function isModelSelection(value: unknown[]): value is [string, string] {
 function buildModelOptions(models: ModelSummary[]): ModelCascaderOption[] {
   return models.map((model) => ({
     isLeaf: true,
+    input: model.input,
     label: model.name,
     reasoning: model.reasoning,
     value: model.id
@@ -203,6 +206,7 @@ export function ModelSelector({
           const selectedModel = selectedOptions[1];
           setSelectedValue(nextValue);
           onChange?.({
+            input: selectedModel?.input ?? [],
             modelId: nextValue[1],
             providerId: nextValue[0],
             reasoning: selectedModel?.reasoning === true

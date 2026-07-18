@@ -214,7 +214,11 @@ export function AgentTasksProvider({
         { ...result.task, activeAgentId: result.agentId },
         input.prompt
       );
-      messageStore.current.appendOptimisticPrompt(taskId, input.prompt);
+      messageStore.current.appendOptimisticPrompt(
+        taskId,
+        input.prompt,
+        input.images
+      );
       setTaskStates((current) => ({
         ...current,
         [taskId]: {
@@ -261,7 +265,11 @@ export function AgentTasksProvider({
         fetcher
       );
       updateTaskStatus(taskId, "running", result.agentId);
-      messageStore.current.appendOptimisticPrompt(taskId, input.prompt);
+      messageStore.current.appendOptimisticPrompt(
+        taskId,
+        input.prompt,
+        input.images
+      );
       setTaskStates((current) => ({
         ...current,
         [taskId]: {

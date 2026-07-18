@@ -66,6 +66,7 @@ interface ContinueTaskBaseInput {
   activePlugins?: readonly string[];
   activeSkills?: readonly string[];
   approvalPolicy?: ApprovalPolicy;
+  images?: StartAgentInput["images"];
   prompt: string;
   runtimeContributions?: BrowserRuntimeContributions;
   thinkingLevel?: ThinkingLevel;
@@ -193,6 +194,7 @@ export function createAgentsService(options: CreateAgentsServiceOptions): Agents
         runtimeInput: {
           modelId:
             selectedModel?.lastModelId ?? task.lastModelId ?? task.lastModelName,
+          ...(input.images === undefined ? {} : { images: input.images }),
           prompt,
           provider: selectedModel?.lastModelProvider ?? task.lastModelProvider,
           ...optionUpdate,

@@ -13,11 +13,21 @@ export interface CreateAppOptions extends CreateV1RouterOptions {
   readonly webAssetsDirectory?: string;
 }
 
+const AGENT_IMAGE_REQUEST_JSON_LIMIT = "25mb";
+
 export async function createApp(options: CreateAppOptions = {}): Promise<Express> {
   const app = express();
 
   const pluginRouter = await createPluginRouter();
 
+  app.post(
+    "/api/v1/agents/start",
+    express.json({ limit: AGENT_IMAGE_REQUEST_JSON_LIMIT })
+  );
+  app.post(
+    "/api/v1/agents/tasks/:taskId/continue",
+    express.json({ limit: AGENT_IMAGE_REQUEST_JSON_LIMIT })
+  );
   app.use(express.json());
   app.use("/api/v1", createV1Router(options));
   app.use("/plugin-assets/:pluginDir", createPluginAssetsMiddleware());

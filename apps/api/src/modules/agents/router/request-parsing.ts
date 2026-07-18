@@ -4,6 +4,7 @@ import { parseBrowserRuntimeContributions } from "../runtime/browser-runtime-con
 
 export interface StartAgentBody {
   approvalPolicy?: unknown;
+  images?: unknown;
   modelId?: string;
   prompt?: string;
   provider?: string;
@@ -14,6 +15,7 @@ export interface StartAgentBody {
 
 export interface ContinueTaskBody {
   approvalPolicy?: unknown;
+  images?: unknown;
   modelId?: string;
   prompt?: string;
   provider?: string;
@@ -40,9 +42,22 @@ export function parseContinueTaskBody(
 
   const contributionInput =
     runtimeContributions === undefined ? {} : { runtimeContributions };
+  const images = parseImageContents(body.images);
+
+  if (images === null) {
+    return null;
+  }
+
+  const imageInput = images === undefined ? {} : { images };
 
   if (body.provider === undefined && body.modelId === undefined) {
-    return { ...options, ...contributionInput, prompt: body.prompt, taskId };
+    return {
+      ...options,
+      ...contributionInput,
+      ...imageInput,
+      prompt: body.prompt,
+      taskId
+    };
   }
 
   if (typeof body.provider !== "string" || typeof body.modelId !== "string") {
@@ -52,6 +67,7 @@ export function parseContinueTaskBody(
   return {
     ...options,
     ...contributionInput,
+    ...imageInput,
     modelId: body.modelId,
     prompt: body.prompt,
     provider: body.provider,
@@ -75,19 +91,57 @@ export function parseStartAgentBody(
   const runtimeContributions = parseBrowserRuntimeContributions(
     body.runtimeContributions
   );
+  const images = parseImageContents(body.images);
 
-  if (!options || runtimeContributions === null) {
+  if (!options || runtimeContributions === null || images === null) {
     return null;
   }
 
   return {
     ...options,
     ...(runtimeContributions === undefined ? {} : { runtimeContributions }),
+    ...(images === undefined ? {} : { images }),
     modelId: body.modelId,
     prompt: body.prompt,
     provider: body.provider,
     workspacePath: body.workspacePath
   };
+}
+
+function parseImageContents(
+  value: unknown
+): StartAgentInput["images"] | undefined | null {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    return null;
+  }
+
+  const images = value.map((item) => {
+    if (!isRecord(item)) {
+      return null;
+    }
+
+    return item.type === "image" &&
+      typeof item.data === "string" &&
+      typeof item.mimeType === "string"
+      ? {
+          data: item.data,
+          mimeType: item.mimeType,
+          type: "image" as const
+        }
+      : null;
+  });
+
+  return images.every((item) => item !== null)
+    ? images
+    : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 export function parseAfterSequence(value: unknown): number | undefined | null {

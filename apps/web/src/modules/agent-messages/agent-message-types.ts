@@ -100,6 +100,7 @@ export type SubagentStatesById = Record<string, SubagentState>;
 
 export interface StartTaskInput {
   approvalPolicy?: ApprovalPolicy;
+  images?: ImageContent[];
   modelId: string;
   prompt: string;
   provider: string;
@@ -110,6 +111,7 @@ export interface StartTaskInput {
 
 export interface ContinueTaskInput {
   approvalPolicy?: ApprovalPolicy;
+  images?: ImageContent[];
   modelId: string;
   prompt: string;
   provider: string;

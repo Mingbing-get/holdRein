@@ -24,6 +24,7 @@ import {
 } from "./suggestion-popup";
 import type {
   ApprovalPolicy,
+  ImageContent,
   ThinkingLevel
 } from "../../agent-messages/agent-message-types";
 import {
@@ -32,6 +33,12 @@ import {
   DEFAULT_THINKING_LEVEL,
   THINKING_LEVEL_OPTIONS
 } from "./task-options";
+import {
+  getImageContents,
+  SenderImageAttachmentButton,
+  SenderImageAttachmentHeader,
+  type SenderImageAttachmentItem
+} from "./image-attachments";
 
 export {
   clampCursorIndex,
@@ -71,7 +78,7 @@ interface Props extends Pick<SenderProps, 'autoSize' | 'className' | 'classNames
   onActiveAgentChange?: (activeAgent: SelectedModel) => void
   onApprovalPolicyChange?: (approvalPolicy: ApprovalPolicy) => void
   onCancel?: () => Promise<void> | void
-  onSubmit?: (...args: Parameters<Required<SenderProps>['onSubmit']>) => Promise<void> | void
+  onSubmit?: (message: string, images?: ImageContent[]) => Promise<void> | void
   onMessageChange?: (message: string) => void
   onThinkingLevelChange?: (thinkingLevel: ThinkingLevel) => void
   workspacePath?: string | undefined
@@ -130,7 +137,6 @@ export default function Sender({
     suggestionGroups: mergedSuggestionGroups
   });
 
-  const disabled = useMemo(() => senderProps.disabled || !draftMessage?.length, [senderProps.disabled, draftMessage])
   const activeSuggestionGroups = suggestionOpen
     ? getGroupsByQuery(currentTrigger.current ?? undefined)
     : [];
@@ -139,10 +145,30 @@ export default function Sender({
     [activeSuggestionGroups]
   );
   const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(0);
+  const [imageAttachments, setImageAttachments] = useState<
+    SenderImageAttachmentItem[]
+  >([]);
+  const [imageAttachmentsOpen, setImageAttachmentsOpen] = useState(false);
+  const supportsImages = activeAgent?.input?.includes("image") === true;
+  const disabled = useMemo(
+    () =>
+      senderProps.disabled ||
+      (!draftMessage?.length && !imageAttachments.length),
+    [senderProps.disabled, draftMessage, imageAttachments.length]
+  )
 
   useEffect(() => {
     setActiveSuggestionIndex(0);
   }, [draftMessage, suggestionOpen]);
+
+  useEffect(() => {
+    if (!supportsImages && imageAttachments.length) {
+      setImageAttachments([]);
+    }
+    if (!supportsImages && imageAttachmentsOpen) {
+      setImageAttachmentsOpen(false);
+    }
+  }, [imageAttachments.length, imageAttachmentsOpen, supportsImages]);
 
   const selectSuggestionValue = useCallback((value: string) => {
     const activeTrigger = currentTrigger.current;
@@ -153,6 +179,14 @@ export default function Sender({
     insertText(value, overwriteLength);
     closeSuggestions();
   }, [closeSuggestions, currentTrigger, insertText]);
+
+  const submitMessage = useCallback(async (message: string) => {
+    const images = getImageContents(imageAttachments);
+
+    await handleSubmit(message, images.length ? images : undefined);
+    setImageAttachments([]);
+    setImageAttachmentsOpen(false);
+  }, [handleSubmit, imageAttachments]);
 
   return (
     <Flex
@@ -209,6 +243,35 @@ export default function Sender({
                       "0 14px 32px color-mix(in srgb, var(--app-color-shadow) 20%, transparent)"
                   }
                 }}
+                header={
+                  supportsImages ? (
+                    <ASender.Header
+                      closable={false}
+                      open={imageAttachmentsOpen}
+                      style={{
+                        background: "transparent"
+                      }}
+                      styles={{
+                        content: {
+                          background: "transparent",
+                          padding: 0
+                        },
+                        header: {
+                          background: "transparent"
+                        }
+                      }}
+                      onOpenChange={setImageAttachmentsOpen}
+                    >
+                      <SenderImageAttachmentHeader
+                        getDropContainer={() =>
+                          senderRef.current?.nativeElement
+                        }
+                        items={imageAttachments}
+                        onItemsChange={setImageAttachments}
+                      />
+                    </ASender.Header>
+                  ) : null
+                }
                 footer={(_, { components: { SendButton, LoadingButton } }) => {
                   let action: React.ReactNode = null
                   if (running) {
@@ -288,6 +351,23 @@ export default function Sender({
                         >
                           {APPROVAL_POLICY_LABELS[approvalPolicy]}
                         </Button>
+                        {supportsImages ? (
+                          <>
+                            <Divider
+                              orientation="vertical"
+                              style={{
+                                borderColor:
+                                  "var(--app-color-border-secondary)"
+                              }}
+                            />
+                            <SenderImageAttachmentButton
+                              disabled={running}
+                              hasItems={imageAttachments.length > 0}
+                              open={imageAttachmentsOpen}
+                              onOpenChange={setImageAttachmentsOpen}
+                            />
+                          </>
+                        ) : null}
                         {senderActions.length ? (
                           <>
                             <Divider
@@ -360,7 +440,7 @@ export default function Sender({
                     return false;
                   }
                 }}
-                onSubmit={handleSubmit}
+                onSubmit={submitMessage}
               />
     </Flex>
   )

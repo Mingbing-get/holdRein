@@ -144,6 +144,7 @@ describe("ModelSelector", () => {
 
     await waitFor(() => {
       expect(onChange).toHaveBeenCalledWith({
+        input: ["text"],
         modelId: "claude-3-5-sonnet",
         providerId: "anthropic",
         reasoning: true
@@ -215,8 +216,6 @@ describe("ModelSelector", () => {
 
     expect(modelSelectorSource).toContain('colorText: "var(--app-color-text)"');
     expect(modelSelectorSource).toContain("optionSelectedBg");
-    expect(modelSelectorSource).toContain(
-      'style={{ width: "fit-content" }}'
-    );
+    expect(modelSelectorSource).toContain('width: "fit-content"');
   });
 });

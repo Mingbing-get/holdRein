@@ -6,6 +6,7 @@ export interface StartAgentInput {
   activePlugins?: readonly string[];
   activeSkills?: readonly string[];
   approvalPolicy?: ApprovalPolicy;
+  images?: StoredImageContent[];
   modelId: string;
   prompt: string;
   provider: string;

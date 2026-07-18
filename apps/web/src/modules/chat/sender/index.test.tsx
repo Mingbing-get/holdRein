@@ -39,6 +39,7 @@ interface MockSenderProps {
         actionNode: React.ReactNode,
         info: { components: MockActionsComponents }
       ) => React.ReactNode);
+  header?: React.ReactNode;
   loading?: boolean;
   onChange?: (
     value: string,
@@ -73,6 +74,7 @@ vi.mock("@ant-design/x", () => {
       {
         disabled,
         footer,
+        header,
         loading,
         onChange,
         onKeyDown,
@@ -128,6 +130,7 @@ vi.mock("@ant-design/x", () => {
 
       return (
         <div data-loading={String(Boolean(loading))}>
+          <div data-testid="sender-header">{header}</div>
           <textarea
             aria-label="消息"
             disabled={disabled}
@@ -152,9 +155,119 @@ vi.mock("@ant-design/x", () => {
       );
     }
   );
+  const MockSenderHeader = ({ children, open }: {
+    children?: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (open: boolean) => void;
+    styles?: unknown;
+  }) => (
+    <section data-open={String(Boolean(open))} data-testid="sender-built-in-header">
+      {children}
+    </section>
+  );
+  const MockCompoundedSender = Object.assign(MockSender, {
+    Header: MockSenderHeader
+  });
+
+  const MockAttachments = React.forwardRef<
+    { select: () => void },
+    {
+      beforeUpload?: (file: File) => boolean | Promise<boolean>;
+      getDropContainer?: () => HTMLElement | null | undefined;
+      items?: Array<{
+        imageContent?: unknown;
+        name?: string;
+        originFileObj?: File;
+        status?: string;
+        thumbUrl?: string;
+        type?: string;
+        url?: string;
+        uid: string;
+      }>;
+      onChange?: (info: {
+        file: {
+          name?: string;
+          originFileObj?: File;
+          status?: string;
+          type?: string;
+          uid: string;
+        };
+        fileList: Array<{
+          imageContent?: unknown;
+          name?: string;
+          originFileObj?: File;
+          status?: string;
+          thumbUrl?: string;
+          type?: string;
+          uid: string;
+          url?: string;
+        }>;
+      }) => void;
+    }
+  >(({ beforeUpload, items = [], onChange }, ref) => {
+    const inputRef = React.useRef<HTMLInputElement>(null);
+    React.useImperativeHandle(ref, () => ({
+      select: () => inputRef.current?.click()
+    }));
+
+    return (
+      <div data-testid="sender-built-in-attachments">
+        <input
+          aria-label="选择图片"
+          multiple
+          ref={inputRef}
+          type="file"
+          onChange={(event) => {
+            const selectedItems = Array.from(
+              event.currentTarget.files ?? []
+            ).map((file, index) => {
+              const item = {
+                name: file.name,
+                originFileObj: file,
+                status: "done",
+                type: file.type,
+                uid: `${file.name}-${index}`
+              };
+              void beforeUpload?.(file);
+              return item;
+            });
+            selectedItems.forEach((file) => {
+              onChange?.({
+                file,
+                fileList: [...items, ...selectedItems]
+              });
+            });
+          }}
+        />
+        {items.map((item) => (
+          <span key={item.uid}>
+            <img alt={item.name} src={item.thumbUrl ?? item.url} />
+            <button
+              aria-label={`移除图片 ${item.name}`}
+              onClick={() =>
+                onChange?.({
+                  file: {
+                    ...item,
+                    status: "removed"
+                  },
+                  fileList: items.filter(
+                    (nextItem) => nextItem.uid !== item.uid
+                  )
+                })
+              }
+              type="button"
+            >
+              移除
+            </button>
+          </span>
+        ))}
+      </div>
+    );
+  });
 
   return {
-    Sender: MockSender,
+    Attachments: MockAttachments,
+    Sender: MockCompoundedSender,
     Suggestion: ({
       children
     }: {
@@ -356,6 +469,142 @@ describe("Sender action button", () => {
     await waitFor(() => {
       expect(onSubmit).toHaveBeenCalledWith("Inspect this project");
     });
+  });
+
+  it("shows image upload only for image-capable models and submits selected images", async () => {
+    const onSubmit = vi.fn();
+    const originalFileReader = globalThis.FileReader;
+
+    class FileReaderMock {
+      onload: null | (() => void) = null;
+      result: string | ArrayBuffer | null = null;
+
+      readAsDataURL() {
+        this.result = "data:image/png;base64,cGljdHVyZQ==";
+        this.onload?.();
+      }
+    }
+
+    vi.stubGlobal("FileReader", FileReaderMock);
+    try {
+      render(
+        <Sender
+          activeAgent={{
+            input: ["text", "image"],
+            modelId: "vision-model",
+            providerId: "openai"
+          }}
+          apiBaseUrl=""
+          onSubmit={onSubmit}
+        />
+      );
+
+      fireEvent.change(screen.getByLabelText("消息"), {
+        target: { value: "Describe this" }
+      });
+      fireEvent.click(screen.getByRole("button", { name: "图片附件" }));
+      expect(screen.getByTestId("sender-built-in-header")).toHaveAttribute(
+        "data-open",
+        "true"
+      );
+      fireEvent.change(screen.getByLabelText("选择图片"), {
+        target: {
+          files: [
+            new File(["picture"], "screen.png", { type: "image/png" })
+          ]
+        }
+      });
+
+      const header = screen.getByTestId("sender-header");
+      await waitFor(() => {
+        expect(header).toContainElement(screen.getByAltText("screen.png"));
+      });
+      expect(screen.getByAltText("screen.png")).toHaveAttribute(
+        "src",
+        "data:image/png;base64,cGljdHVyZQ=="
+      );
+      expect(screen.getByTestId("sender-footer-tools")).not.toContainElement(
+        screen.getByAltText("screen.png")
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "发送消息" }));
+
+      await waitFor(() => {
+        expect(onSubmit).toHaveBeenCalledWith("Describe this", [
+          {
+            data: "cGljdHVyZQ==",
+            mimeType: "image/png",
+            type: "image"
+          }
+        ]);
+      });
+    } finally {
+      vi.stubGlobal("FileReader", originalFileReader);
+    }
+  });
+
+  it("does not show image upload for text-only models and removes selected images", async () => {
+    const originalFileReader = globalThis.FileReader;
+
+    class FileReaderMock {
+      onload: null | (() => void) = null;
+      result: string | ArrayBuffer | null = null;
+
+      readAsDataURL() {
+        this.result = "data:image/png;base64,cGljdHVyZQ==";
+        this.onload?.();
+      }
+    }
+
+    vi.stubGlobal("FileReader", FileReaderMock);
+    try {
+      const view = render(
+        <Sender
+          activeAgent={{
+            input: ["text", "image"],
+            modelId: "vision-model",
+            providerId: "openai"
+          }}
+          apiBaseUrl=""
+        />
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "图片附件" }));
+      fireEvent.change(screen.getByLabelText("选择图片"), {
+        target: {
+          files: [
+            new File(["picture"], "screen.png", { type: "image/png" })
+          ]
+        }
+      });
+
+      const header = screen.getByTestId("sender-header");
+      await waitFor(() => {
+        expect(header).toContainElement(screen.getByAltText("screen.png"));
+      });
+      fireEvent.click(screen.getByRole("button", { name: "移除图片 screen.png" }));
+      await waitFor(() => {
+        expect(screen.queryByAltText("screen.png")).not.toBeInTheDocument();
+      });
+
+      view.rerender(
+        <Sender
+          activeAgent={{
+            input: ["text"],
+            modelId: "text-model",
+            providerId: "openai"
+          }}
+          apiBaseUrl=""
+        />
+      );
+
+      expect(screen.queryByLabelText("选择图片")).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "图片附件" })
+      ).not.toBeInTheDocument();
+    } finally {
+      vi.stubGlobal("FileReader", originalFileReader);
+    }
   });
 
   it("restores the draft when switching back to a task", () => {

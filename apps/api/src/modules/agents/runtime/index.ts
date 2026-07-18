@@ -410,7 +410,11 @@ export function createAgentRuntime(
           sessionId: harnessSessionMetadata.id
         });
 
-        void harness.prompt(promptText)
+        const promptResult = harnessOptions.images?.length
+          ? harness.prompt(promptText, { images: harnessOptions.images })
+          : harness.prompt(promptText);
+
+        void promptResult
           .catch((error) => {
             options.eventBus.emit({
               agentId: harnessAgentId,
@@ -440,6 +444,7 @@ export function createAgentRuntime(
         : undefined;
       const startedHarness = await startHarness(input.prompt, {
         depth: 0,
+        ...(input.images === undefined ? {} : { images: input.images }),
         isContinue: false,
         pluginPrompt: input.prompt,
         ...(inputSession ? { session: inputSession } : {})

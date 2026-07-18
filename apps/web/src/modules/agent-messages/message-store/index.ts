@@ -1,11 +1,15 @@
 import { reduceAgentMessages } from "../collection";
-import type { AgentEventEnvelope } from "../agent-message-types";
+import type { AgentEventEnvelope, ImageContent } from "../agent-message-types";
 import type { WebPlugin } from "@hold-rein/plugin-web";
 
 type Listener = () => void;
 
 export interface AgentMessageStore {
-  appendOptimisticPrompt: (agentId: string, prompt: string) => void;
+  appendOptimisticPrompt: (
+    agentId: string,
+    prompt: string,
+    images?: ImageContent[]
+  ) => void;
   getAgentMessage: (
     agentId: string,
     messageId: string
@@ -75,10 +79,13 @@ export function createAgentMessageStore(): AgentMessageStore {
   };
 
   return {
-    appendOptimisticPrompt: (agentId, prompt) => {
+    appendOptimisticPrompt: (agentId, prompt, images = []) => {
       const snapshot = getSnapshot(agentId);
       const message: WebPlugin.AgentMessage = {
-        content: [{ text: prompt, type: "text" }],
+        content: [
+          { text: prompt, type: "text" },
+          ...images
+        ],
         id: `prompt-${snapshot.messagesById.size}`,
         role: "user",
         timestamp: Date.now()

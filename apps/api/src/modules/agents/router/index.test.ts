@@ -164,6 +164,75 @@ describe("agent routes", () => {
     });
   });
 
+  it("starts an agent run with user images", async () => {
+    const service = createService();
+
+    const response = await request(await createApp({ agentsService: service }))
+      .post("/api/v1/agents/start")
+      .send({
+        images: [
+          {
+            data: "cGljdHVyZQ==",
+            mimeType: "image/png",
+            type: "image"
+          }
+        ],
+        modelId: "gpt-4.1",
+        prompt: "Describe this image",
+        provider: "openai",
+        workspacePath: "/tmp/workspace"
+      });
+
+    expect(response.status).toBe(200);
+    expect(service.startAgent).toHaveBeenCalledWith({
+      approvalPolicy: "approval",
+      images: [
+        {
+          data: "cGljdHVyZQ==",
+          mimeType: "image/png",
+          type: "image"
+        }
+      ],
+      modelId: "gpt-4.1",
+      prompt: "Describe this image",
+      provider: "openai",
+      thinkingLevel: "medium",
+      workspacePath: "/tmp/workspace"
+    });
+  });
+
+  it("accepts large image payloads when starting an agent run", async () => {
+    const service = createService();
+    const imageData = "a".repeat(150 * 1024);
+
+    const response = await request(await createApp({ agentsService: service }))
+      .post("/api/v1/agents/start")
+      .send({
+        images: [
+          {
+            data: imageData,
+            mimeType: "image/png",
+            type: "image"
+          }
+        ],
+        modelId: "gpt-4.1",
+        prompt: "Describe this image",
+        provider: "openai",
+        workspacePath: "/tmp/workspace"
+      });
+
+    expect(response.status).toBe(200);
+    expect(service.startAgent).toHaveBeenCalledWith(expect.objectContaining({
+      images: [
+        {
+          data: imageData,
+          mimeType: "image/png",
+          type: "image"
+        }
+      ]
+    }));
+  });
+
   it("lists workspace skills and enabled global skills", async () => {
     rootPath = await mkdtemp(join(tmpdir(), "hold-rein-agent-skills-"));
     const workspaceSkillPath = join(rootPath, ".agents", "skills", "reviewer");
@@ -224,7 +293,7 @@ describe("agent routes", () => {
     expect(response.status).toBe(400);
     expect(response.body).toEqual({
       code: 40000,
-      msg: "workspacePath, provider, modelId and prompt must be strings; runtimeContributions must be valid when provided",
+      msg: "workspacePath, provider, modelId and prompt must be strings; images and runtimeContributions must be valid when provided",
       data: null
     });
   });
@@ -266,6 +335,71 @@ describe("agent routes", () => {
       thinkingLevel: "medium",
       taskId: "task-1"
     });
+  });
+
+  it("continues an existing task with user images", async () => {
+    const service = createService();
+    const response = await request(await createApp({ agentsService: service }))
+      .post("/api/v1/agents/tasks/task-1/continue")
+      .send({
+        images: [
+          {
+            data: "cGljdHVyZQ==",
+            mimeType: "image/png",
+            type: "image"
+          }
+        ],
+        modelId: "claude-3-5-sonnet",
+        prompt: "Continue with this image",
+        provider: "anthropic"
+      });
+
+    expect(response.status).toBe(200);
+    expect(service.continueTask).toHaveBeenCalledWith({
+      approvalPolicy: "approval",
+      images: [
+        {
+          data: "cGljdHVyZQ==",
+          mimeType: "image/png",
+          type: "image"
+        }
+      ],
+      modelId: "claude-3-5-sonnet",
+      prompt: "Continue with this image",
+      provider: "anthropic",
+      thinkingLevel: "medium",
+      taskId: "task-1"
+    });
+  });
+
+  it("accepts large image payloads when continuing a task", async () => {
+    const service = createService();
+    const imageData = "a".repeat(150 * 1024);
+
+    const response = await request(await createApp({ agentsService: service }))
+      .post("/api/v1/agents/tasks/task-1/continue")
+      .send({
+        images: [
+          {
+            data: imageData,
+            mimeType: "image/png",
+            type: "image"
+          }
+        ],
+        prompt: "Continue with this image"
+      });
+
+    expect(response.status).toBe(200);
+    expect(service.continueTask).toHaveBeenCalledWith(expect.objectContaining({
+      images: [
+        {
+          data: imageData,
+          mimeType: "image/png",
+          type: "image"
+        }
+      ],
+      taskId: "task-1"
+    }));
   });
 
   it("continues with the previous model when model fields are omitted", async () => {
@@ -319,7 +453,7 @@ describe("agent routes", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.msg).toBe(
-      "prompt must be a string, provider and modelId must both be strings when provided, and runtimeContributions must be valid when provided"
+      "prompt must be a string, provider and modelId must both be strings when provided, and images and runtimeContributions must be valid when provided"
     );
     expect(service.continueTask).not.toHaveBeenCalled();
   });

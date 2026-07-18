@@ -110,6 +110,33 @@ describe("agent runtime sessions", () => {
     });
   });
 
+  it("passes user images to the harness prompt", async () => {
+    const { repo } = createSessionRepo();
+    const runtime = createRuntime(repo);
+
+    await runtime.start({
+      ...createRunInput(),
+      images: [
+        {
+          data: "cGljdHVyZQ==",
+          mimeType: "image/png",
+          type: "image"
+        }
+      ],
+      prompt: "Describe this image"
+    });
+
+    expect(prompt).toHaveBeenCalledWith("Describe this image", {
+      images: [
+        {
+          data: "cGljdHVyZQ==",
+          mimeType: "image/png",
+          type: "image"
+        }
+      ]
+    });
+  });
+
   it("opens the stored session when continuing a task", async () => {
     const { repo, create, open } = createSessionRepo();
     const runtime = createRuntime(repo);
@@ -335,7 +362,7 @@ describe("agent runtime sessions", () => {
 
     await runtime.start(createRunInput());
 
-    expect(resolveContributions).toHaveBeenCalledWith(
+    expect(resolveContributions.mock.calls[0]?.[0]).toEqual(
       expect.objectContaining({
         agentName: "main",
         isContinue: false,
