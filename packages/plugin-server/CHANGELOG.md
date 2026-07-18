@@ -1,5 +1,11 @@
 # @hold-rein/plugin-server
 
+## 0.0.7
+
+### Patch Changes
+
+- 让 cli 的所有的 node_modules 都暴露出来、支持操作文件、支持传递图片给模型
+
 ## 0.0.6
 
 ### Patch Changes
