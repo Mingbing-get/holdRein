@@ -42,7 +42,7 @@ describe("createLoopbackHostApiClient", () => {
     });
     expect(fetch).toHaveBeenCalledWith(
       "http://127.0.0.1:3001/api/v1/agents/start",
-      expect.objectContaining({
+      {
         body: JSON.stringify({
           modelId: "gpt-4.1",
           prompt: "Inspect this project",
@@ -50,9 +50,8 @@ describe("createLoopbackHostApiClient", () => {
           workspacePath: "/tmp/workspace"
         }),
         headers: { "Content-Type": "application/json" },
-        method: "POST",
-        signal: expect.any(Object)
-      })
+        method: "POST"
+      }
     );
   });
 });

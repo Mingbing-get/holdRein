@@ -36,10 +36,8 @@ export type HostApiFactory = (plugin: HostApiPluginIdentity) => HostApiClient;
 export interface CreateLoopbackHostApiClientOptions {
   readonly baseUrl: string;
   readonly fetch?: typeof fetch;
-  readonly timeoutMs?: number;
 }
 
-const DEFAULT_TIMEOUT_MS = 10_000;
 const HOST_API_PATH_ERROR = "path must begin with /api/v1 and must not include a host.";
 
 export function createLoopbackHostApiClient(
@@ -47,41 +45,33 @@ export function createLoopbackHostApiClient(
 ): HostApiClient {
   const baseUrl = options.baseUrl.replace(/\/$/, "");
   const requestFetch = options.fetch ?? fetch;
-  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   const request: HostApiRequest = async <TData>(
     requestOptions: HostApiRequestOptions
   ): Promise<HostApiResult<TData>> => {
     const path = normalizeHostApiPath(requestOptions.path);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-    try {
-      const response = await requestFetch(
-        formatUrl(baseUrl, path, requestOptions.query),
-        {
-          ...(requestOptions.body === undefined
-            ? {}
-            : {
-                body: JSON.stringify(requestOptions.body),
-                headers: {
-                  "Content-Type": "application/json",
-                  ...(requestOptions.headers ?? {})
-                }
-              }),
-          method: requestOptions.method ?? "GET",
-          signal: controller.signal
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Host API request failed with status ${response.status}.`);
+    const response = await requestFetch(
+      formatUrl(baseUrl, path, requestOptions.query),
+      {
+        ...(requestOptions.body === undefined
+          ? {}
+          : {
+              body: JSON.stringify(requestOptions.body),
+              headers: {
+                "Content-Type": "application/json",
+                ...(requestOptions.headers ?? {})
+              }
+            }),
+        method: requestOptions.method ?? "GET"
       }
+    );
 
-      return await response.json() as HostApiResult<TData>;
-    } finally {
-      clearTimeout(timeout);
+    if (!response.ok) {
+      throw new Error(`Host API request failed with status ${response.status}.`);
     }
+
+    return await response.json() as HostApiResult<TData>;
   };
 
   return {
