@@ -6,6 +6,7 @@ export {
   createLoopbackHostApiClient,
   createLoopbackHostApiFactory
 } from "./host-api";
+export type * from "./host-api";
 export { loadInstalledServerPlugins } from "./runtime/loader";
 export type {
   LoadedServerPlugins,

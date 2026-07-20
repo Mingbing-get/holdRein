@@ -1,4 +1,29 @@
 import { createAgentApi, type HostApiAgentClient } from "./agent";
+import {
+  createModelProvidersApi,
+  type HostApiModelProvidersClient
+} from "./model-providers";
+import {
+  createModelProxiesApi,
+  type HostApiModelProxiesClient
+} from "./model-proxies";
+import { createPluginsApi, type HostApiPluginsClient } from "./plugins";
+import {
+  createScheduledTasksApi,
+  type HostApiScheduledTasksClient
+} from "./scheduled-tasks";
+import { createSkillsApi, type HostApiSkillsClient } from "./skills";
+import { createUsageStatsApi, type HostApiUsageStatsClient } from "./usage-stats";
+import { createWorkspacesApi, type HostApiWorkspacesClient } from "./workspaces";
+
+export type * from "./agent";
+export type * from "./model-providers";
+export type * from "./model-proxies";
+export type * from "./plugins";
+export type * from "./scheduled-tasks";
+export type * from "./skills";
+export type * from "./usage-stats";
+export type * from "./workspaces";
 
 type HostApiMethod = "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
 
@@ -24,6 +49,13 @@ export type HostApiRequest = <TData>(
 
 export interface HostApiClient {
   readonly agent: HostApiAgentClient;
+  readonly modelProviders: HostApiModelProvidersClient;
+  readonly modelProxies: HostApiModelProxiesClient;
+  readonly plugins: HostApiPluginsClient;
+  readonly scheduledTasks: HostApiScheduledTasksClient;
+  readonly skills: HostApiSkillsClient;
+  readonly usageStats: HostApiUsageStatsClient;
+  readonly workspaces: HostApiWorkspacesClient;
 }
 
 export interface HostApiPluginIdentity {
@@ -75,7 +107,14 @@ export function createLoopbackHostApiClient(
   };
 
   return {
-    agent: createAgentApi(request)
+    agent: createAgentApi(request),
+    modelProviders: createModelProvidersApi(request),
+    modelProxies: createModelProxiesApi(request),
+    plugins: createPluginsApi(request),
+    scheduledTasks: createScheduledTasksApi(request),
+    skills: createSkillsApi(request),
+    usageStats: createUsageStatsApi(request),
+    workspaces: createWorkspacesApi(request)
   };
 }
 
@@ -110,7 +149,11 @@ function formatUrl(
   const url = new URL(`${baseUrl}${path}`);
 
   for (const [key, value] of Object.entries(query ?? {})) {
-    url.searchParams.append(key, value === undefined ? "" : String(value));
+    if (value === undefined) {
+      continue;
+    }
+
+    url.searchParams.append(key, String(value));
   }
 
   return url.href;
