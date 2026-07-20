@@ -138,7 +138,7 @@ describe("createServerPluginRegistry", () => {
   });
 
   it("types server plugins with optional loaded hooks", async () => {
-    const hostApi = { request: vi.fn() };
+    const hostApi = { agent: { start: vi.fn() } };
     const onLoaded = vi.fn();
     const plugin: ServerPlugin.Plugin = {
       id: "loaded",

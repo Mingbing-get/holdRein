@@ -1,6 +1,8 @@
-export type HostApiMethod = "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
+import { createAgentApi, type HostApiAgentClient } from "./agent";
 
-export type HostApiQueryValue = boolean | number | string | undefined;
+type HostApiMethod = "DELETE" | "GET" | "PATCH" | "POST" | "PUT";
+
+type HostApiQueryValue = boolean | number | string | undefined;
 
 export interface HostApiRequestOptions {
   readonly body?: unknown;
@@ -16,10 +18,12 @@ export interface HostApiResult<TData> {
   readonly msg: string;
 }
 
+export type HostApiRequest = <TData>(
+  options: HostApiRequestOptions
+) => Promise<HostApiResult<TData>>;
+
 export interface HostApiClient {
-  readonly request: <TData>(
-    options: HostApiRequestOptions
-  ) => Promise<HostApiResult<TData>>;
+  readonly agent: HostApiAgentClient;
 }
 
 export interface HostApiPluginIdentity {
@@ -45,38 +49,43 @@ export function createLoopbackHostApiClient(
   const requestFetch = options.fetch ?? fetch;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  return {
-    async request<TData>(
-      request: HostApiRequestOptions
-    ): Promise<HostApiResult<TData>> {
-      const path = normalizeHostApiPath(request.path);
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const request: HostApiRequest = async <TData>(
+    requestOptions: HostApiRequestOptions
+  ): Promise<HostApiResult<TData>> => {
+    const path = normalizeHostApiPath(requestOptions.path);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
-      try {
-        const response = await requestFetch(formatUrl(baseUrl, path, request.query), {
-          ...(request.body === undefined
+    try {
+      const response = await requestFetch(
+        formatUrl(baseUrl, path, requestOptions.query),
+        {
+          ...(requestOptions.body === undefined
             ? {}
             : {
-                body: JSON.stringify(request.body),
+                body: JSON.stringify(requestOptions.body),
                 headers: {
                   "Content-Type": "application/json",
-                  ...(request.headers ?? {})
+                  ...(requestOptions.headers ?? {})
                 }
               }),
-          method: request.method ?? "GET",
+          method: requestOptions.method ?? "GET",
           signal: controller.signal
-        });
-
-        if (!response.ok) {
-          throw new Error(`Host API request failed with status ${response.status}.`);
         }
+      );
 
-        return await response.json() as HostApiResult<TData>;
-      } finally {
-        clearTimeout(timeout);
+      if (!response.ok) {
+        throw new Error(`Host API request failed with status ${response.status}.`);
       }
+
+      return await response.json() as HostApiResult<TData>;
+    } finally {
+      clearTimeout(timeout);
     }
+  };
+
+  return {
+    agent: createAgentApi(request)
   };
 }
 

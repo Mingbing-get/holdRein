@@ -83,7 +83,7 @@ it("replaces the active server plugins when plugins are reloaded", async () => {
 
 it("calls plugin loaded hooks with plugin-scoped host APIs", async () => {
   const onLoaded = vi.fn();
-  const hostApi = { request: vi.fn() };
+  const hostApi = { agent: { start: vi.fn() } };
   const hostApiFactory = vi.fn(() => hostApi);
   const plugin = {
     id: "enabled-plugin",

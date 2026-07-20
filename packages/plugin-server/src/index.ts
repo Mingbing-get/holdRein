@@ -6,15 +6,6 @@ export {
   createLoopbackHostApiClient,
   createLoopbackHostApiFactory
 } from "./host-api";
-export type {
-  HostApiClient,
-  HostApiFactory,
-  HostApiMethod,
-  HostApiPluginIdentity,
-  HostApiQueryValue,
-  HostApiRequestOptions,
-  HostApiResult
-} from "./host-api";
 export { loadInstalledServerPlugins } from "./runtime/loader";
 export type {
   LoadedServerPlugins,

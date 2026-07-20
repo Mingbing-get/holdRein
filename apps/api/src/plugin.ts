@@ -8,7 +8,6 @@ import {
   loadInstalledServerPlugins,
   type DevPluginManager,
   type DevServerPluginEntry,
-  type HostApiFactory,
   type ServerPlugin,
   type RuntimePluginManifest
 } from "@hold-rein/plugin-server";
@@ -21,7 +20,9 @@ export const pluginRegistry = createServerPluginRegistry();
 let runtimeWebPlugins: RuntimePluginManifest[] = [];
 let activePluginRouter: Router = Router();
 let activeRouteContext: ServerPlugin.RouteContext | null = null;
-let activeHostApiFactory: HostApiFactory | undefined;
+let activeHostApiFactory:
+  | ReturnType<typeof createLoopbackHostApiFactory>
+  | undefined;
 let activeDevPluginManager: DevPluginManager | undefined;
 let devImportVersion = 0;
 let activeDevPlugins: ServerPlugin.Plugin[] = [];
