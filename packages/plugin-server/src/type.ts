@@ -27,7 +27,7 @@ export namespace ServerPlugin {
   type RseponseType = "success" | "badRequest" | "unauthorized" | "forbidden" | "notFound" | "conflict" | "internalError"
 
   export interface LoadedContext {
-    readonly hostApi?: HostApiClient;
+    readonly hostApi: HostApiClient;
   }
 
   export interface RouteContext {

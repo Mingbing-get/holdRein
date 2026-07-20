@@ -124,17 +124,19 @@ async function notifyPluginsLoaded(
       continue;
     }
 
+    if (activeHostApiFactory === undefined) {
+      throw new Error(
+        `Cannot call loaded hook for plugin "${plugin.id}" without a host API factory.`
+      );
+    }
+
     await plugin.onLoaded({
-      ...(activeHostApiFactory === undefined
-        ? {}
-        : {
-            hostApi: activeHostApiFactory({
-              id: plugin.id,
-              ...(plugin.packageName === undefined
-                ? {}
-                : { packageName: plugin.packageName })
-            })
-          })
+      hostApi: activeHostApiFactory({
+        id: plugin.id,
+        ...(plugin.packageName === undefined
+          ? {}
+          : { packageName: plugin.packageName })
+      })
     });
   }
 }

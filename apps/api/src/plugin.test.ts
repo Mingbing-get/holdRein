@@ -111,6 +111,23 @@ it("calls plugin loaded hooks with plugin-scoped host APIs", async () => {
   expect(onLoaded).toHaveBeenCalledWith({ hostApi });
 });
 
+it("requires a host API factory before calling plugin loaded hooks", async () => {
+  const plugin = {
+    id: "enabled-plugin",
+    onLoaded: vi.fn()
+  };
+
+  mocks.loadInstalledServerPlugins.mockResolvedValueOnce({
+    plugins: [plugin],
+    webPlugins: []
+  });
+
+  await expect(reloadServerPlugins("/tmp/plugins")).rejects.toThrow(
+    'Cannot call loaded hook for plugin "enabled-plugin" without a host API factory.'
+  );
+  expect(plugin.onLoaded).not.toHaveBeenCalled();
+});
+
 it("resolves host node_modules from the API runtime module", async () => {
   const pluginRoot = "/tmp/hold-rein-plugins";
   const runtimeNodeModules = mockRuntimeNodeModules();

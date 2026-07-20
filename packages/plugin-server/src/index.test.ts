@@ -145,6 +145,10 @@ describe("createServerPluginRegistry", () => {
       onLoaded
     };
 
+    if (false) {
+      // @ts-expect-error hostApi is always provided to loaded hooks.
+      await plugin.onLoaded?.({});
+    }
     await plugin.onLoaded?.({ hostApi });
 
     expect(onLoaded).toHaveBeenCalledWith({ hostApi });
