@@ -13,6 +13,7 @@ import type {
 import type { Model, Api } from "@earendil-works/pi-ai";
 
 import type { Router, Response } from "express";
+import type { HostApiClient } from "./host-api";
 
 export namespace ServerPlugin {
   // 接口相关
@@ -24,6 +25,10 @@ export namespace ServerPlugin {
   }
   
   type RseponseType = "success" | "badRequest" | "unauthorized" | "forbidden" | "notFound" | "conflict" | "internalError"
+
+  export interface LoadedContext {
+    readonly hostApi?: HostApiClient;
+  }
 
   export interface RouteContext {
     RESPONSE_CODE_DEFINITIONS: Record<RseponseType, ResponseCodeDefinition>
@@ -146,6 +151,7 @@ export namespace ServerPlugin {
     readonly packageName?: string
     readonly contributionResolver?: ContributionResolver
     readonly dispose?: () => void | Promise<void>
+    readonly onLoaded?: (context: LoadedContext) => void | Promise<void>
     readonly registerRoutes?: (context: RouteContext) => Router | Promise<Router>;
   }
 }

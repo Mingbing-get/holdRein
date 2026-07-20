@@ -9,6 +9,7 @@ import type {
 } from "@hold-rein/plugin-server";
 
 const mocks = vi.hoisted(() => ({
+  createLoopbackHostApiFactory: vi.fn(),
   installPluginPackage: vi.fn(),
   realpathSync: vi.fn(),
   loadInstalledServerPlugins: vi.fn(),
@@ -29,6 +30,7 @@ vi.mock("node:fs", async (importOriginal) => {
 });
 
 vi.mock("@hold-rein/plugin-server", () => ({
+  createLoopbackHostApiFactory: mocks.createLoopbackHostApiFactory,
   createServerPluginRegistry: () => ({
     has: vi.fn(() => true),
     register: vi.fn(),
@@ -48,6 +50,7 @@ const {
 
 beforeEach(async () => {
   clearRuntimePluginsForTests();
+  mocks.createLoopbackHostApiFactory.mockReset();
   mocks.installPluginPackage.mockReset();
   mocks.realpathSync.mockReset();
   mocks.loadInstalledServerPlugins.mockReset();
@@ -59,6 +62,9 @@ beforeEach(async () => {
     webPlugins: []
   });
   mocks.registerRoutes.mockResolvedValue(undefined);
+  mocks.createLoopbackHostApiFactory.mockReturnValue(() => ({
+    request: vi.fn()
+  }));
 });
 
 it("replaces the active server plugins when plugins are reloaded", async () => {
@@ -73,6 +79,36 @@ it("replaces the active server plugins when plugins are reloaded", async () => {
   await reloadServerPlugins(pluginRoot);
 
   expect(mocks.replaceAll).toHaveBeenCalledWith(plugins);
+});
+
+it("calls plugin loaded hooks with plugin-scoped host APIs", async () => {
+  const onLoaded = vi.fn();
+  const hostApi = { request: vi.fn() };
+  const hostApiFactory = vi.fn(() => hostApi);
+  const plugin = {
+    id: "enabled-plugin",
+    packageName: "@scope/enabled-plugin",
+    onLoaded
+  };
+
+  mocks.createLoopbackHostApiFactory.mockReturnValueOnce(hostApiFactory);
+  mocks.loadInstalledServerPlugins.mockResolvedValueOnce({
+    plugins: [plugin],
+    webPlugins: []
+  });
+
+  await reloadServerPlugins("/tmp/plugins", {
+    hostApiBaseUrl: "http://127.0.0.1:3001"
+  });
+
+  expect(mocks.createLoopbackHostApiFactory).toHaveBeenCalledWith({
+    baseUrl: "http://127.0.0.1:3001"
+  });
+  expect(hostApiFactory).toHaveBeenCalledWith({
+    id: "enabled-plugin",
+    packageName: "@scope/enabled-plugin"
+  });
+  expect(onLoaded).toHaveBeenCalledWith({ hostApi });
 });
 
 it("resolves host node_modules from the API runtime module", async () => {

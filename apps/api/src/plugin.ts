@@ -4,9 +4,11 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
   createServerPluginRegistry,
+  createLoopbackHostApiFactory,
   loadInstalledServerPlugins,
   type DevPluginManager,
   type DevServerPluginEntry,
+  type HostApiFactory,
   type ServerPlugin,
   type RuntimePluginManifest
 } from "@hold-rein/plugin-server";
@@ -19,6 +21,7 @@ export const pluginRegistry = createServerPluginRegistry();
 let runtimeWebPlugins: RuntimePluginManifest[] = [];
 let activePluginRouter: Router = Router();
 let activeRouteContext: ServerPlugin.RouteContext | null = null;
+let activeHostApiFactory: HostApiFactory | undefined;
 let activeDevPluginManager: DevPluginManager | undefined;
 let devImportVersion = 0;
 let activeDevPlugins: ServerPlugin.Plugin[] = [];
@@ -26,6 +29,7 @@ const runtimeModuleDirectory = dirname(fileURLToPath(import.meta.url));
 
 export interface ReloadServerPluginsOptions {
   readonly devPluginManager?: DevPluginManager;
+  readonly hostApiBaseUrl?: string;
   readonly importDevModule?: (
     importUrl: string
   ) => Promise<{ readonly default?: ServerPlugin.Plugin }>;
@@ -43,6 +47,9 @@ export async function reloadServerPlugins(
   options: ReloadServerPluginsOptions = {}
 ): Promise<void> {
   activeDevPluginManager = options.devPluginManager ?? activeDevPluginManager;
+  activeHostApiFactory = options.hostApiBaseUrl === undefined
+    ? activeHostApiFactory
+    : createLoopbackHostApiFactory({ baseUrl: options.hostApiBaseUrl });
   const pluginsService = createPluginsService({ pluginRoot });
   const loaded = await loadInstalledServerPlugins({
     disabledPluginIds: await pluginsService.listDisabledPluginIds(),
@@ -59,7 +66,11 @@ export async function reloadServerPlugins(
   await disposeDevPlugins(activeDevPlugins);
   activeDevPlugins = [...devLoaded.plugins];
 
-  pluginRegistry.replaceAll([...loaded.plugins, ...devLoaded.plugins]);
+  const activePlugins = [...loaded.plugins, ...devLoaded.plugins];
+
+  await notifyPluginsLoaded(activePlugins);
+
+  pluginRegistry.replaceAll(activePlugins);
   runtimeWebPlugins = [
     ...loaded.webPlugins,
     ...(activeDevPluginManager?.getWebPluginManifests() ?? [])
@@ -78,6 +89,7 @@ export function clearRuntimePluginsForTests(): void {
   runtimeWebPlugins = [];
   activePluginRouter = Router();
   activeRouteContext = null;
+  activeHostApiFactory = undefined;
   activeDevPluginManager = undefined;
   devImportVersion = 0;
   activeDevPlugins = [];
@@ -101,6 +113,29 @@ async function rebuildPluginRouter(
 
   await pluginRegistry.registerRoutes(nextPluginRouter, context);
   activePluginRouter = nextPluginRouter;
+}
+
+async function notifyPluginsLoaded(
+  plugins: readonly ServerPlugin.Plugin[]
+): Promise<void> {
+  for (const plugin of plugins) {
+    if (!plugin.onLoaded) {
+      continue;
+    }
+
+    await plugin.onLoaded({
+      ...(activeHostApiFactory === undefined
+        ? {}
+        : {
+            hostApi: activeHostApiFactory({
+              id: plugin.id,
+              ...(plugin.packageName === undefined
+                ? {}
+                : { packageName: plugin.packageName })
+            })
+          })
+    });
+  }
 }
 
 async function loadDevServerPlugins(options: {

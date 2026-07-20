@@ -137,6 +137,19 @@ describe("createServerPluginRegistry", () => {
     expect(subscribeCalls).toEqual(["static", "dynamic"]);
   });
 
+  it("types server plugins with optional loaded hooks", async () => {
+    const hostApi = { request: vi.fn() };
+    const onLoaded = vi.fn();
+    const plugin: ServerPlugin.Plugin = {
+      id: "loaded",
+      onLoaded
+    };
+
+    await plugin.onLoaded?.({ hostApi });
+
+    expect(onLoaded).toHaveBeenCalledWith({ hostApi });
+  });
+
   it("resolves contributions only for active plugin package names when provided", async () => {
     const registry = createServerPluginRegistry();
     const activeResolver = vi.fn().mockReturnValue({

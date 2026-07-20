@@ -46,7 +46,10 @@ export async function startHoldReinServer(
       : undefined;
   await bootstrapServerPlugins(
     env.pluginRoot,
-    devPluginManager === undefined ? {} : { devPluginManager }
+    {
+      hostApiBaseUrl: createLoopbackBaseUrl(options.host, options.port),
+      ...(devPluginManager === undefined ? {} : { devPluginManager })
+    }
   );
   const agentsService = getDefaultAgentsService();
   getDefaultScheduledTasksService({ agentsService }).start();
@@ -69,6 +72,12 @@ export async function startHoldReinServer(
     server,
     url
   };
+}
+
+function createLoopbackBaseUrl(host: string, port: number): string {
+  const clientHost = host === "0.0.0.0" || host === "::" ? "127.0.0.1" : host;
+
+  return `http://${clientHost}:${port}`;
 }
 
 function listen(

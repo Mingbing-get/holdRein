@@ -79,7 +79,18 @@ describe("runtime startup", () => {
       pluginPaths: ["./packages/plugins/github"]
     });
     expect(mocks.bootstrapServerPlugins).toHaveBeenCalledWith("/tmp/plugins", {
-      devPluginManager: mocks.devPluginManager
+      devPluginManager: mocks.devPluginManager,
+      hostApiBaseUrl: "http://127.0.0.1:3001"
+    });
+  });
+
+  it("uses a loopback host API base URL when the server binds all interfaces", async () => {
+    const { startHoldReinServer } = await import("./runtime");
+
+    await startHoldReinServer({ host: "0.0.0.0", port: 3301 });
+
+    expect(mocks.bootstrapServerPlugins).toHaveBeenCalledWith("/tmp/plugins", {
+      hostApiBaseUrl: "http://127.0.0.1:3301"
     });
   });
 });
