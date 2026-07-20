@@ -1,5 +1,13 @@
 # @hold-rein/cli
 
+## 0.0.16
+
+### Patch Changes
+
+- 插件服务端支持调用开放的对象
+- Updated dependencies
+  - @hold-rein/plugin-server@0.0.8
+
 ## 0.0.15
 
 ### Patch Changes

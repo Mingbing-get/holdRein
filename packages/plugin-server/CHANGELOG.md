@@ -1,5 +1,11 @@
 # @hold-rein/plugin-server
 
+## 0.0.8
+
+### Patch Changes
+
+- 插件服务端支持调用开放的对象
+
 ## 0.0.7
 
 ### Patch Changes
