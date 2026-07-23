@@ -47,6 +47,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "peerDependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "@earendil-works/pi-agent-core": "0.75.4",
     "@earendil-works/pi-ai": "0.76.0",
     "@hold-rein/plugin-server": "workspace:*",
@@ -64,6 +65,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "@earendil-works/pi-agent-core": "0.75.4",
     "@earendil-works/pi-ai": "0.76.0",
     "@hold-rein/plugin-server": "workspace:*",
