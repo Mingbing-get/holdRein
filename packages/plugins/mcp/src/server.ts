@@ -1,3 +1,7 @@
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
 import type { ServerPlugin } from "@hold-rein/plugin-server";
 
 import { PLUGIN_ID } from "./plugin-id";
@@ -9,6 +13,11 @@ import {
   createMcpResourceListTool
 } from "./server/tools";
 
+const MCP_CONFIGURATION_SKILL_DIR = join(
+  skillRootDir(),
+  "mcp-configuration"
+);
+
 const serverPlugin: ServerPlugin.Plugin = {
   id: PLUGIN_ID,
   registerRoutes: createRouter,
@@ -17,6 +26,7 @@ const serverPlugin: ServerPlugin.Plugin = {
     const options = { servers };
 
     return {
+      skillDirs: [MCP_CONFIGURATION_SKILL_DIR],
       tools: [
         ...(await createMcpPluginTools(options)),
         createMcpResourceListTool(options),
@@ -27,3 +37,12 @@ const serverPlugin: ServerPlugin.Plugin = {
 };
 
 export default serverPlugin;
+
+function skillRootDir(): string {
+  const baseDir = dirname(fileURLToPath(import.meta.url));
+  const sourceSkillRoot = join(baseDir, "server/skills");
+
+  return existsSync(sourceSkillRoot)
+    ? sourceSkillRoot
+    : join(baseDir, "skills");
+}
